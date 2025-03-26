@@ -1,208 +1,300 @@
 <!-- components/feature/restaurant/RestaurantCard.vue -->
 <template>
-    <div class="restaurant-card" :class="{ 'restaurant-card--featured': restaurant.featured }">
-        <div class="restaurant-card__image">
-            <img :src="restaurant.image" :alt="restaurant.name" />
-            <div v-if="restaurant.featured" class="restaurant-card__badge">Featured</div>
-            <div v-if="restaurant.deliveryFee === 0" class="restaurant-card__tag">Free Delivery</div>
+    <router-link :to="`/restaurant/${restaurant.id}`" class="restaurant-card">
+        <div class="restaurant-card__image-container">
+            <img :src="restaurant.image" :alt="restaurant.name" class="restaurant-card__image">
+
+            <div class="restaurant-card__badges">
+                <span v-if="restaurant.featured" class="restaurant-card__badge restaurant-card__badge--featured">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
+                    </svg>
+                    Destacado
+                </span>
+                <span v-if="restaurant.isNew" class="restaurant-card__badge restaurant-card__badge--new">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Nuevo
+                </span>
+            </div>
+
+            <div class="restaurant-card__delivery-time">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                </svg>
+                {{ restaurant.deliveryTime }} min
+            </div>
         </div>
 
         <div class="restaurant-card__content">
-            <div class="restaurant-card__info">
+            <div class="restaurant-card__header">
                 <h3 class="restaurant-card__name">{{ restaurant.name }}</h3>
-                <div class="restaurant-card__meta">
-                    <span class="restaurant-card__cuisine">{{ restaurant.cuisine }}</span>
-                    <span class="restaurant-card__dot">•</span>
-                    <span class="restaurant-card__price">{{ restaurant.priceRange }}</span>
+                <div class="restaurant-card__rating">
+                    <div class="restaurant-card__stars">
+                        <span>{{ restaurant.rating }}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFC107" stroke="#FFC107"
+                            stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                    </div>
+                    <span class="restaurant-card__reviews">({{ restaurant.reviewCount }})</span>
                 </div>
             </div>
 
-            <div class="restaurant-card__rating">
-                <div class="restaurant-card__stars">
-                    <span class="restaurant-card__star">★</span>
-                    <span>{{ restaurant.rating.toFixed(1) }}</span>
+            <div class="restaurant-card__details">
+                <div class="restaurant-card__tags">
+                    <span class="restaurant-card__tag">{{ restaurant.cuisine }}</span>
+                    <span class="restaurant-card__tag">{{ restaurant.priceRange }}</span>
+                    <span class="restaurant-card__tag">{{ restaurant.distance }} km</span>
                 </div>
-                <div class="restaurant-card__reviews">({{ restaurant.reviewCount }})</div>
-            </div>
-        </div>
 
-        <div class="restaurant-card__footer">
-            <div class="restaurant-card__stat">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                <span>{{ restaurant.deliveryTime }} min</span>
+                <div class="restaurant-card__delivery">
+                    <span v-if="restaurant.deliveryFee > 0">Envío: ${{ restaurant.deliveryFee.toFixed(2) }}</span>
+                    <span v-else class="restaurant-card__free-delivery">Envío gratis</span>
+                </div>
             </div>
 
-            <div class="restaurant-card__stat">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            <div v-if="restaurant.promoText" class="restaurant-card__promo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <path
-                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
                     </path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
-                <span>{{ getDistanceText(restaurant.distance) }}</span>
+                {{ restaurant.promoText }}
             </div>
         </div>
-    </div>
+
+        <div class="restaurant-card__hover-effect">
+            <span class="restaurant-card__view-text">Ver restaurante</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+        </div>
+    </router-link>
 </template>
 
 <script setup lang="ts">
-interface Restaurant {
-    id: number;
-    name: string;
-    cuisine: string;
-    priceRange: string;
-    rating: number;
-    reviewCount: number;
-    deliveryTime: number;
-    deliveryFee: number;
-    distance: number;
-    featured: boolean;
-    image: string;
-}
-
-const props = defineProps<{
-    restaurant: Restaurant
-}>()
-
-const getDistanceText = (distance: number) => {
-    return distance < 1 ? `${(distance * 1000).toFixed(0)} m` : `${distance.toFixed(1)} km`
-}
+defineProps({
+    restaurant: {
+        type: Object,
+        required: true
+    }
+})
 </script>
 
 <style lang="scss" scoped>
 .restaurant-card {
-    background-color: white;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    background: white;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     position: relative;
+    height: 100%;
 
     &:hover {
         transform: translateY(-10px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
 
-        .restaurant-card__image img {
-            transform: scale(1.05);
+        .restaurant-card__image {
+            transform: scale(1.08);
+        }
+
+        .restaurant-card__hover-effect {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 
-    &--featured {
-        box-shadow: 0 10px 30px rgba(255, 107, 107, 0.15);
-
-        &:hover {
-            box-shadow: 0 20px 40px rgba(255, 107, 107, 0.2);
-        }
-    }
-
-    &__image {
+    &__image-container {
         position: relative;
         height: 180px;
         overflow: hidden;
+    }
 
-        img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+    &__image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    &__badges {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        gap: 8px;
     }
 
     &__badge {
-        position: absolute;
-        top: 1rem;
-        left: 1rem;
-        background: linear-gradient(135deg, #FF6B6B, #FF8E53);
-        color: white;
-        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
         font-weight: 600;
-        padding: 0.3rem 0.8rem;
-        border-radius: 50px;
-        z-index: 1;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+
+        &--featured {
+            background-color: rgba(255, 165, 2, 0.9);
+            color: white;
+        }
+
+        &--new {
+            background-color: rgba(32, 191, 107, 0.9);
+            color: white;
+        }
     }
 
-    &__tag {
+    &__delivery-time {
         position: absolute;
-        bottom: 1rem;
-        left: 1rem;
-        background: rgba(0, 0, 0, 0.7);
+        bottom: 12px;
+        right: 12px;
+        background-color: rgba(0, 0, 0, 0.7);
         color: white;
-        font-size: 0.75rem;
-        font-weight: 500;
-        padding: 0.3rem 0.8rem;
-        border-radius: 50px;
-        z-index: 1;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        backdrop-filter: blur(4px);
     }
 
     &__content {
-        padding: 1.5rem;
+        padding: 1.25rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    &__header {
         display: flex;
         justify-content: space-between;
-        border-bottom: 1px solid #f0f0f0;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
     }
 
     &__name {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem;
-        color: #333;
-    }
-
-    &__meta {
-        display: flex;
-        align-items: center;
-        color: #777;
-        font-size: 0.9rem;
-    }
-
-    &__dot {
-        margin: 0 0.5rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1e293b;
     }
 
     &__rating {
         display: flex;
-        flex-direction: column;
-        align-items: flex-end;
+        align-items: center;
+        gap: 4px;
     }
 
     &__stars {
         display: flex;
         align-items: center;
-        color: #333;
-        font-weight: 600;
-    }
-
-    &__star {
-        color: #FFD700;
-        margin-right: 0.3rem;
+        gap: 3px;
+        font-weight: 700;
+        color: #1e293b;
     }
 
     &__reviews {
-        font-size: 0.8rem;
-        color: #777;
+        font-size: 0.85rem;
+        color: #64748b;
     }
 
-    &__footer {
-        padding: 1rem 1.5rem;
+    &__details {
+        margin-bottom: 0.75rem;
+    }
+
+    &__tags {
         display: flex;
-        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 0.5rem;
     }
 
-    &__stat {
+    &__tag {
+        background-color: #f1f5f9;
+        color: #64748b;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    &__delivery {
+        font-size: 0.9rem;
+        color: #64748b;
+    }
+
+    &__free-delivery {
+        color: #10b981;
+        font-weight: 600;
+    }
+
+    &__promo {
+        margin-top: auto;
+        background: linear-gradient(to right, #ffefba, #ffffff);
+        padding: 10px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
-        color: #777;
-        font-size: 0.9rem;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: #b45309;
 
         svg {
-            margin-right: 0.5rem;
-            color: #FF6B6B;
+            color: #f59e0b;
+            flex-shrink: 0;
+        }
+    }
+
+    &__hover-effect {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to right, #FF416C, #FF4B2B);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 1rem;
+        opacity: 0;
+        transform: translateY(100%);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        font-weight: 600;
+
+        svg {
+            transition: transform 0.3s ease;
+        }
+
+        &:hover svg {
+            transform: translateX(3px);
         }
     }
 }

@@ -1,3 +1,4 @@
+<!-- components/layout/UHeader.vue -->
 <template>
     <header class="u-header" :class="{ 'u-header--scrolled': scrolled }">
         <div class="u-header__container">
@@ -12,6 +13,7 @@
 
             <div class="u-header__logo">
                 <router-link to="/" class="u-header__logo-link">
+                    <span class="u-header__logo-icon">🍽️</span>
                     <span class="u-header__logo-text">Elixium Foods</span>
                 </router-link>
             </div>
@@ -24,11 +26,36 @@
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </div>
-                <router-link to="/" class="u-header__nav-link" @click="closeMobileMenu">Home</router-link>
-                <router-link to="/restaurants" class="u-header__nav-link"
-                    @click="closeMobileMenu">Restaurants</router-link>
-                <router-link to="/special-offers" class="u-header__nav-link" @click="closeMobileMenu">Special
-                    Offers</router-link>
+
+                <div class="u-header__nav-logo">
+                    <span class="u-header__logo-icon">🍽️</span>
+                    <span class="u-header__logo-text">Elixium Foods</span>
+                </div>
+
+                <div class="u-header__nav-links">
+                    <router-link to="/" class="u-header__nav-link" @click="closeMobileMenu">
+                        <span class="u-header__nav-link-icon">🏠</span>
+                        <span class="u-header__nav-link-text">Inicio</span>
+                    </router-link>
+                    <router-link to="/restaurants" class="u-header__nav-link" @click="closeMobileMenu">
+                        <span class="u-header__nav-link-icon">🍔</span>
+                        <span class="u-header__nav-link-text">Restaurantes</span>
+                    </router-link>
+                    <router-link to="/special-offers" class="u-header__nav-link" @click="closeMobileMenu">
+                        <span class="u-header__nav-link-icon">🏷️</span>
+                        <span class="u-header__nav-link-text">Ofertas</span>
+                    </router-link>
+                    <router-link to="/about" class="u-header__nav-link" @click="closeMobileMenu">
+                        <span class="u-header__nav-link-icon">ℹ️</span>
+                        <span class="u-header__nav-link-text">Nosotros</span>
+                    </router-link>
+                </div>
+
+                <div class="u-header__nav-footer">
+                    <button class="u-header__nav-button">
+                        <span>Iniciar Sesión</span>
+                    </button>
+                </div>
             </nav>
 
             <div class="u-header__overlay" :class="{ 'u-header__overlay--active': mobileMenuOpen }"
@@ -42,15 +69,17 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                 </button>
+
                 <router-link to="/cart" class="u-header__action-btn u-header__cart-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        <path d="M9 20a1 1 0 1 0 0 2 1 1 0 1 0 0-2z"></path>
+                        <path d="M20 20a1 1 0 1 0 0 2 1 1 0 1 0 0-2z"></path>
+                        <path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 5H6"></path>
                     </svg>
-                    <span class="u-header__cart-count">0</span>
+                    <span class="u-header__cart-count">3</span>
                 </router-link>
+
                 <router-link to="/profile" class="u-header__action-btn u-header__profile-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -109,12 +138,13 @@ onUnmounted(() => {
     background-color: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     z-index: 1000;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
 
     &--scrolled {
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+        background-color: rgba(255, 255, 255, 0.98);
     }
 
     &__container {
@@ -123,30 +153,36 @@ onUnmounted(() => {
         justify-content: space-between;
         max-width: 1400px;
         margin: 0 auto;
-        padding: 1rem 2rem;
+        padding: 0.75rem 2rem;
     }
 
     &__menu-toggle {
         display: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background-color: white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         cursor: pointer;
-        color: #333;
-        transition: color 0.3s;
+        color: #1e293b;
+        transition: all 0.3s ease;
+        align-items: center;
+        justify-content: center;
 
         &:hover {
-            color: #FF6B6B;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            color: #FF416C;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 992px) {
             display: flex;
-            align-items: center;
-            justify-content: center;
         }
     }
 
     &__logo {
         flex: 0 0 auto;
 
-        @media (max-width: 768px) {
+        @media (max-width: 992px) {
             flex: 1;
             text-align: center;
         }
@@ -156,38 +192,44 @@ onUnmounted(() => {
         text-decoration: none;
         display: flex;
         align-items: center;
+        gap: 0.5rem;
+    }
+
+    &__logo-icon {
+        font-size: 1.5rem;
     }
 
     &__logo-text {
         font-size: 1.5rem;
-        font-weight: 700;
-        background: linear-gradient(to right, #FF6B6B, #FF8E53);
+        font-weight: 800;
+        background: linear-gradient(to right, #FF416C, #FF4B2B);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
+        letter-spacing: -0.03em;
     }
 
     &__navigation {
         display: flex;
         align-items: center;
-        gap: 2rem;
         margin: 0 2rem;
 
-        @media (max-width: 768px) {
+        @media (max-width: 992px) {
             position: fixed;
             top: 0;
-            left: -280px;
-            width: 280px;
+            left: -320px;
+            width: 300px;
             height: 100vh;
             background-color: white;
             flex-direction: column;
             align-items: flex-start;
             gap: 1rem;
-            padding: 2rem 1.5rem;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
             z-index: 1010;
-            transition: left 0.3s ease;
+            transition: left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
             margin: 0;
+            overflow-y: auto;
 
             &--active {
                 left: 0;
@@ -198,70 +240,140 @@ onUnmounted(() => {
     &__nav-close {
         display: none;
 
-        @media (max-width: 768px) {
-            display: block;
+        @media (max-width: 992px) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: absolute;
             top: 1rem;
             right: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #f1f5f9;
             cursor: pointer;
-            color: #333;
+            color: #64748b;
+            transition: all 0.2s ease;
 
             &:hover {
-                color: #FF6B6B;
+                background-color: #e2e8f0;
+                color: #1e293b;
             }
+        }
+    }
+
+    &__nav-logo {
+        display: none;
+
+        @media (max-width: 992px) {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            width: 100%;
+        }
+    }
+
+    &__nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        @media (max-width: 992px) {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+            gap: 0;
         }
     }
 
     &__nav-link {
         text-decoration: none;
-        color: #333;
+        color: #1e293b;
         font-weight: 500;
         position: relative;
-        padding: 0.5rem 0;
-        transition: color 0.3s;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
 
-        &::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(to right, #FF6B6B, #FF8E53);
-            transition: width 0.3s ease;
+        &-icon {
+            display: none;
+
+            @media (max-width: 992px) {
+                display: inline-block;
+                font-size: 1.2rem;
+            }
         }
 
-        &:hover,
+        &:hover {
+            color: #FF416C;
+            background-color: rgba(#FF416C, 0.05);
+        }
+
         &.router-link-active {
-            color: #FF6B6B;
-
-            &::after {
-                width: 100%;
-            }
+            color: #FF416C;
+            background-color: rgba(#FF416C, 0.08);
+            font-weight: 600;
         }
 
-        @media (max-width: 768px) {
-            display: block;
+        @media (max-width: 992px) {
             width: 100%;
-            padding: 1rem 0;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 0.9rem 1rem;
+            border-radius: 10px;
 
-            &:last-child {
-                border-bottom: none;
+            &:not(:last-child) {
+                border-bottom: 1px solid #f8fafc;
             }
+        }
+    }
+
+    &__nav-footer {
+        display: none;
+
+        @media (max-width: 992px) {
+            display: flex;
+            width: 100%;
+            margin-top: auto;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+        }
+    }
+
+    &__nav-button {
+        width: 100%;
+        padding: 0.9rem;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(to right, #FF416C, #FF4B2B);
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(#FF416C, 0.3);
         }
     }
 
     &__overlay {
         display: none;
 
-        @media (max-width: 768px) {
+        @media (max-width: 992px) {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(3px);
             z-index: 1000;
             opacity: 0;
             visibility: hidden;
@@ -277,46 +389,53 @@ onUnmounted(() => {
     &__actions {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.5rem;
     }
 
     &__action-btn {
         background: none;
         border: none;
         cursor: pointer;
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #333;
-        border-radius: 50%;
-        transition: all 0.3s;
+        color: #1e293b;
+        border-radius: 10px;
+        transition: all 0.3s ease;
         position: relative;
         text-decoration: none;
+        background-color: white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 
         &:hover {
-            background-color: rgba(255, 107, 107, 0.1);
-            color: #FF6B6B;
+            color: #FF416C;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transform: translateY(-2px);
+        }
+
+        &:active {
+            transform: translateY(0);
         }
     }
 
     &__cart-count {
         position: absolute;
-        top: 0;
-        right: 0;
-        background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+        top: -5px;
+        right: -5px;
+        background: linear-gradient(135deg, #FF416C, #FF4B2B);
         color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
+        border-radius: 10px;
+        min-width: 20px;
+        height: 20px;
         font-size: 0.7rem;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        box-shadow: 0 2px 5px rgba(255, 107, 107, 0.5);
+        box-shadow: 0 2px 5px rgba(#FF416C, 0.3);
+        padding: 0 6px;
     }
 }
 </style>
