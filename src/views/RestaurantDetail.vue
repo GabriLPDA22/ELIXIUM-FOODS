@@ -584,5 +584,10 @@ $transition: all 0.3s ease;
             align-items: center;
         }
     }
+
+    .menu-nav{
+        margin-top: 8rem;
+    }
+
 }
 </style>
