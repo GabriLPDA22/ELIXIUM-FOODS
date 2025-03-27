@@ -26,6 +26,11 @@ const routes: RouteRecordRaw[] = [
     path: '/order-tracking/:id',
     name: 'order-tracking',
     component: () => import('@/views/OrderTracking.vue')
+  },
+  {
+    path: '/profile',
+    name: 'user-profile',
+    component: () => import('@/views/UserProfile.vue')
   }
 ]
 
