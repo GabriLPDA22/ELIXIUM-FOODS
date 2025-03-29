@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles that are hard to achieve with just Tailwind */
+@layer base {
+  html,
+  body {
+    @apply h-full font-sans text-text antialiased;
+  }
+
+  #app {
+    @apply min-h-screen flex flex-col;
+  }
+
+  a {
+    @apply text-primary no-underline transition-colors duration-normal;
+  }
+
+  a:hover {
+    @apply underline;
+  }
+
+  /* Focus states for accessibility */
+  :focus {
+    @apply outline-2 outline-primary outline-offset-2;
+  }
+}
+
+/* Component abstractions */
+@layer components {
+  /* You can define reusable component patterns here */
+  .btn {
+    @apply inline-flex items-center justify-center font-semibold overflow-hidden transition-all duration-normal;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-[#FF8E53] text-white;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-dark text-white hover:bg-opacity-80;
+  }
+
+  .input-base {
+    @apply w-full py-3 px-4 text-base border border-gray-300 rounded-lg transition-all duration-normal focus:outline-none;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  /* You can define custom utility classes here */
+  .text-truncate {
+    @apply overflow-hidden whitespace-nowrap text-ellipsis;
+  }
+
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+}
+
+/* Container utility - similar to what you had before */
+.container {
+  @apply w-full mx-auto px-4;
+  max-width: 1200px;
+}
