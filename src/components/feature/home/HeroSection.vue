@@ -41,6 +41,7 @@
                     </div>
                 </div>
 
+                <!-- Badges ahora tienen mayor z-index para aparecer sobre la onda -->
                 <div class="hero__badges">
                     <div class="hero__badge">
                         <div class="hero__badge-icon">⭐</div>
@@ -247,6 +248,9 @@ const address = ref('')
         display: flex;
         flex-wrap: wrap;
         gap: 1rem;
+        position: relative;
+        z-index: 5; /* Aumentado para que aparezca sobre la onda */
+        margin-bottom: 1rem; /* Asegura que no quede cortado en el borde */
     }
 
     &__badge {
@@ -258,6 +262,7 @@ const address = ref('')
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         transition: transform 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Sombra añadida para mejor visibilidad */
 
         &:hover {
             transform: translateY(-3px);
@@ -318,7 +323,7 @@ const address = ref('')
         left: 0;
         width: 100%;
         line-height: 0;
-        z-index: 1;
+        z-index: 1; /* Mantiene la onda por debajo de los badges */
 
         svg {
             display: block;
