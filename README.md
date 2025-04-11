@@ -191,11 +191,11 @@ Desarrollado con ❤️ por un equipo de profesionales apasionados por la tecnol
 
 ## 📄 Licencia
 
-Este proyecto está licenciado bajo [MIT License](LICENSE).
+Este proyecto está licenciado bajo [MIT License](LICENSE.md).
 
 ## 🙌 Contribuciones
 
-¡Las contribuciones son bienvenidas! Revisa nuestras [guías de contribución](CONTRIBUTING.md) para comenzar.
+¡Las contribuciones son bienvenidas! Revisa nuestra [guía de contribución](CONTRIBUTING.md) para comenzar.
 
 ## 🌟 Inspiración y Agradecimientos
 
