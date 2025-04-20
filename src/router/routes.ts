@@ -13,6 +13,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/RestaurantList.vue')
   },
   {
+    path: '/restaurant/:id',
+    redirect: to => ({ path: `/restaurants/${to.params.id}` })
+  },
+  {
     path: '/restaurants/:id',
     name: 'restaurant-detail',
     component: () => import('@/views/RestaurantDetail.vue')

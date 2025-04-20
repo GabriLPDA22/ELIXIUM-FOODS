@@ -3,11 +3,11 @@
   <footer class="u-footer">
     <div class="u-footer__top">
       <div class="u-footer__wave">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+        <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
           <path fill="#0f172a" fill-opacity="1"
             d="M0,192L48,202.7C96,213,192,235,288,218.7C384,203,480,149,576,138.7C672,128,768,160,864,186.7C960,213,1056,235,1152,229.3C1248,224,1344,192,1392,176L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z">
           </path>
-        </svg>
+        </svg> -->
       </div>
     </div>
 
@@ -56,11 +56,11 @@
             </div>
             <div class="u-footer__apps">
               <a href="#" class="u-footer__app-link">
-                <img src="https://developer.apple.com/app-store/marketing/guidelines/images/badge-example-preferred.png"
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
                   alt="Descarga en App Store" class="u-footer__app-image">
               </a>
               <a href="#" class="u-footer__app-link">
-                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/es_badge_web_generic.png"
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
                   alt="Disponible en Google Play" class="u-footer__app-image">
               </a>
             </div>
@@ -104,9 +104,9 @@
           <div class="u-footer__newsletter">
             <h3 class="u-footer__heading">Mantente Actualizado</h3>
             <p class="u-footer__newsletter-text">Suscríbete a nuestro boletín y recibe ofertas especiales</p>
-            <form class="u-footer__form">
+            <form class="u-footer__form" @submit.prevent="submitNewsletter">
               <div class="u-footer__form-group">
-                <input type="email" placeholder="Tu dirección de email" class="u-footer__input" />
+                <input type="email" v-model="email" placeholder="Tu dirección de email" class="u-footer__input" />
                 <button type="submit" class="u-footer__button">
                   <span>Suscribirse</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -171,7 +171,18 @@
 </template>
 
 <script setup lang="ts">
-// No se necesita script específico para el footer
+import { ref } from 'vue';
+
+const email = ref('');
+
+const submitNewsletter = () => {
+  // Aquí puedes implementar la lógica para enviar el formulario
+  if (email.value) {
+    // Simular envío
+    alert('¡Gracias por suscribirte! Pronto recibirás nuestras ofertas.');
+    email.value = '';
+  }
+};
 </script>
 
 <style lang="scss" scoped>

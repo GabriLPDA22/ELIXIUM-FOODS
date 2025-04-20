@@ -1,0 +1,1 @@
+<!-- components/feature/restaurant/HeaderSection.vue -->
