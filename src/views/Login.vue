@@ -37,7 +37,7 @@
             </div>
   
             <form @submit.prevent="handleLogin" class="login-form">
-              <div class="login-form__alert" v-if="error">
+              <div v-if="error" class="login-form__alert">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="10"></circle>
@@ -45,6 +45,15 @@
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
                 <span>{{ error }}</span>
+              </div>
+  
+              <div v-if="successMessage" class="login-form__success">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span>{{ successMessage }}</span>
               </div>
   
               <div class="login-form__group">
@@ -55,7 +64,7 @@
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                     <polyline points="22,6 12,13 2,6"></polyline>
                   </svg>
-                  <input v-model="email" type="email" id="email" class="login-form__input" placeholder="tu@email.com"
+                  <input v-model="loginForm.email" type="email" id="email" class="login-form__input" placeholder="tu@email.com"
                     required />
                 </div>
               </div>
@@ -71,7 +80,7 @@
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
-                  <input v-model="password" :type="showPassword ? 'text' : 'password'" id="password"
+                  <input v-model="loginForm.password" :type="showPassword ? 'text' : 'password'" id="password"
                     class="login-form__input" placeholder="********" required />
                   <button type="button" class="login-form__toggle-password" @click="togglePassword"
                     :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
@@ -93,7 +102,7 @@
   
               <div class="login-form__group login-form__group--checkbox">
                 <label class="login-form__checkbox">
-                  <input type="checkbox" v-model="rememberMe" />
+                  <input type="checkbox" v-model="loginForm.rememberMe" />
                   <span class="login-form__checkbox-mark"></span>
                   <span>Mantener sesión iniciada</span>
                 </label>
@@ -158,18 +167,24 @@
   </template>
   
   <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref, reactive } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useAuthStore } from '@/stores/auth';
   
   const router = useRouter();
+  const authStore = useAuthStore();
   
   // Estado para el formulario
-  const email = ref('');
-  const password = ref('');
-  const rememberMe = ref(false);
+  const loginForm = reactive({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  
   const showPassword = ref(false);
   const loading = ref(false);
   const error = ref('');
+  const successMessage = ref('');
   
   // Mostrar u ocultar la contraseña
   const togglePassword = () => {
@@ -181,24 +196,27 @@
     try {
       loading.value = true;
       error.value = '';
+      
+      // Llamada a la API de autenticación
+      const success = await authStore.login({
+        email: loginForm.email,
+        password: loginForm.password
+      });
   
-      // Simular petición a la API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-  
-      // En una implementación real, aquí se haría la llamada al backend
-      // const response = await loginService.login(email.value, password.value, rememberMe.value);
-  
-      // Para este ejemplo, simulamos un login exitoso
-      if (email.value === 'usuario@ejemplo.com' && password.value === 'password') {
-        // Redirigir a la página principal después del login
-        router.push('/');
+      if (success) {
+        successMessage.value = '¡Inicio de sesión exitoso!';
+        
+        // Redirigir después de un breve momento
+        setTimeout(() => {
+          const returnUrl = router.currentRoute.value.query.returnUrl?.toString() || '/';
+          router.push(returnUrl);
+        }, 1000);
       } else {
-        // Mostrar error
-        error.value = 'Email o contraseña incorrectos. Por favor, inténtalo de nuevo.';
+        error.value = 'Credenciales inválidas. Por favor, inténtalo de nuevo.';
       }
-    } catch (err) {
-      error.value = 'Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.';
+    } catch (err: any) {
       console.error('Error de login:', err);
+      error.value = err.message || 'Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.';
     } finally {
       loading.value = false;
     }
@@ -449,6 +467,18 @@
       font-size: 0.95rem;
     }
   
+    &__success {
+      background-color: rgba(#10b981, 0.1);
+      color: #10b981;
+      padding: 1rem;
+      border-radius: $border-radius;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+    }
+  
     &__group {
       margin-bottom: 1.5rem;
   
@@ -685,30 +715,31 @@
       color: $dark;
       cursor: pointer;
       transition: all 0.3s ease;
-  
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-      }
-  
-      &--google:hover {
-        background-color: #f8fafc;
-        border-color: #f1f5f9;
-      }
-  
-      &--facebook:hover {
-        background-color: #f0f6ff;
-        border-color: #dbeafe;
-      }
-  
-      &--apple:hover {
-        background-color: #f8fafc;
-        border-color: #f1f5f9;
-      }
+      transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     }
-  
-    &__icon {
-      flex-shrink: 0;
+
+    &--google:hover {
+      background-color: #f8fafc;
+      border-color: #f1f5f9;
+    }
+
+    &--facebook:hover {
+      background-color: #f0f6ff;
+      border-color: #dbeafe;
+    }
+
+    &--apple:hover {
+      background-color: #f8fafc;
+      border-color: #f1f5f9;
     }
   }
-  </style>
+
+  &__icon {
+    flex-shrink: 0;
+  }
+}
+</style>

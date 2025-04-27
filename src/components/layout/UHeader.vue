@@ -52,9 +52,25 @@
                 </div>
 
                 <div class="u-header__nav-footer">
-                    <button class="u-header__nav-button">
-                        <span>Iniciar Sesión</span>
-                    </button>
+                    <div v-if="isAuthenticated">
+                        <div class="u-header__nav-user">
+                            <span class="u-header__nav-user-greeting">Hola, {{ userFirstName }}</span>
+                        </div>
+                        <div class="u-header__nav-actions">
+                            <router-link to="/profile" class="u-header__nav-button u-header__nav-button--outline"
+                                @click="closeMobileMenu">
+                                <span>Mi Perfil</span>
+                            </router-link>
+                            <button @click="handleLogout" class="u-header__nav-button">
+                                <span>Cerrar Sesión</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <router-link to="/login" class="u-header__nav-button" @click="closeMobileMenu">
+                            <span>Iniciar Sesión</span>
+                        </router-link>
+                    </div>
                 </div>
             </nav>
 
@@ -77,14 +93,86 @@
                         <path d="M20 20a1 1 0 1 0 0 2 1 1 0 1 0 0-2z"></path>
                         <path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 5H6"></path>
                     </svg>
-                    <span class="u-header__cart-count">3</span>
+                    <span class="u-header__cart-count">{{ cartItemCount }}</span>
                 </router-link>
 
-                <router-link to="/profile" class="u-header__action-btn u-header__profile-btn">
+                <div v-if="isAuthenticated" class="u-header__user-menu">
+                    <button class="u-header__action-btn u-header__profile-btn" @click="toggleUserMenu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </button>
+                    <div class="u-header__user-dropdown" v-if="userMenuOpen">
+                        <div class="u-header__user-dropdown-header">
+                            <span class="u-header__user-dropdown-greeting">Hola, {{ userFirstName }}</span>
+                            <span class="u-header__user-dropdown-email">{{ userEmail }}</span>
+                        </div>
+                        <div class="u-header__user-dropdown-divider"></div>
+                        <ul class="u-header__user-dropdown-menu">
+                            <li>
+                                <router-link to="/profile" class="u-header__user-dropdown-item" @click="closeUserMenu">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    <span>Mi Perfil</span>
+                                </router-link>
+                            </li>
+                            <li>
+                                <router-link to="/orders" class="u-header__user-dropdown-item" @click="closeUserMenu">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5"></path>
+                                        <path d="M2 12l10 5 10-5"></path>
+                                    </svg>
+                                    <span>Mis Pedidos</span>
+                                </router-link>
+                            </li>
+                            <li>
+                                <router-link to="/addresses" class="u-header__user-dropdown-item" @click="closeUserMenu">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    <span>Mis Direcciones</span>
+                                </router-link>
+                            </li>
+                            <li>
+                                <router-link to="/settings" class="u-header__user-dropdown-item" @click="closeUserMenu">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                        <path
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                        </path>
+                                    </svg>
+                                    <span>Configuración</span>
+                                </router-link>
+                            </li>
+                        </ul>
+                        <div class="u-header__user-dropdown-divider"></div>
+                        <button class="u-header__user-dropdown-logout" @click="handleLogout">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                            <span>Cerrar Sesión</span>
+                        </button>
+                    </div>
+                </div>
+                <router-link v-else to="/login" class="u-header__action-btn u-header__profile-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10 17 15 12 10 7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
                     </svg>
                 </router-link>
             </div>
@@ -93,13 +181,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { useCartStore } from '@/stores/cart';
+
+const router = useRouter();
+const authStore = useAuthStore();
+const cartStore = useCartStore();
 
 const mobileMenuOpen = ref(false);
 const scrolled = ref(false);
+const userMenuOpen = ref(false);
+
+// Calcular propiedades basadas en el estado de autenticación
+const isAuthenticated = computed(() => authStore.isAuthenticated());
+const userFirstName = computed(() => authStore.user?.firstName || '');
+const userEmail = computed(() => authStore.user?.email || '');
+const cartItemCount = computed(() => cartStore?.itemCount || 0);
 
 const toggleMobileMenu = () => {
     mobileMenuOpen.value = !mobileMenuOpen.value;
+    userMenuOpen.value = false;
 
     // Cuando el menú está abierto, prevenir el scroll en el body
     if (mobileMenuOpen.value) {
@@ -114,17 +217,46 @@ const closeMobileMenu = () => {
     document.body.style.overflow = '';
 };
 
+const toggleUserMenu = () => {
+    userMenuOpen.value = !userMenuOpen.value;
+};
+
+const closeUserMenu = () => {
+    userMenuOpen.value = false;
+};
+
+const handleLogout = () => {
+    authStore.logout();
+    userMenuOpen.value = false;
+    closeMobileMenu();
+    router.push('/');
+};
+
 const handleScroll = () => {
     scrolled.value = window.scrollY > 20;
 };
 
-// Eventos para detectar scroll
+// Cerrar menú de usuario al hacer clic fuera
+const handleClickOutside = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (
+        userMenuOpen.value &&
+        !target.closest('.u-header__user-menu') &&
+        !target.closest('.u-header__profile-btn')
+    ) {
+        closeUserMenu();
+    }
+};
+
+// Eventos para detectar scroll y clicks
 onMounted(() => {
     window.addEventListener('scroll', handleScroll);
+    document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll);
+    document.removeEventListener('click', handleClickOutside);
     document.body.style.overflow = ''; // Asegurarse de restaurar el scroll al desmontar
 });
 </script>
@@ -177,9 +309,7 @@ onUnmounted(() => {
         @media (max-width: 992px) {
             display: flex;
         }
-    }
-
-    &__logo {
+    }&__logo {
         flex: 0 0 auto;
 
         @media (max-width: 992px) {
@@ -337,11 +467,29 @@ onUnmounted(() => {
 
         @media (max-width: 992px) {
             display: flex;
+            flex-direction: column;
             width: 100%;
             margin-top: auto;
             padding-top: 1.5rem;
             border-top: 1px solid #f1f5f9;
         }
+    }
+
+    &__nav-user {
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    &__nav-user-greeting {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 1.1rem;
+    }
+
+    &__nav-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
     }
 
     &__nav-button {
@@ -356,10 +504,22 @@ onUnmounted(() => {
         cursor: pointer;
         transition: all 0.3s ease;
         font-family: inherit;
+        text-decoration: none;
+        text-align: center;
 
         &:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(#FF416C, 0.3);
+        }
+
+        &--outline {
+            background: transparent;
+            border: 2px solid #FF416C;
+            color: #FF416C;
+
+            &:hover {
+                background-color: rgba(#FF416C, 0.05);
+            }
         }
     }
 
@@ -436,6 +596,122 @@ onUnmounted(() => {
         font-weight: bold;
         box-shadow: 0 2px 5px rgba(#FF416C, 0.3);
         padding: 0 6px;
+    }
+
+    &__user-menu {
+        position: relative;
+    }
+
+    &__user-dropdown {
+        position: absolute;
+        top: calc(100% + 0.75rem);
+        right: 0;
+        width: 260px;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        z-index: 1001;
+        animation: scaleIn 0.2s ease forwards;
+        transform-origin: top right;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            right: 16px;
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            transform: rotate(45deg);
+            border-radius: 2px;
+        }
+
+        &-header {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0.75rem;
+        }
+
+        &-greeting {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        &-email {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        &-divider {
+            height: 1px;
+            background-color: #f1f5f9;
+            margin: 0.5rem 0;
+        }
+
+        &-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        &-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            color: #1e293b;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+
+            &:hover {
+                background-color: #f8fafc;
+            }
+
+            svg {
+                color: #64748b;
+            }
+        }
+
+        &-logout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            background-color: #fee2e2;
+            color: #ef4444;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.95rem;
+
+            &:hover {
+                background-color: #fecaca;
+            }
+
+            svg {
+                stroke: #ef4444;
+            }
+        }
+    }
+}
+
+@keyframes scaleIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
     }
 }
 </style>
