@@ -569,7 +569,7 @@
 
 // Filtros de ofertas
 .offers-filters {
-  background-color: $white;
+  background-color: white;
   padding: 16px 0;
   position: sticky;
   top: 0;
@@ -605,7 +605,7 @@
   padding: 8px 16px;
   border-radius: 100px;
   border: 1px solid $border;
-  background-color: $white;
+  background-color: white;
   color: $text-light;
   font-size: 14px;
   font-weight: 500;
@@ -627,15 +627,15 @@
   &--active {
     background-color: $primary;
     border-color: $primary;
-    color: $white;
+    color: white;
 
     .offers-filter-button__icon {
-      color: $white;
+      color: white;
     }
 
     &:hover {
       background-color: $primary;
-      color: $white;
+      color: white;
       transform: translateY(-2px);
     }
   }
@@ -694,7 +694,7 @@
 .featured-offer-card {
   flex: 0 0 auto;
   width: 400px;
-  background-color: $white;
+  background-color: white;
   border-radius: $border-radius;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -731,7 +731,7 @@
     top: 16px;
     left: 16px;
     background-color: $primary;
-    color: $white;
+    color: white;
     font-weight: 700;
     padding: 6px 12px;
     border-radius: 8px;
@@ -793,7 +793,7 @@
 
   &__button {
     background-color: $primary;
-    color: $white;
+    color: white;
     border: none;
     border-radius: 8px;
     padding: 12px;
@@ -812,7 +812,7 @@
 // Ofertas lista
 .offers-list {
   padding: 40px 0;
-  background-color: $white;
+  background-color: white;
   border-radius: $border-radius;
   margin-top: 40px;
 
@@ -859,7 +859,7 @@
 // Select control
 .select-control {
   appearance: none;
-  background-color: $white;
+  background-color: white;
   border: 1px solid $border;
   border-radius: 8px;
   padding: 8px 32px 8px 12px;
@@ -896,7 +896,7 @@
 
 // Offer card
 .offer-card {
-  background-color: $white;
+  background-color: white;
   border-radius: $border-radius;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -914,7 +914,7 @@
     right: -30px;
     transform: rotate(45deg);
     background-color: $accent;
-    color: $white;
+    color: white;
     font-weight: 700;
     padding: 4px 30px;
     font-size: 12px;
@@ -949,7 +949,7 @@
     top: -20px;
     left: 20px;
     background-color: $primary;
-    color: $white;
+    color: white;
     font-weight: 700;
     padding: 6px 12px;
     border-radius: 8px;
@@ -1047,7 +1047,7 @@
     display: block;
     width: 100%;
     background-color: $primary;
-    color: $white;
+    color: white;
     border: none;
     border-radius: 8px;
     padding: 12px;
@@ -1107,7 +1107,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    color: $white;
+    color: white;
 
     @media (max-width: 768px) {
       flex-direction: column;
@@ -1141,7 +1141,7 @@
   }
 
   &__button {
-    background-color: $white;
+    background-color: white;
     color: $primary;
     font-weight: 700;
     padding: 12px 24px;
@@ -1162,7 +1162,7 @@
   bottom: 20px;
   right: 20px;
   background-color: rgba($dark, 0.9);
-  color: $white;
+  color: white;
   padding: 12px 20px;
   border-radius: 50px;
   display: flex;
