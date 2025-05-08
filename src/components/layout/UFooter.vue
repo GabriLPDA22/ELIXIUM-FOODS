@@ -1,16 +1,6 @@
 <!-- components/layout/UFooter.vue -->
 <template>
   <footer class="u-footer">
-    <div class="u-footer__top">
-      <div class="u-footer__wave">
-        <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
-          <path fill="#0f172a" fill-opacity="1"
-            d="M0,192L48,202.7C96,213,192,235,288,218.7C384,203,480,149,576,138.7C672,128,768,160,864,186.7C960,213,1056,235,1152,229.3C1248,224,1344,192,1392,176L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z">
-          </path>
-        </svg> -->
-      </div>
-    </div>
-
     <div class="u-footer__main">
       <div class="container">
         <div class="u-footer__content">
@@ -56,11 +46,11 @@
             </div>
             <div class="u-footer__apps">
               <a href="#" class="u-footer__app-link">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
+                <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
                   alt="Descarga en App Store" class="u-footer__app-image">
               </a>
               <a href="#" class="u-footer__app-link">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/es_badge_web_generic.png"
                   alt="Disponible en Google Play" class="u-footer__app-image">
               </a>
             </div>
@@ -100,26 +90,6 @@
               </ul>
             </div>
           </div>
-
-          <div class="u-footer__newsletter">
-            <h3 class="u-footer__heading">Mantente Actualizado</h3>
-            <p class="u-footer__newsletter-text">Suscríbete a nuestro boletín y recibe ofertas especiales</p>
-            <form class="u-footer__form" @submit.prevent="submitNewsletter">
-              <div class="u-footer__form-group">
-                <input type="email" v-model="email" placeholder="Tu dirección de email" class="u-footer__input" />
-                <button type="submit" class="u-footer__button">
-                  <span>Suscribirse</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
-                </button>
-              </div>
-              <p class="u-footer__privacy">Al suscribirte, aceptas nuestra <a href="#"
-                  class="u-footer__privacy-link">Política de Privacidad</a></p>
-            </form>
-          </div>
         </div>
       </div>
     </div>
@@ -130,39 +100,23 @@
           <p class="u-footer__copyright">© {{ new Date().getFullYear() }} Elixium Foods. Todos los derechos reservados.
           </p>
           <div class="u-footer__payment">
-            <span class="u-footer__payment-icon">
-              <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="30" height="20" rx="4" fill="#016FD0" />
-                <path d="M13.5 14H16.5V6H13.5V14ZM18.5 14H21.5V10H18.5V14ZM7.5 14H10.5V6H7.5V14ZM10.5 8H13.5V6H10.5V8Z"
-                  fill="white" />
-              </svg>
-            </span>
-            <span class="u-footer__payment-icon">
-              <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="30" height="20" rx="4" fill="#EB001B" />
-                <circle cx="11" cy="10" r="5" fill="#EB001B" />
-                <circle cx="19" cy="10" r="5" fill="#F79E1B" />
-                <path
-                  d="M15 6.8C16.6 8 17.7 9.9 17.7 12C17.7 14.1 16.6 16 15 17.2C13.4 16 12.3 14.1 12.3 12C12.3 9.9 13.4 8 15 6.8Z"
-                  fill="#FF5F00" />
-              </svg>
-            </span>
-            <span class="u-footer__payment-icon">
-              <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="30" height="20" rx="4" fill="#393939" />
-                <path
-                  d="M11.5 12.9C11.5 14.1 12.4 15 13.6 15H18.5V13.2H13.8C13.5 13.2 13.3 13 13.3 12.7V10H18.5V8.2H13.3V5H11.5V12.9Z"
-                  fill="white" />
-              </svg>
-            </span>
-            <span class="u-footer__payment-icon">
-              <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="30" height="20" rx="4" fill="#1434CB" />
-                <path
-                  d="M10.5 7L9 14H11L12.5 7H10.5ZM16 7L14.5 14H16.5L18 7H16ZM12.5 7L11 14H13L14.5 7H12.5ZM19 11.5H21L21.5 10H19.5L20 8.5H22L22.5 7H18.5L17 14H21L21.5 12.5H19.5L19 11.5Z"
-                  fill="white" />
-              </svg>
-            </span>
+            <!-- Tarjetas de crédito con las imágenes específicas proporcionadas -->
+            <a href="#" class="u-footer__payment-link" title="American Express">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/1200px-American_Express_logo_%282018%29.svg.png"
+                  alt="American Express" class="u-footer__payment-img">
+            </a>
+            <a href="#" class="u-footer__payment-link" title="Mastercard">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/MasterCard_early_1990s_logo.png"
+                  alt="Mastercard" class="u-footer__payment-img">
+            </a>
+            <a href="#" class="u-footer__payment-link" title="Visa">
+              <img src="https://www.visa.es/dam/VCOM/regional/ve/unitedkingdom/in-page-images/click-to-pay/consumer/uk-visa-clicktopay-logo-800x450.jpg"
+                  alt="Visa" class="u-footer__payment-img">
+            </a>
+            <a href="https://www.top-bank.ch/es/banca-online-movil/paypal" class="u-footer__payment-link" title="PayPal">
+              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
+                  alt="PayPal" class="u-footer__payment-img">
+            </a>
           </div>
         </div>
       </div>
@@ -189,23 +143,7 @@ const submitNewsletter = () => {
 .u-footer {
   position: relative;
   color: #fff;
-
-  &__top {
-    position: relative;
-    height: 150px;
-  }
-
-  &__wave {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-
-    svg {
-      display: block;
-      width: 100%;
-    }
-  }
+  background-color: #0f172a;
 
   &__main {
     background-color: #0f172a;
@@ -236,16 +174,12 @@ const submitNewsletter = () => {
 
   &__content {
     display: grid;
-    grid-template-columns: 1.5fr 2fr 1.5fr;
+    grid-template-columns: 1fr 2fr;
     gap: 3rem;
 
     @media (max-width: 992px) {
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-    }
-
-    @media (max-width: 768px) {
       grid-template-columns: 1fr;
+      gap: 2rem;
     }
   }
 
@@ -327,9 +261,13 @@ const submitNewsletter = () => {
   }
 
   &__app-image {
-    width: 100%;
+    width: 140px;
     height: auto;
-    border-radius: 6px;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: translateY(-3px);
+    }
   }
 
   &__nav {
@@ -337,13 +275,8 @@ const submitNewsletter = () => {
     grid-template-columns: repeat(3, 1fr);
     gap: 2rem;
 
-    @media (max-width: 992px) {
-      grid-column: span 2;
-    }
-
     @media (max-width: 768px) {
       grid-template-columns: repeat(2, 1fr);
-      grid-column: auto;
     }
 
     @media (max-width: 576px) {
@@ -390,94 +323,6 @@ const submitNewsletter = () => {
     }
   }
 
-  &__newsletter {
-    @media (max-width: 992px) {
-      grid-column: span 2;
-    }
-
-    @media (max-width: 768px) {
-      grid-column: auto;
-    }
-  }
-
-  &__newsletter-text {
-    color: #94a3b8;
-    margin-bottom: 1.2rem;
-    line-height: 1.6;
-    font-size: 1.05rem;
-  }
-
-  &__form-group {
-    display: flex;
-    overflow: hidden;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
-    transition: all 0.3s ease;
-
-    &:focus-within {
-      background-color: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  &__input {
-    flex: 1;
-    padding: 1rem 1.2rem;
-    border: none;
-    outline: none;
-    background-color: transparent;
-    color: #fff;
-    font-family: inherit;
-    font-size: 1rem;
-
-    &::placeholder {
-      color: #64748b;
-    }
-  }
-
-  &__button {
-    background: linear-gradient(135deg, #FF416C, #FF4B2B);
-    color: white;
-    border: none;
-    padding: 0 1.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: inherit;
-    font-size: 0.95rem;
-
-    svg {
-      transition: transform 0.3s ease;
-    }
-
-    &:hover {
-      background: linear-gradient(135deg, darken(#FF416C, 5%), darken(#FF4B2B, 5%));
-
-      svg {
-        transform: translateX(3px);
-      }
-    }
-  }
-
-  &__privacy {
-    margin-top: 0.75rem;
-    font-size: 0.8rem;
-    color: #64748b;
-  }
-
-  &__privacy-link {
-    color: #94a3b8;
-    text-decoration: none;
-    transition: color 0.3s ease;
-
-    &:hover {
-      color: #fff;
-    }
-  }
-
   &__bottom {
     background-color: #0a0f1a;
     padding: 1.5rem 0;
@@ -499,15 +344,32 @@ const submitNewsletter = () => {
 
   &__payment {
     display: flex;
-    gap: 0.75rem;
+    gap: 1.2rem;
+    align-items: center;
+    margin-top: 0.5rem;
   }
 
-  &__payment-icon {
-    opacity: 0.7;
-    transition: opacity 0.3s;
+  &__payment-link {
+    display: block;
+    transition: transform 0.3s ease;
 
     &:hover {
-      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  &__payment-img {
+    height: 32px;
+    width: auto;
+    background-color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    object-fit: contain;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
   }
 }
@@ -517,6 +379,11 @@ const submitNewsletter = () => {
     &__bottom-content {
       flex-direction: column;
       text-align: center;
+    }
+
+    &__payment {
+      justify-content: center;
+      margin-top: 1rem;
     }
   }
 }
