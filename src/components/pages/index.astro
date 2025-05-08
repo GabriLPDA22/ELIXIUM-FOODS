@@ -1,0 +1,26 @@
+---
+import MainLayout from '@/layouts/MainLayout.astro';
+import BotonVue from '@/vue/common/UButton.vue';
+import EncabezadoSeccion from '@/vue/home/HeroSection.vue';
+
+// const productos = await fetch('api/productos').then(res => res.json());
+---
+<MainLayout title="Página de Inicio - Elixium Foods">
+    <header>
+        <h1>Bienvenido a Elixium Foods (con Astro)</h1>
+    </header>
+
+    <EncabezadoSeccion client:visible />
+
+    {/* <ListaDeProductos client:load /> */}
+    {/* <ListaDeProductos productos={productos} client:load /> */}
+
+    <section>
+        <p>Haz tu pedido ahora:</p>
+        <BotonVue client:click />
+    </section>
+
+    <footer>
+        <p>&copy; {new Date().getFullYear()} Elixium Foods</p>
+    </footer>
+</MainLayout>
