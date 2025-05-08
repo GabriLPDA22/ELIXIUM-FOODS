@@ -1,18 +1,17 @@
 <!-- components/feature/home/HeroSection.vue -->
 <template>
     <section class="hero">
-        <div class="hero__container">
-            <!-- Animated background elements -->
-            <div class="hero__animated-bg">
-                <div class="hero__food-icon hero__food-icon--1">🍕</div>
-                <div class="hero__food-icon hero__food-icon--2">🍔</div>
-                <div class="hero__food-icon hero__food-icon--3">🍣</div>
-                <div class="hero__food-icon hero__food-icon--4">🌮</div>
-                <div class="hero__food-icon hero__food-icon--5">🥗</div>
-                <div class="hero__food-icon hero__food-icon--6">🍦</div>
-                <div class="hero__food-icon hero__food-icon--7">🍜</div>
-            </div>
+        <div class="hero__animated-bg">
+            <div class="hero__food-icon hero__food-icon--1">🍕</div>
+            <div class="hero__food-icon hero__food-icon--2">🍔</div>
+            <div class="hero__food-icon hero__food-icon--3">🍣</div>
+            <div class="hero__food-icon hero__food-icon--4">🌮</div>
+            <div class="hero__food-icon hero__food-icon--5">🥗</div>
+            <div class="hero__food-icon hero__food-icon--6">🍦</div>
+            <div class="hero__food-icon hero__food-icon--7">🍜</div>
+        </div>
 
+        <div class="hero__container">
             <div class="hero__content">
                 <h1 class="hero__title">Deliciosa comida.<br /><span class="hero__title-highlight">Entrega
                         rápida.</span></h1>
@@ -80,7 +79,6 @@
 import { ref } from 'vue'
 
 const address = ref('')
-
 </script>
 
 <style lang="scss" scoped>
@@ -249,6 +247,8 @@ const address = ref('')
         flex-wrap: wrap;
         gap: 1rem;
         position: relative;
+        z-index: 5;
+        position: relative;
         z-index: 5; /* Aumentado para que aparezca sobre la onda */
         margin-bottom: 1rem; /* Asegura que no quede cortado en el borde */
     }
@@ -262,6 +262,7 @@ const address = ref('')
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         transition: transform 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Sombra añadida para mejor visibilidad */
 
         &:hover {

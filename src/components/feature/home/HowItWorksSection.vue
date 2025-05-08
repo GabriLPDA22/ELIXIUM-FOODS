@@ -18,7 +18,9 @@
                         <div class="step__icon-wrapper">
                             <div class="step__icon-bg"></div>
                             <div class="step__icon">
-                                <component :is="step.icon" />
+                                <span v-if="index === 0" class="step__emoji">🍽️</span>
+                                <span v-if="index === 1" class="step__emoji">📋</span>
+                                <span v-if="index === 2" class="step__emoji">🚚</span>
                             </div>
                         </div>
                         <div class="step__animation-circle"></div>
@@ -45,49 +47,18 @@
 </template>
 
 <script setup lang="ts">
-// Iconos SVG como componentes Vue con diseños mejorados
-const RestaurantIcon = {
-    template: `
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-    `
-}
-
-const OrderIcon = {
-    template: `
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 12h6M9 16h6M9 8h1M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2Z"/>
-      </svg>
-    `
-}
-
-const DeliveryIcon = {
-    template: `
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-    `
-}
-
 const steps = [
     {
         title: 'Encuentra Restaurantes',
-        description: 'Descubre los mejores restaurantes cercanos con nuestro amplio catálogo de opciones',
-        icon: RestaurantIcon
+        description: 'Descubre los mejores restaurantes cercanos con nuestro amplio catálogo de opciones'
     },
     {
         title: 'Elige tus Platillos',
-        description: 'Personaliza tu pedido y paga de forma segura con múltiples opciones de pago',
-        icon: OrderIcon
+        description: 'Personaliza tu pedido y paga de forma segura con múltiples opciones de pago'
     },
     {
         title: 'Entrega Rápida',
-        description: 'Rastrea tu pedido en tiempo real y disfruta de comida deliciosa entregada a tu puerta',
-        icon: DeliveryIcon
+        description: 'Rastrea tu pedido en tiempo real y disfruta de comida deliciosa entregada a tu puerta'
     }
 ]
 </script>
@@ -246,6 +217,14 @@ const steps = [
         max-width: 500px;
         margin: 0 auto;
     }
+}
+
+.step__emoji {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 .step {

@@ -1,519 +1,570 @@
-<!-- views/RestaurantList.vue -->
+<!-- views/RestaurantDetail.vue -->
 <template>
-    <div class="restaurants-page">
-        <!-- Header section with search bar -->
-        <header class="header">
-            <div class="container">
-                <h1 class="header__title">Descubre restaurantes increíbles</h1>
-                <p class="header__subtitle">Encuentra tu comida favorita entregada a tu puerta</p>
-
-                <div class="search-bar">
-                    <div class="search-bar__input-wrapper">
-                        <svg class="search-bar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <input type="text" v-model="searchQuery" placeholder="Buscar restaurantes o tipos de comida..."
-                            class="search-bar__input">
-                    </div>
-                    <button class="search-bar__button">
-                        <span>Buscar</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="header__popular-searches">
-                    <span class="header__popular-label">Popular:</span>
-                    <div class="header__popular-tags">
-                        <button class="popular-tag" @click="searchQuery = 'Pizza'">Pizza</button>
-                        <button class="popular-tag" @click="searchQuery = 'Hamburguesa'">Hamburguesa</button>
-                        <button class="popular-tag" @click="searchQuery = 'Sushi'">Sushi</button>
-                        <button class="popular-tag" @click="searchQuery = 'Tacos'">Tacos</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="header__wave">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
-                    <path fill="#ffffff" fill-opacity="1"
-                        d="M0,96L48,90.7C96,85,192,75,288,101.3C384,128,480,192,576,197.3C672,203,768,149,864,117.3C960,85,1056,75,1152,96C1248,117,1344,171,1392,197.3L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z">
-                    </path>
+    <div class="restaurant-detail-page">
+        <!-- Debug info (solo para desarrollo) -->
+        <div v-if="error" class="error-container">
+            <div class="error-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
             </div>
-        </header>
+            <h2 class="error-title">Error al cargar el restaurante</h2>
+            <p class="error-message">{{ error }}</p>
+            <p class="error-id">ID del restaurante: {{ restaurantId }}</p>
+            <router-link to="/" class="error-button">Volver a la lista de restaurantes</router-link>
+        </div>
 
-        <!-- Filter section with categories -->
-        <section class="filters">
-            <div class="container">
-                <div class="filters__wrapper">
-                    <div class="filters__categories">
-                        <div class="category-scroll">
-                            <div class="category-scroll__gradient category-scroll__gradient--left"
-                                v-if="showLeftScroll"></div>
-                            <div class="category-scroll__container" ref="categoriesContainer">
-                                <button v-for="category in categories" :key="category.id"
-                                    :class="['category-button', { 'category-button--active': selectedCategory === category.id }]"
-                                    @click="selectCategory(category.id)">
-                                    <span class="category-button__icon" v-if="getCategoryIcon(category.id)">{{
-                                        getCategoryIcon(category.id) }}</span>
-                                    <span>{{ category.name }}</span>
-                                </button>
-                            </div>
-                            <div class="category-scroll__gradient category-scroll__gradient--right"
-                                v-if="showRightScroll"></div>
-                            <button class="category-scroll__arrow category-scroll__arrow--left"
-                                @click="scrollCategories('left')" v-if="showLeftScroll"
-                                aria-label="Categorías anteriores">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M15 18L9 12L15 6" />
-                                </svg>
-                            </button>
-                            <button class="category-scroll__arrow category-scroll__arrow--right"
-                                @click="scrollCategories('right')" v-if="showRightScroll" aria-label="Más categorías">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M9 6L15 12L9 18" />
-                                </svg>
-                            </button>
+        <!-- Loader -->
+        <div v-else-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Cargando información del restaurante</p>
+        </div>
+
+        <template v-else-if="restaurant">
+            <!-- Hero section with restaurant cover and basic info -->
+            <section class="restaurant-hero" :style="{ backgroundImage: `url(${restaurant.coverImage})` }">
+                <div class="restaurant-hero__overlay"></div>
+                <div class="container">
+                    <div class="restaurant-hero__content">
+                        <div class="restaurant-hero__logo">
+                            <img :src="restaurant.logo" :alt="restaurant.name" />
                         </div>
-                    </div>
-
-                    <div class="filters__extra">
-                        <div class="filter-option">
-                            <label class="filter-label">Ordenar por:</label>
-                            <div class="filter-select-wrapper">
-                                <select v-model="sortBy" class="filter-select">
-                                    <option value="popularity">Más Popular</option>
-                                    <option value="rating">Mejor Valorados</option>
-                                    <option value="delivery">Tiempo de Entrega</option>
-                                    <option value="price">Precio</option>
-                                </select>
-                                <div class="filter-select-icon">
+                        <div class="restaurant-hero__info">
+                            <h1 class="restaurant-hero__name">{{ restaurant.name }}</h1>
+                            <div class="restaurant-hero__tags">
+                                <span>{{ restaurant.cuisine }}</span>
+                                <span class="dot-separator"></span>
+                                <span>{{ restaurant.priceRange }}</span>
+                                <span class="dot-separator"></span>
+                                <span>{{ restaurant.distance }} km</span>
+                            </div>
+                            <div class="restaurant-hero__rating">
+                                <span class="restaurant-hero__rating-score">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFCC00" stroke="#FFCC00"
+                                        stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon
+                                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                                        </polygon>
+                                    </svg>
+                                    {{ restaurant.rating }}
+                                </span>
+                                <span class="restaurant-hero__rating-count">({{ restaurant.reviewCount }}
+                                    opiniones)</span>
+                                <button class="rating-button">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                        <path
+                                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+                                        </path>
                                     </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="filter-option">
-                            <label class="filter-label">Precio:</label>
-                            <div class="price-filter">
-                                <button v-for="price in ['$', '$$', '$$$', '$$$$']" :key="price"
-                                    class="price-filter__button"
-                                    :class="{ 'price-filter__button--active': priceFilter.includes(price) }"
-                                    @click="togglePriceFilter(price)">
-                                    {{ price }}
+                                    Opiniones
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Restaurant list section -->
-        <section class="restaurant-list">
-            <div class="container">
-                <div v-if="loading" class="loading-state">
-                    <div class="loading-spinner"></div>
-                    <h3 class="loading-state__title">Buscando los mejores restaurantes para ti...</h3>
-                    <p class="loading-state__text">Esto solo tomará un momento</p>
-                </div>
-
-                <div v-else-if="filteredRestaurants.length === 0" class="empty-state">
-                    <div class="empty-state__icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 12H2M16 6l6 6-6 6M8 18l-6-6 6-6"></path>
-                        </svg>
-                    </div>
-                    <h3 class="empty-state__title">No encontramos restaurantes con esos criterios</h3>
-                    <p class="empty-state__text">Intenta con otros filtros o búsquedas</p>
-                    <button @click="resetFilters" class="empty-state__button">Reiniciar filtros</button>
-                </div>
-
-                <div v-else>
-                    <div class="restaurant-list__header">
-                        <h2 class="restaurant-list__title">{{ getResultsTitle() }}</h2>
-                        <p class="restaurant-list__count">{{ filteredRestaurants.length }} restaurantes encontrados</p>
-                    </div>
-
-                    <div class="restaurant-grid">
-                        <div v-for="restaurant in filteredRestaurants" :key="restaurant.id" class="restaurant-card"
-                            @click="goToRestaurant(restaurant.id)">
-                            <div class="restaurant-card__image">
-                                <img :src="restaurant.coverImage" :alt="restaurant.name">
-
-                                <div class="restaurant-card__badges">
-                                    <span v-if="isNew(restaurant)"
-                                        class="restaurant-card__badge restaurant-card__badge--new">Nuevo</span>
-                                    <span v-if="isFastDelivery(restaurant)"
-                                        class="restaurant-card__badge restaurant-card__badge--fast">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                                        </svg>
-                                        Rápido
-                                    </span>
-                                </div>
-
-                                <div class="restaurant-card__delivery-info">
-                                    <div class="restaurant-card__delivery-time">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <polyline points="12 6 12 12 16 14"></polyline>
-                                        </svg>
-                                        {{ restaurant.deliveryTime }} min
-                                    </div>
-                                    <div class="restaurant-card__delivery-fee">
-                                        <span v-if="restaurant.deliveryFee > 0">Envío: ${{ restaurant.deliveryFee
-                                            }}</span>
-                                        <span v-else class="restaurant-card__free-delivery">Envío Gratis</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="restaurant-card__content">
-                                <div class="restaurant-card__header">
-                                    <h3 class="restaurant-card__name">{{ restaurant.name }}</h3>
-                                    <div class="restaurant-card__rating">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFC107" stroke="#FFC107"
-                                            stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">
-                                            <polygon
-                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-                                            </polygon>
-                                        </svg>
-                                        <span>{{ restaurant.rating }}</span>
-                                        <span class="restaurant-card__reviews">({{ restaurant.reviewCount }})</span>
-                                    </div>
-                                </div>
-
-                                <div class="restaurant-card__info">
-                                    <span class="restaurant-card__cuisine">{{ restaurant.cuisine }}</span>
-                                    <span class="restaurant-card__price">{{ restaurant.priceRange }}</span>
-                                    <span class="restaurant-card__distance">{{ restaurant.distance }} km</span>
-                                </div>
-
-                                <div class="restaurant-card__tags">
-                                    <span class="restaurant-card__tag" v-if="restaurant.deliveryFee === 0">Envío
-                                        Gratis</span>
-                                    <span class="restaurant-card__tag" v-if="restaurant.deliveryTime <= 20">Entrega
-                                        Rápida</span>
-                                    <span class="restaurant-card__tag" v-if="restaurant.rating >= 4.8">Muy
-                                        Valorado</span>
-                                </div>
-
-                                <div class="restaurant-card__view">
-                                    <span>Ver restaurante</span>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            <div class="restaurant-hero__delivery">
+                                <div class="delivery-info">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
                                     </svg>
+                                    <span>{{ restaurant.deliveryTime }} min</span>
                                 </div>
+                                <div class="delivery-info">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="2" x2="12" y2="6"></line>
+                                        <line x1="12" y1="18" x2="12" y2="22"></line>
+                                        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                                        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                                        <line x1="2" y1="12" x2="6" y2="12"></line>
+                                        <line x1="18" y1="12" x2="22" y2="12"></line>
+                                        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                                        <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                                    </svg>
+                                    <span v-if="restaurant.deliveryFee > 0">${{ restaurant.deliveryFee.toFixed(2) }} de
+                                        envío</span>
+                                    <span v-else class="free-delivery">Envío gratis</span>
+                                </div>
+                            </div>
+                            <div class="restaurant-hero__actions">
+                                <button class="action-button">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                                        </path>
+                                    </svg>
+                                    Favorito
+                                </button>
+                                <button class="action-button">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                        <polyline points="16 6 12 2 8 6"></polyline>
+                                        <line x1="12" y1="2" x2="12" y2="15"></line>
+                                    </svg>
+                                    Compartir
+                                </button>
+                                <a :href="`https://maps.google.com/?q=${restaurant.address}`" target="_blank"
+                                    class="action-button">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    Mapa
+                                </a>
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <div class="restaurant-list__footer">
-                        <button class="load-more-button" v-if="hasMoreRestaurants">
-                            <span>Cargar más restaurantes</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <!-- Menu category navigation -->
+            <section class="category-nav">
+                <div class="container">
+                    <div class="category-scroll">
+                        <button v-if="showLeftScroll" @click="scrollCategories('left')"
+                            class="category-scroll__arrow category-scroll__arrow--left"
+                            aria-label="Ver categorías anteriores">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="6 9 12 15 18 9"></polyline>
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+
+                        <div class="category-scroll__container" ref="categoriesContainer">
+                            <button v-for="category in menuCategories" :key="category.id" class="category-nav__item"
+                                :class="{ 'category-nav__item--active': activeCategory === category.id }"
+                                @click="scrollToCategory(category.id)">
+                                {{ category.name }}
+                            </button>
+                        </div>
+
+                        <button v-if="showRightScroll" @click="scrollCategories('right')"
+                            class="category-scroll__arrow category-scroll__arrow--right"
+                            aria-label="Ver más categorías">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
                         </button>
                     </div>
                 </div>
+            </section>
+
+            <!-- Main content with menu items and cart -->
+            <section class="restaurant-content">
+                <div class="container">
+                    <div class="restaurant-content__wrapper">
+                        <!-- Menu sections -->
+                        <div class="menu-sections">
+                            <!-- Promo cards -->
+                            <div class="promo-cards">
+                                <div class="promo-card">
+                                    <div class="promo-card__content">
+                                        <h3 class="promo-card__title">Envío gratis en tu primer pedido</h3>
+                                        <p class="promo-card__text">Usa el código: BIENVENIDO</p>
+                                    </div>
+                                    <div class="promo-card__image">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
+                                            <circle cx="16" cy="16" r="7"></circle>
+                                            <line x1="16" y1="12" x2="16" y2="20"></line>
+                                            <line x1="12" y1="16" x2="20" y2="16"></line>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="promo-card">
+                                    <div class="promo-card__content">
+                                        <h3 class="promo-card__title">10% de descuento</h3>
+                                        <p class="promo-card__text">Pedidos mayores a $300</p>
+                                    </div>
+                                    <div class="promo-card__image">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <line x1="19" y1="5" x2="5" y2="19"></line>
+                                            <circle cx="6.5" cy="6.5" r="2.5"></circle>
+                                            <circle cx="17.5" cy="17.5" r="2.5"></circle>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Menu sections -->
+                            <div v-for="category in menuCategories" :key="category.id" :id="category.id"
+                                class="menu-section" ref="menuSections">
+                                <h2 class="menu-section__title">{{ category.name }}</h2>
+
+                                <div class="menu-items">
+                                    <div v-for="item in category.items" :key="item.id" class="menu-item">
+                                        <div class="menu-item__content">
+                                            <h3 class="menu-item__name">{{ item.name }}</h3>
+                                            <p class="menu-item__description">{{ item.description }}</p>
+                                            <div class="menu-item__price">${{ item.price.toFixed(2) }}</div>
+                                            <div v-if="item.popular" class="menu-item__badge">Popular</div>
+                                        </div>
+                                        <div class="menu-item__image">
+                                            <img v-if="item.image" :src="item.image" :alt="item.name">
+                                            <div v-else class="menu-item__no-image"></div>
+                                            <button class="menu-item__add" @click="addToCart(item)">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cart sidebar -->
+                        <div class="cart-sidebar">
+                            <div class="cart">
+                                <div class="cart__header">
+                                    <h2 class="cart__title">Tu pedido</h2>
+                                    <button v-if="cart.items.length > 0" class="cart__clear" @click="clearCart">
+                                        Vaciar carrito
+                                    </button>
+                                </div>
+
+                                <div v-if="cart.items.length === 0" class="cart__empty">
+                                    <div class="cart__empty-icon">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <circle cx="9" cy="21" r="1"></circle>
+                                            <circle cx="20" cy="21" r="1"></circle>
+                                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <p class="cart__empty-text">Tu carrito está vacío</p>
+                                    <p class="cart__empty-subtext">Agrega elementos para empezar tu pedido</p>
+                                </div>
+
+                                <div v-else>
+                                    <div class="cart__items">
+                                        <div v-for="(item, index) in cart.items" :key="index" class="cart-item">
+                                            <div class="cart-item__quantity">
+                                                <button class="cart-item__quantity-btn" @click="decrementItem(index)">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                    </svg>
+                                                </button>
+                                                <span>{{ item.quantity }}</span>
+                                                <button class="cart-item__quantity-btn" @click="incrementItem(index)">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                    </svg>
+                                                </button>
+                                            </div>
+
+                                            <div class="cart-item__details">
+                                                <div class="cart-item__name">{{ item.name }}</div>
+                                                <button class="cart-item__remove" @click="removeItem(index)">
+                                                    Eliminar
+                                                </button>
+                                            </div>
+
+                                            <div class="cart-item__price">${{ (item.price * item.quantity).toFixed(2) }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="cart__summary">
+                                        <div class="cart__row">
+                                            <span>Subtotal</span>
+                                            <span>${{ subtotal.toFixed(2) }}</span>
+                                        </div>
+                                        <div class="cart__row">
+                                            <span>Costo de envío</span>
+                                            <span v-if="restaurant.deliveryFee > 0">${{
+                                                restaurant.deliveryFee.toFixed(2) }}</span>
+                                            <span v-else class="free-delivery">Gratis</span>
+                                        </div>
+                                        <div class="cart__row cart__row--total">
+                                            <span>Total</span>
+                                            <span>${{ total.toFixed(2) }}</span>
+                                        </div>
+                                    </div>
+
+                                    <button class="cart__checkout-btn">
+                                        Realizar pedido
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </template>
+
+        <!-- Not found state -->
+        <div v-else-if="!loading && !restaurant && !error" class="not-found">
+            <div class="not-found__icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
             </div>
-        </section>
+            <h2 class="not-found__title">Restaurante no encontrado</h2>
+            <p class="not-found__text">El restaurante que buscas no existe o ya no está disponible</p>
+            <router-link to="/" class="not-found__button">Volver a la página principal</router-link>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import PopularTag from '@/components/ui/PopularTag.vue';
 
+const route = useRoute();
 const router = useRouter();
 
 // Estado
-const restaurants = ref([]);
 const loading = ref(true);
-const searchQuery = ref('');
-const selectedCategory = ref('all');
-const sortBy = ref('popularity');
-const priceFilter = ref([]);
-const hasMoreRestaurants = ref(false);
-
-// Categorías mejoradas con iconos
-const categories = [
-    { id: 'all', name: 'Todos' },
-    { id: 'american', name: 'Americana' },
-    { id: 'italian', name: 'Italiana' },
-    { id: 'mexican', name: 'Mexicana' },
-    { id: 'asian', name: 'Asiática' },
-    { id: 'fastfood', name: 'Fast Food' },
-    { id: 'healthy', name: 'Saludable' },
-    { id: 'dessert', name: 'Postres' },
-    { id: 'vegan', name: 'Vegana' }
-];
-
-// Iconos para categorías
-const getCategoryIcon = (categoryId) => {
-    const icons = {
-        'american': '🍔',
-        'italian': '🍕',
-        'mexican': '🌮',
-        'asian': '🍜',
-        'fastfood': '🍟',
-        'healthy': '🥗',
-        'dessert': '🍦',
-        'vegan': '🥑'
-    };
-    return icons[categoryId] || '';
-};
-
-// Obtener restaurantes (simulado)
-const fetchRestaurants = async () => {
-    loading.value = true;
-
-    // Simulación de API
-    setTimeout(() => {
-        restaurants.value = [
-            {
-                id: 1,
-                name: 'Burger Kingdom',
-                cuisine: 'Americana',
-                priceRange: '$$',
-                rating: 4.8,
-                reviewCount: 324,
-                deliveryTime: 25,
-                deliveryFee: 2.99,
-                distance: 1.2,
-                coverImage: 'https://images.unsplash.com/photo-1542574271-7f3b92e6c821?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'american',
-                createdAt: new Date('2023-05-15')
-            },
-            {
-                id: 2,
-                name: 'Pizza Paradise',
-                cuisine: 'Italiana',
-                priceRange: '$$',
-                rating: 4.6,
-                reviewCount: 258,
-                deliveryTime: 35,
-                deliveryFee: 3.99,
-                distance: 2.5,
-                coverImage: 'https://images.unsplash.com/photo-1590947132387-155cc02f3212?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'italian',
-                createdAt: new Date('2023-08-01')
-            },
-            {
-                id: 3,
-                name: 'Taco Town',
-                cuisine: 'Mexicana',
-                priceRange: '$',
-                rating: 4.4,
-                reviewCount: 187,
-                deliveryTime: 20,
-                deliveryFee: 1.99,
-                distance: 0.8,
-                coverImage: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'mexican',
-                createdAt: new Date('2023-03-27')
-            },
-            {
-                id: 4,
-                name: 'Sushi Supreme',
-                cuisine: 'Japonesa',
-                priceRange: '$$$',
-                rating: 4.9,
-                reviewCount: 412,
-                deliveryTime: 40,
-                deliveryFee: 4.99,
-                distance: 3.2,
-                coverImage: 'https://images.unsplash.com/photo-1553621042-f6e147245754?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'asian',
-                createdAt: new Date('2022-12-15')
-            },
-            {
-                id: 5,
-                name: 'Green Leaf',
-                cuisine: 'Vegetariana',
-                priceRange: '$$',
-                rating: 4.7,
-                reviewCount: 156,
-                deliveryTime: 30,
-                deliveryFee: 2.49,
-                distance: 1.8,
-                coverImage: 'https://images.unsplash.com/photo-1505576399279-565b52d4ac71?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'healthy',
-                createdAt: new Date('2023-07-10')
-            },
-            {
-                id: 6,
-                name: 'Chicken Shack',
-                cuisine: 'Fast Food',
-                priceRange: '$',
-                rating: 4.3,
-                reviewCount: 289,
-                deliveryTime: 15,
-                deliveryFee: 0,
-                distance: 0.5,
-                coverImage: 'https://images.unsplash.com/photo-1559847844-5315695dadae?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1547716752-9e0568b8f169?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'fastfood',
-                createdAt: new Date('2023-09-25')
-            },
-            {
-                id: 7,
-                name: 'Pasta Palace',
-                cuisine: 'Italiana',
-                priceRange: '$$',
-                rating: 4.5,
-                reviewCount: 201,
-                deliveryTime: 35,
-                deliveryFee: 3.49,
-                distance: 2.7,
-                coverImage: 'https://images.unsplash.com/photo-1481931098730-318b6f776db0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1473093226795-af9932fe5856?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'italian',
-                createdAt: new Date('2023-01-18')
-            },
-            {
-                id: 8,
-                name: 'Breakfast Bliss',
-                cuisine: 'Americana',
-                priceRange: '$$',
-                rating: 4.7,
-                reviewCount: 178,
-                deliveryTime: 25,
-                deliveryFee: 0,
-                distance: 1.6,
-                coverImage: 'https://images.unsplash.com/photo-1496412705862-e0088f16f791?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                logo: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                category: 'american',
-                createdAt: new Date('2023-11-05')
-            }
-        ];
-
-        // Simulando que hay más restaurantes
-        hasMoreRestaurants.value = true;
-
-        loading.value = false;
-    }, 1500);
-};
-
-// Filtrar restaurantes
-const filteredRestaurants = computed(() => {
-    let result = [...restaurants.value];
-
-    // Filtrar por búsqueda
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        result = result.filter(restaurant =>
-            restaurant.name.toLowerCase().includes(query) ||
-            restaurant.cuisine.toLowerCase().includes(query)
-        );
-    }
-
-    // Filtrar por categoría
-    if (selectedCategory.value && selectedCategory.value !== 'all') {
-        result = result.filter(restaurant => restaurant.category === selectedCategory.value);
-    }
-
-    // Filtrar por precio
-    if (priceFilter.value.length > 0) {
-        result = result.filter(restaurant => priceFilter.value.includes(restaurant.priceRange));
-    }
-
-    // Ordenar restaurantes
-    switch (sortBy.value) {
-        case 'rating':
-            result.sort((a, b) => b.rating - a.rating);
-            break;
-        case 'delivery':
-            result.sort((a, b) => a.deliveryTime - b.deliveryTime);
-            break;
-        case 'price':
-            result.sort((a, b) => a.priceRange.length - b.priceRange.length);
-            break;
-        default: // popularity
-            result.sort((a, b) => b.reviewCount - a.reviewCount);
-    }
-
-    return result;
+const restaurant = ref(null);
+const error = ref(null);
+const restaurantId = ref('');
+const activeCategory = ref('');
+const menuCategories = ref([]);
+const cart = ref({
+    items: []
 });
 
-// Métodos
-const selectCategory = (categoryId) => {
-    selectedCategory.value = categoryId;
-};
-
-const togglePriceFilter = (price) => {
-    if (priceFilter.value.includes(price)) {
-        priceFilter.value = priceFilter.value.filter(p => p !== price);
-    } else {
-        priceFilter.value.push(price);
-    }
-};
-
-const resetFilters = () => {
-    searchQuery.value = '';
-    selectedCategory.value = 'all';
-    sortBy.value = 'popularity';
-    priceFilter.value = [];
-};
-
-const goToRestaurant = (restaurantId) => {
-    router.push(`/restaurant/${restaurantId}`);
-};
-
-const getResultsTitle = () => {
-    if (selectedCategory.value === 'all' && !searchQuery.value) {
-        return 'Restaurantes populares';
-    } else if (selectedCategory.value !== 'all') {
-        const category = categories.find(c => c.id === selectedCategory.value);
-        return `Restaurantes ${category ? category.name : ''}`;
-    } else if (searchQuery.value) {
-        return `Resultados para "${searchQuery.value}"`;
-    }
-    return 'Restaurantes';
-};
-
-// Helpers para badges
-const isNew = (restaurant) => {
-    // Considera nuevo si tiene menos de 2 meses
-    const twoMonthsAgo = new Date();
-    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-    return restaurant.createdAt > twoMonthsAgo;
-};
-
-const isFastDelivery = (restaurant) => {
-    return restaurant.deliveryTime <= 20;
-};
-
-// Navegación en carrusel
+// Referencias para el scroll
 const categoriesContainer = ref(null);
+const menuSections = ref([]);
 const showLeftScroll = ref(false);
 const showRightScroll = ref(true);
 
+// Calcular subtotal y total del carrito
+const subtotal = computed(() => {
+    return cart.value.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+});
+
+const total = computed(() => {
+    const deliveryFee = restaurant.value ? restaurant.value.deliveryFee : 0;
+    return subtotal.value + deliveryFee;
+});
+
+// Cargar datos del restaurante (simulado)
+const fetchRestaurantData = async () => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+        // Obtener el ID del restaurante de los parámetros de ruta
+        restaurantId.value = route.params.id;
+
+        // Validar que el ID sea válido
+        if (!restaurantId.value) {
+            throw new Error('ID de restaurante no encontrado en la URL');
+        }
+
+        // ID convertido a número para validación
+        const id = parseInt(restaurantId.value);
+
+        if (isNaN(id)) {
+            throw new Error('ID de restaurante inválido');
+        }
+
+        // Simulación de API con timeout para demostrar carga
+        const data = await new Promise((resolve, reject) => {
+            setTimeout(() => {
+                // Validar si el restaurante existe en nuestros datos (simulado)
+                // Aquí podemos añadir una condición para simular restaurantes no encontrados
+                if (id === 999) {
+                    reject(new Error('Restaurante no encontrado en la base de datos'));
+                    return;
+                }
+
+                // Datos simulados del restaurante
+                resolve({
+                    restaurant: {
+                        id: id,
+                        name: 'Burger Kingdom',
+                        cuisine: 'Americana',
+                        priceRange: '$$',
+                        rating: 4.8,
+                        reviewCount: 324,
+                        deliveryTime: 25,
+                        deliveryFee: 2.99,
+                        distance: 1.2,
+                        address: "Calle Principal 123, Ciudad",
+                        coverImage: 'https://images.unsplash.com/photo-1542574271-7f3b92e6c821?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+                        logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                    },
+                    menuCategories: [
+                        {
+                            id: 'burgers',
+                            name: 'Hamburguesas',
+                            items: [
+                                {
+                                    id: 1,
+                                    name: 'Clásica Burger',
+                                    description: 'Hamburguesa de carne con queso, lechuga, tomate y nuestra salsa especial',
+                                    price: 89.99,
+                                    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                                    popular: true
+                                },
+                                {
+                                    id: 2,
+                                    name: 'Doble Cheese Burger',
+                                    description: 'Doble carne, triple queso, tocino y cebolla caramelizada',
+                                    price: 119.99,
+                                    image: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                                    popular: true
+                                },
+                                {
+                                    id: 3,
+                                    name: 'Burger Vegetariana',
+                                    description: 'Hamburguesa a base de plantas con queso, lechuga y tomate',
+                                    price: 99.99,
+                                    image: 'https://images.unsplash.com/photo-1550317138-10000687a72b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+                                }
+                            ]
+                        },
+                        {
+                            id: 'sides',
+                            name: 'Acompañamientos',
+                            items: [
+                                {
+                                    id: 4,
+                                    name: 'Papas Fritas',
+                                    description: 'Papas fritas crujientes con sal marina',
+                                    price: 39.99,
+                                    image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                                    popular: true
+                                },
+                                {
+                                    id: 5,
+                                    name: 'Aros de Cebolla',
+                                    description: 'Aros de cebolla fritos con nuestra mezcla especial de especias',
+                                    price: 49.99,
+                                    image: 'https://images.unsplash.com/photo-1639024471283-03518883512d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+                                }
+                            ]
+                        },
+                        {
+                            id: 'drinks',
+                            name: 'Bebidas',
+                            items: [
+                                {
+                                    id: 6,
+                                    name: 'Refresco',
+                                    description: 'Coca-Cola, Sprite, Fanta o agua mineral',
+                                    price: 29.99,
+                                    image: 'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+                                },
+                                {
+                                    id: 7,
+                                    name: 'Malteada',
+                                    description: 'Malteada cremosa de chocolate, vainilla o fresa',
+                                    price: 49.99,
+                                    image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                                    popular: true
+                                }
+                            ]
+                        },
+                        {
+                            id: 'desserts',
+                            name: 'Postres',
+                            items: [
+                                {
+                                    id: 8,
+                                    name: 'Brownie con Helado',
+                                    description: 'Brownie caliente con helado de vainilla y salsa de chocolate',
+                                    price: 59.99,
+                                    image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+                                },
+                                {
+                                    id: 9,
+                                    name: 'Pastel de Queso',
+                                    description: 'Clásico pastel de queso con salsa de frutos rojos',
+                                    price: 69.99,
+                                    image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+                                }
+                            ]
+                        }
+                    ]
+                });
+            }, 1500);
+        });
+
+        // Asignar datos
+        restaurant.value = data.restaurant;
+        menuCategories.value = data.menuCategories;
+
+        // Establecer la primera categoría como activa
+        if (menuCategories.value.length > 0) {
+            activeCategory.value = menuCategories.value[0].id;
+        }
+
+    } catch (err) {
+        console.error('Error al cargar el restaurante:', err);
+        error.value = err.message || 'Error al cargar los datos del restaurante';
+        restaurant.value = null;
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Funciones de interacción con el carrito
+const addToCart = (item) => {
+    const existingItemIndex = cart.value.items.findIndex(cartItem => cartItem.id === item.id);
+
+    if (existingItemIndex >= 0) {
+        // Si el item ya está en el carrito, incrementar cantidad
+        cart.value.items[existingItemIndex].quantity += 1;
+    } else {
+        // Si no, añadirlo con cantidad 1
+        cart.value.items.push({
+            ...item,
+            quantity: 1
+        });
+    }
+};
+
+const incrementItem = (index) => {
+    cart.value.items[index].quantity += 1;
+};
+
+const decrementItem = (index) => {
+    if (cart.value.items[index].quantity > 1) {
+        cart.value.items[index].quantity -= 1;
+    } else {
+        removeItem(index);
+    }
+};
+
+const removeItem = (index) => {
+    cart.value.items.splice(index, 1);
+};
+
+const clearCart = () => {
+    cart.value.items = [];
+};
+
+// Navegación de categorías
 const checkScrollPosition = () => {
     if (!categoriesContainer.value) return;
 
@@ -534,888 +585,917 @@ const scrollCategories = (direction) => {
         container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
 
-    // Update scroll indicators after scrolling
+    // Actualizar indicadores de scroll
     setTimeout(checkScrollPosition, 300);
 };
 
-// Observar cambios en los filtros para recargar
-watch([searchQuery, selectedCategory, sortBy, priceFilter], () => {
-    if (!loading.value) {
-        // En una aplicación real, esto cargaría desde el backend
-        // El timeout simula una carga de datos
-        loading.value = true;
-        setTimeout(() => {
-            loading.value = false;
-        }, 500);
-    }
-}, { deep: true });
+// Scroll a la categoría seleccionada en el menú
+const scrollToCategory = (categoryId) => {
+    activeCategory.value = categoryId;
 
-// Inicialización al montar
-onMounted(() => {
-    selectCategory('all'); // Categoría por defecto
-    fetchRestaurants();
+    nextTick(() => {
+        const section = document.getElementById(categoryId);
+        if (section) {
+            // Calcular offset para el header
+            const navHeight = document.querySelector('.category-nav')?.offsetHeight || 0;
+            const topOffset = section.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
 
-    // Verificar indicadores de scroll
-    setTimeout(() => {
-        if (categoriesContainer.value) {
-            checkScrollPosition();
-            categoriesContainer.value.addEventListener('scroll', checkScrollPosition);
+            window.scrollTo({
+                top: topOffset,
+                behavior: 'smooth'
+            });
         }
-    }, 300);
-});
+    });
+};
+
+// Observer para detectar qué sección es visible
+const setupIntersectionObserver = () => {
+    // Asegurarse de que el navegador soporte IntersectionObserver
+    if (!('IntersectionObserver' in window)) {
+        console.warn('IntersectionObserver no es soportado en este navegador');
+        return;
+    }
+
+    // Asegurarse de que el elemento exista antes de obtener su altura
+    const navElement = document.querySelector('.category-nav');
+    const navHeight = navElement ? navElement.offsetHeight : 0;
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                activeCategory.value = entry.target.id;
+
+                // Scroll a la categoría activa en el menú de navegación
+                const activeButton = categoriesContainer.value?.querySelector(`.category-nav__item--active`);
+                if (activeButton) {
+                    activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }
+        });
+    }, {
+        rootMargin: `-${navHeight + 10}px 0px -${window.innerHeight - navHeight - 200}px 0px`,
+        threshold: 0
+    });
+
+    // Observar todas las secciones del menú
+    if (menuSections.value && menuSections.value.length > 0) {
+        menuSections.value.forEach(section => {
+            if (section) observer.observe(section);
+        });
+    }
+};
+
+// Handler para cambio de ruta
+watch(() => route.params.id, (newId, oldId) => {
+    if (newId !== oldId) {
+        fetchRestaurantData();
+    }
+}, { immediate: false });
+
+// Inicialización
+onMounted(async () => {
+    await fetchRestaurantData();
+
+    nextTick(() => {
+        // Configurar observer después de que el DOM se haya actualizado
+        if (menuSections.value && menuSections.value.length > 0) {
+            setupIntersectionObserver();
+        }
+
+        // Comprobar los indicadores de scroll
+        setTimeout(() => {
+            if (categoriesContainer.value) {
+                checkScrollPosition();
+                categoriesContainer.value.addEventListener('scroll', checkScrollPosition);
+            }
+        }, 300);
+    });
+})
 </script>
 
 <style lang="scss" scoped>
 // Variables
-$primary: #FF416C;
-$primary-gradient: linear-gradient(to right, #FF416C, #FF4B2B);
-$secondary: #0652DD;
-$secondary-gradient: linear-gradient(to right, #0652DD, #12CBC4);
-$accent: #FFA502;
-$dark: #1e293b;
-$light: #f8fafc;
-$text: #1e293b;
-$text-light: #64748b;
-$border: #e2e8f0;
+$primary-color: #06C167; // Color principal de Uber Eats
+$black: #000000;
+$white: #FFFFFF;
+$light-gray: #F6F6F6;
+$medium-gray: #EEEEEE;
+$dark-gray: #545454;
+$text-primary: #000000;
+$text-secondary: #757575;
+$success-color: #06C167;
+$warning-color: #FF8000;
+$border-radius-sm: 8px;
 $border-radius: 16px;
-$transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+$box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+$transition: all 0.2s ease;
 
 // Container
 .container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 2rem;
+    padding: 0 24px;
 
     @media (max-width: 768px) {
-        padding: 0 1.5rem;
+        padding: 0 16px;
     }
 }
 
-// Header
-.header {
-    background: $primary-gradient;
-    color: white;
-    padding: 5rem 0 8rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image:
-            radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-        z-index: 1;
-    }
-
-    &__title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        position: relative;
-        z-index: 2;
-
-        @media (max-width: 768px) {
-            font-size: 2.5rem;
-        }
-
-        @media (max-width: 480px) {
-            font-size: 2rem;
-        }
-    }
-
-    &__subtitle {
-        font-size: 1.25rem;
-        opacity: 0.9;
-        margin-bottom: 2.5rem;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-        position: relative;
-        z-index: 2;
-
-        @media (max-width: 768px) {
-            font-size: 1.1rem;
-        }
-    }
-
-    &__popular-searches {
-        margin-top: 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        position: relative;
-        z-index: 2;
-
-        @media (max-width: 768px) {
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-    }
-
-    &__popular-label {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.95rem;
-    }
-
-    &__popular-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        justify-content: center;
-    }
-
-    &__wave {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        line-height: 0;
-        z-index: 1;
-
-        svg {
-            width: 100%;
-            height: auto;
-        }
-    }
+.restaurant-detail-page {
+    background-color: $light-gray;
+    min-height: 100vh;
 }
 
-// Popular tag
-.popular-tag {
-    background-color: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    border-radius: 50px;
-    padding: 0.35rem 1rem;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(5px);
-
-    &:hover {
-        background-color: rgba(255, 255, 255, 0.25);
-        transform: translateY(-2px);
-    }
-}
-
-// Search bar
-.search-bar {
+// Loading container
+.loading-container {
     display: flex;
-    max-width: 700px;
-    margin: 0 auto;
-    border-radius: $border-radius;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 10;
-
-    @media (max-width: 768px) {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    &__input-wrapper {
-        flex: 1;
-        position: relative;
-        background-color: white;
-        border-radius: $border-radius 0 0 $border-radius;
-        overflow: hidden;
-
-        @media (max-width: 768px) {
-            border-radius: $border-radius;
-        }
-    }
-
-    &__icon {
-        position: absolute;
-        left: 1.25rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: $primary;
-    }
-
-    &__input {
-        width: 100%;
-        border: none;
-        outline: none;
-        padding: 1.25rem 1.25rem 1.25rem 3.25rem;
-        font-size: 1.05rem;
-        color: $dark;
-
-        &::placeholder {
-            color: #94a3b8;
-        }
-    }
-
-    &__button {
-        background: $secondary-gradient;
-        color: white;
-        border: none;
-        padding: 0 2rem;
-        font-weight: 600;
-        font-size: 1.05rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-radius: 0 $border-radius $border-radius 0;
-        transition: all 0.3s ease;
-
-        svg {
-            transition: transform 0.3s ease;
-        }
-
-        &:hover {
-            box-shadow: 0 5px 15px rgba($secondary, 0.3);
-
-            svg {
-                transform: translateX(3px);
-            }
-        }
-
-        @media (max-width: 768px) {
-            border-radius: $border-radius;
-            justify-content: center;
-            padding: 1rem;
-        }
-    }
-}
-
-// Filters section
-.filters {
-    background-color: white;
-    padding: 1.5rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-    margin-top: -4rem;
-    border-radius: $border-radius;
-    margin-bottom: 2rem;
-
-    &__wrapper {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-
-        @media (max-width: 992px) {
-            flex-direction: column;
-            align-items: stretch;
-        }
-    }
-
-    &__categories {
-        flex: 1;
-        max-width: 70%;
-
-        @media (max-width: 992px) {
-            max-width: 100%;
-        }
-    }
-
-    &__extra {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-
-        @media (max-width: 768px) {
-            flex-direction: column;
-            align-items: flex-start;
-            width: 100%;
-            gap: 1rem;
-        }
-    }
-}
-
-// Category scroll
-.category-scroll {
-    position: relative;
-
-    &__container {
-        display: flex;
-        gap: 0.75rem;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
-        padding: 0.5rem 0;
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-    }
-
-    &__gradient {
-        position: absolute;
-        top: 0;
-        height: 100%;
-        width: 5rem;
-        z-index: 1;
-        pointer-events: none;
-
-        &--left {
-            left: 0;
-            background: linear-gradient(to right, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
-        }
-
-        &--right {
-            right: 0;
-            background: linear-gradient(to left, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
-        }
-    }
-
-    &__arrow {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: white;
-        border: 1px solid $border;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        z-index: 2;
-        transition: all 0.3s ease;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-
-        &:hover {
-            background-color: $primary;
-            border-color: $primary;
-            color: white;
-            box-shadow: 0 5px 15px rgba($primary, 0.2);
-        }
-
-        &--left {
-            left: 0.5rem;
-        }
-
-        &--right {
-            right: 0.5rem;
-        }
-    }
-}
-
-// Category button
-.category-button {
-    white-space: nowrap;
-    padding: 0.6rem 1.2rem;
-    border: 1px solid $border;
-    background-color: white;
-    color: $text;
-    border-radius: 50px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: $transition;
-    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-
-    &__icon {
-        font-size: 1.2rem;
-    }
-
-    &:hover {
-        border-color: $primary;
-        color: $primary;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    &--active {
-        background: $primary-gradient;
-        color: white;
-        border-color: transparent;
-
-        &:hover {
-            color: white;
-            box-shadow: 0 5px 15px rgba($primary, 0.2);
-        }
-    }
-}
-
-// Filter option
-.filter-option {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-
-    @media (max-width: 768px) {
-        width: 100%;
-    }
-}
-
-.filter-label {
-    font-size: 0.95rem;
-    color: $text-light;
-    font-weight: 500;
-}
-
-// Filter select
-.filter-select-wrapper {
-    position: relative;
-
-    @media (max-width: 768px) {
-        flex: 1;
-    }
-}
-
-.filter-select {
-    appearance: none;
-    padding: 0.6rem 2.5rem 0.6rem 1.2rem;
-    border: 1px solid $border;
-    border-radius: 50px;
-    background-color: white;
-    font-size: 0.95rem;
-    color: $text;
-    cursor: pointer;
-    transition: all 0.3s ease;
-
-    &:focus {
-        outline: none;
-        border-color: $primary;
-        box-shadow: 0 0 0 3px rgba($primary, 0.1);
-    }
-
-    @media (max-width: 768px) {
-        width: 100%;
-    }
-}
-
-.filter-select-icon {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: $text-light;
-    pointer-events: none;
-}
-
-// Price filter
-.price-filter {
-    display: flex;
-    gap: 0.25rem;
-
-    &__button {
-        min-width: 38px;
-        height: 38px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid $border;
-        background-color: white;
-        color: $text;
-        border-radius: 50px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        &:hover {
-            border-color: $primary;
-            color: $primary;
-        }
-
-        &--active {
-            background: $primary-gradient;
-            color: white;
-            border-color: transparent;
-
-            &:hover {
-                color: white;
-            }
-        }
-    }
-}
-
-// Restaurant list
-.restaurant-list {
-    padding: 2rem 0 5rem;
-    background-color: $light;
-    min-height: 50vh;
-
-    &__header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-
-        @media (max-width: 768px) {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-    }
-
-    &__title {
-        font-size: 2rem;
-        font-weight: 800;
-        color: $dark;
-        margin: 0;
-
-        @media (max-width: 768px) {
-            font-size: 1.75rem;
-        }
-    }
-
-    &__count {
-        color: $text-light;
-        font-size: 1rem;
-    }
-
-    &__footer {
-        margin-top: 3rem;
-        text-align: center;
-    }
-}
-
-// Restaurant grid
-.restaurant-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 2rem;
-
-    @media (max-width: 768px) {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    }
-
-    @media (max-width: 480px) {
-        grid-template-columns: 1fr;
-    }
-}
-
-// Restaurant card
-.restaurant-card {
-    background-color: white;
-    border-radius: $border-radius;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    transition: $transition;
-    cursor: pointer;
-    border: 1px solid rgba(0, 0, 0, 0.03);
-
-    &:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1);
-
-        .restaurant-card__image img {
-            transform: scale(1.05);
-        }
-
-        .restaurant-card__view {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    &__image {
-        height: 180px;
-        position: relative;
-        overflow: hidden;
-
-        img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s ease;
-        }
-    }
-
-    &__badges {
-        position: absolute;
-        top: 1rem;
-        left: 1rem;
-        display: flex;
-        gap: 0.5rem;
-        z-index: 1;
-    }
-
-    &__badge {
-        padding: 0.35rem 0.75rem;
-        border-radius: 50px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        backdrop-filter: blur(4px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-        &--new {
-            background-color: rgba(16, 185, 129, 0.9);
-            color: white;
-        }
-
-        &--fast {
-            background-color: rgba(245, 158, 11, 0.9);
-            color: white;
-        }
-    }
-
-    &__delivery-info {
-        position: absolute;
-        bottom: 1rem;
-        right: 1rem;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.5rem;
-        z-index: 1;
-    }
-
-    &__delivery-time {
-        background-color: rgba(0, 0, 0, 0.75);
-        color: white;
-        padding: 0.4rem 0.75rem;
-        border-radius: 50px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        backdrop-filter: blur(4px);
-    }
-
-    &__delivery-fee {
-        background-color: rgba(255, 255, 255, 0.9);
-        color: $text;
-        padding: 0.4rem 0.75rem;
-        border-radius: 50px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        backdrop-filter: blur(4px);
-    }
-
-    &__free-delivery {
-        color: #10b981;
-        font-weight: 600;
-    }
-
-    &__content {
-        padding: 1.5rem;
-        position: relative;
-    }
-
-    &__header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.75rem;
-    }
-
-    &__name {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: $dark;
-        margin: 0 0 0.5rem;
-    }
-
-    &__rating {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-weight: 700;
-        color: $dark;
-    }
-
-    &__reviews {
-        font-weight: 400;
-        color: $text-light;
-        font-size: 0.8rem;
-    }
-
-    &__info {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-
-        span {
-            color: $text-light;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-
-            &::after {
-                content: '';
-                display: inline-block;
-                width: 3px;
-                height: 3px;
-                background-color: $border;
-                border-radius: 50%;
-                margin-left: 0.75rem;
-            }
-
-            &:last-child::after {
-                display: none;
-            }
-        }
-    }
-
-    &__tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    &__tag {
-        background-color: #f8fafc;
-        color: $text-light;
-        padding: 0.25rem 0.75rem;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        border: 1px solid $border;
-    }
-
-    &__view {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        background: $primary-gradient;
-        color: white;
-        padding: 0.6rem 1.2rem;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-top: auto;
-        opacity: 0;
-        transform: translateY(10px);
-        transition: all 0.3s ease;
-
-        svg {
-            transition: transform 0.3s ease;
-        }
-
-        &:hover svg {
-            transform: translateX(3px);
-        }
-    }
-}
-
-// Loading state
-.loading-state {
-    text-align: center;
-    padding: 3rem 1rem;
-
-    &__title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: $dark;
-        margin: 1rem 0 0.5rem;
-    }
-
-    &__text {
-        color: $text-light;
-        margin-bottom: 0;
-    }
+    justify-content: center;
+    padding: 100px 0;
 
     .loading-spinner {
-        display: inline-block;
-        width: 64px;
-        height: 64px;
-        border: 4px solid rgba($primary, 0.1);
+        width: 48px;
+        height: 48px;
+        border: 3px solid $light-gray;
         border-radius: 50%;
-        border-top-color: $primary;
-        animation: spin 1s ease-in-out infinite;
+        border-top-color: $primary-color;
+        animation: spinner 1s linear infinite;
+        margin-bottom: 16px;
     }
 
-    @keyframes spin {
+    .loading-text {
+        color: $text-secondary;
+        font-size: 16px;
+    }
+
+    @keyframes spinner {
         to {
             transform: rotate(360deg);
         }
     }
 }
 
-// Empty state
-.empty-state {
-    text-align: center;
-    padding: 4rem 1rem;
+// Restaurant hero section
+.restaurant-hero {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    padding: 160px 0 40px;
+    color: $white;
 
-    &__icon {
+    &__overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.8));
+        z-index: 1;
+    }
+
+    &__content {
+        position: relative;
+        z-index: 2;
         display: flex;
-        align-items: center;
-        justify-content: center;
+        gap: 24px;
+
+        @media (max-width: 768px) {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+    }
+
+    &__logo {
         width: 120px;
         height: 120px;
-        background-color: #f8fafc;
-        border-radius: 50%;
-        margin: 0 auto 1.5rem;
-        color: $text-light;
+        border-radius: $border-radius;
+        overflow: hidden;
+        flex-shrink: 0;
+        box-shadow: $box-shadow;
+        border: 3px solid $white;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
     }
 
-    &__title {
-        font-size: 1.5rem;
+    &__info {
+        flex: 1;
+    }
+
+    &__name {
+        font-size: 36px;
         font-weight: 700;
-        color: $dark;
-        margin: 0 0 0.5rem;
+        margin: 0 0 8px;
+
+        @media (max-width: 768px) {
+            font-size: 28px;
+        }
     }
 
-    &__text {
-        color: $text-light;
-        margin-bottom: 2rem;
-        max-width: 400px;
-        margin-left: auto;
-        margin-right: auto;
+    &__tags {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+
+        span {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            justify-content: center;
+        }
     }
 
-    &__button {
-        background: $primary-gradient;
-        color: white;
-        border: none;
-        padding: 0.8rem 1.5rem;
-        border-radius: 50px;
+    &__rating {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+
+        @media (max-width: 768px) {
+            justify-content: center;
+        }
+    }
+
+    &__rating-score {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
+    }
 
-        &:hover {
-            box-shadow: 0 5px 15px rgba($primary, 0.3);
-            transform: translateY(-2px);
+    &__rating-count {
+        opacity: 0.8;
+        font-size: 14px;
+    }
+
+    &__delivery {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+
+        @media (max-width: 768px) {
+            justify-content: center;
+        }
+    }
+
+    &__actions {
+        display: flex;
+        gap: 12px;
+
+        @media (max-width: 768px) {
+            justify-content: center;
         }
     }
 }
 
-// Load more button
-.load-more-button {
-    display: inline-flex;
+// Dot separator
+.dot-separator {
+    width: 4px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    display: inline-block;
+}
+
+// Delivery info
+.delivery-info {
+    display: flex;
     align-items: center;
-    gap: 0.5rem;
-    background-color: white;
-    color: $primary;
-    border: 1px solid $border;
-    padding: 0.8rem 2rem;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    gap: 6px;
+    font-size: 14px;
 
     svg {
-        transition: transform 0.3s ease;
+        opacity: 0.8;
     }
+}
+
+// Free delivery badge
+.free-delivery {
+    color: $success-color;
+    font-weight: 600;
+}
+
+// Action buttons
+.action-button {
+    background-color: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: $white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: $transition;
+    text-decoration: none;
 
     &:hover {
-        background-color: #f8fafc;
-        border-color: $primary;
+        background-color: rgba(255, 255, 255, 0.25);
+    }
+}
 
-        svg {
-            transform: translateY(3px);
+// Rating button
+.rating-button {
+    background-color: transparent;
+    border: none;
+    color: $white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 100px;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: $transition;
+
+    &:hover {
+        opacity: 1;
+        text-decoration: underline;
+    }
+}
+
+// Category navigation
+.category-nav {
+    background-color: $white;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    .category-scroll {
+        position: relative;
+        display: flex;
+        align-items: center;
+
+        &__container {
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            scroll-behavior: smooth;
+
+            &::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        &__arrow {
+            position: absolute;
+            z-index: 2;
+            background-color: $white;
+            border: 1px solid $medium-gray;
+            color: $text-primary;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: $transition;
+
+            &:hover {
+                background-color: $light-gray;
+            }
+
+            &--left {
+                left: 0;
+            }
+
+            &--right {
+                right: 0;
+            }
         }
     }
+}
+
+// Category nav item
+.category-nav__item {
+    padding: 16px 20px;
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: $text-secondary;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: $transition;
+
+    &:hover {
+        color: $text-primary;
+    }
+
+    &--active {
+        color: $primary-color;
+        border-bottom-color: $primary-color;
+        font-weight: 600;
+    }
+}
+
+// Restaurant content
+.restaurant-content {
+    padding: 40px 0 60px;
+
+    &__wrapper {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 32px;
+
+        @media (max-width: 992px) {
+            grid-template-columns: 1fr;
+        }
+    }
+}
+
+// Promo cards
+.promo-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+// Promo card
+.promo-card {
+    background: linear-gradient(to right, #f6f8fe, #ffffff);
+    border-radius: $border-radius;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e0e7ff;
+
+    &__content {
+        flex: 1;
+    }
+
+    &__title {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 600;
+        color: $text-primary;
+    }
+
+    &__text {
+        margin: 0;
+        font-size: 14px;
+        color: $text-secondary;
+    }
+
+    &__image {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6366f1;
+        flex-shrink: 0;
+    }
+}
+
+// Menu section
+.menu-section {
+    margin-bottom: 40px;
+    scroll-margin-top: 70px;
+
+    &__title {
+        font-size: 20px;
+        font-weight: 700;
+        color: $text-primary;
+        margin: 0 0 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid $medium-gray;
+    }
+}
+
+// Menu items
+.menu-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+
+    @media (max-width: 576px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+// Menu item
+.menu-item {
+    background-color: $white;
+    border-radius: $border-radius;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: $transition;
+    position: relative;
+
+    &:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+
+        .menu-item__add {
+            opacity: 1;
+        }
+    }
+
+    &__content {
+        padding: 16px;
+        flex: 1;
+    }
+
+    &__name {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 4px;
+        color: $text-primary;
+    }
+
+    &__description {
+        font-size: 14px;
+        color: $text-secondary;
+        margin: 0 0 12px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    &__price {
+        font-weight: 600;
+        color: $text-primary;
+    }
+
+    &__badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background-color: $warning-color;
+        color: $white;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 100px;
+        z-index: 1;
+    }
+
+    &__image {
+        width: 100px;
+        height: 100px;
+        overflow: hidden;
+        position: relative;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    &__no-image {
+        width: 100%;
+        height: 100%;
+        background-color: $light-gray;
+    }
+
+    &__add {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: $primary-color;
+        color: $white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: $transition;
+
+        &:hover {
+            background-color: darken($primary-color, 5%);
+            transform: scale(1.1);
+        }
+    }
+}
+
+// Cart sidebar
+.cart-sidebar {
+    position: sticky;
+    top: 70px;
+
+    @media (max-width: 992px) {
+        position: static;
+    }
+}
+
+// Cart
+.cart {
+    background-color: $white;
+    border-radius: $border-radius;
+    box-shadow: $box-shadow;
+    padding: 24px;
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    &__title {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+        color: $text-primary;
+    }
+
+    &__clear {
+        background: none;
+        border: none;
+        color: $text-secondary;
+        font-size: 14px;
+        cursor: pointer;
+
+        &:hover {
+            color: #f43f5e;
+            text-decoration: underline;
+        }
+    }
+
+    &__empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+        text-align: center;
+
+        &-icon {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: $light-gray;
+            border-radius: 50%;
+            color: $text-secondary;
+            margin-bottom: 16px;
+        }
+
+        &-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: $text-primary;
+            margin: 0 0 8px;
+        }
+
+        &-subtext {
+            font-size: 14px;
+            color: $text-secondary;
+            margin: 0;
+        }
+    }
+
+    &__items {
+        margin-bottom: 24px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    &__summary {
+        border-top: 1px solid $medium-gray;
+        padding-top: 16px;
+        margin-bottom: 24px;
+    }
+
+    &__row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: $text-secondary;
+
+        &--total {
+            font-size: 16px;
+            font-weight: 600;
+            color: $text-primary;
+        }
+    }
+
+    &__checkout-btn {
+        width: 100%;
+        background-color: $primary-color;
+        color: $white;
+        border: none;
+        border-radius: $border-radius-sm;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: $transition;
+
+        &:hover {
+            background-color: darken($primary-color, 5%);
+        }
+    }
+}
+
+// Cart item
+.cart-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid $light-gray;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &__quantity {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 12px;
+
+        span {
+            min-width: 24px;
+            text-align: center;
+            font-weight: 600;
+        }
+    }
+
+    &__quantity-btn {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        border: 1px solid $medium-gray;
+        background-color: $white;
+        color: $text-primary;
+        cursor: pointer;
+        transition: $transition;
+
+        &:hover {
+            background-color: $light-gray;
+        }
+    }
+
+    &__details {
+        flex: 1;
+    }
+
+    &__name {
+        font-weight: 500;
+        margin-bottom: 4px;
+    }
+
+    &__remove {
+        background: none;
+        border: none;
+        color: $text-secondary;
+        padding: 0;
+        font-size: 12px;
+        cursor: pointer;
+
+        &:hover {
+            color: #f43f5e;
+            text-decoration: underline;
+        }
+    }
+
+    &__price {
+        font-weight: 600;
+        margin-left: 12px;
+    }
+}
+
+// Not found state
+.not-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 0;
+    text-align: center;
+
+    &__icon {
+        width: 80px;
+        height: 80px;
+        background-color: $light-gray;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text-secondary;
+        margin-bottom: 24px;
+    }
+
+    &__title {
+        font-size: 24px;
+        font-weight: 700;
+        color: $text-primary;
+        margin: 0 0 12px;
+    }
+
+    &__text {
+        color: $text-secondary;
+        margin: 0 0 24px;
+        max-width: 500px;
+    }
+
+    &__button {
+        background-color: $primary-color;
+        color: $white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: $border-radius-sm;
+        font-weight: 600;
+        text-decoration: none;
+        transition: $transition;
+
+        &:hover {
+            background-color: darken($primary-color, 5%);
+        }
+    }
+
+    /* Estilos para el contenedor de error */
+    .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 100px 24px;
+        text-align: center;
+    }
+
+    .error-icon {
+        width: 80px;
+        height: 80px;
+        background-color: #FEE2E2;
+        color: #DC2626;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+    }
+
+    .error-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 12px;
+    }
+
+    .error-message {
+        color: #4B5563;
+        margin: 0 0 8px;
+        max-width: 500px;
+    }
+
+    .error-id {
+        font-family: monospace;
+        background-color: #F3F4F6;
+        padding: 4px 12px;
+        border-radius: 6px;
+        margin: 12px 0 24px;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .error-button {
+        background-color: #06C167;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background-color: #059655;
+        }
+    }
+
 }
 </style>
