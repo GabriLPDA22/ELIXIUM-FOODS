@@ -1,25 +1,24 @@
 // src/assets/styles/mixins.scss
+@use 'variables' as *;
+
 // Responsive breakpoints
 @mixin respond-to($breakpoint) {
-    @if $breakpoint ==sm {
+    @if $breakpoint == sm {
         @media (min-width: $breakpoint-sm) {
             @content;
         }
     }
-
-    @else if $breakpoint ==md {
+    @else if $breakpoint == md {
         @media (min-width: $breakpoint-md) {
             @content;
         }
     }
-
-    @else if $breakpoint ==lg {
+    @else if $breakpoint == lg {
         @media (min-width: $breakpoint-lg) {
             @content;
         }
     }
-
-    @else if $breakpoint ==xl {
+    @else if $breakpoint == xl {
         @media (min-width: $breakpoint-xl) {
             @content;
         }
@@ -53,15 +52,13 @@
 
 // Box shadow utilities
 @mixin box-shadow($level: 1) {
-    @if $level ==1 {
+    @if $level == 1 {
         box-shadow: $shadow-sm;
     }
-
-    @else if $level ==2 {
+    @else if $level == 2 {
         box-shadow: $shadow-md;
     }
-
-    @else if $level ==3 {
+    @else if $level == 3 {
         box-shadow: $shadow-lg;
     }
 }

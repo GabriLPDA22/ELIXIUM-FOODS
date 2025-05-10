@@ -1,4 +1,8 @@
-// src/assets/styles/main.scss
+/* src/assets/styles/main.scss */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
 @import 'variables';
 @import 'mixins';
 
@@ -27,7 +31,7 @@ body {
 }
 
 a {
-    color: #FF6B6B;
+    color: variables.$primary-color;
     text-decoration: none;
     transition: color 0.3s;
 
@@ -46,4 +50,85 @@ a {
 
 .text-center {
     text-align: center;
+}
+
+// Gradientes personalizados
+.bg-gradient-primary {
+    background: linear-gradient(135deg, variables.$primary-color, variables.$secondary-color);
+}
+
+// Animaciones
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(-25%);
+        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+        transform: translateY(0);
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+}
+
+// Estilos específicos del panel
+.admin-panel {
+    font-family: 'Inter', sans-serif;
+
+    .token-display {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+
+        &::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: rgba(155, 155, 155, 0.5);
+            border-radius: 3px;
+        }
+    }
+}
+
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+// Scrollbar personalizado para logs
+.logs-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.logs-container::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+.logs-container::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+
+    &:hover {
+        background: #64748b;
+    }
+}
+
+// Responsive design
+@include mixins.respond-to(md) {
+    .container {
+        padding: 0 2rem;
+    }
 }

@@ -5,60 +5,81 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/views/Home.vue')
+    component: () => import('@/views/Home.vue'),
   },
   {
     path: '/restaurants',
     name: 'restaurants',
     component: () => import('@/views/RestaurantList.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/restaurant/:id',
-    redirect: to => ({ path: `/restaurants/${to.params.id}` })
+    redirect: (to) => ({ path: `/restaurants/${to.params.id}` }),
   },
   {
     path: '/restaurants/:id',
     name: 'restaurant-detail',
     component: () => import('@/views/RestaurantDetail.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/about',
     name: 'about',
     component: () => import('@/views/AboutUs.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/special-offers',
     name: 'offers',
     component: () => import('@/views/Offers.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/profile',
     name: 'user-profile',
     component: () => import('@/views/UserProfile.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',
     name: 'login',
     component: () => import('@/views/Login.vue'),
-    meta: { guest: true }
+    meta: { guest: true },
   },
   {
     path: '/register',
     name: 'register',
     component: () => import('@/views/Register.vue'),
-    meta: { guest: true }
+    meta: { guest: true },
   },
   {
     path: '/forgot-password',
     name: 'forgot-password',
     component: () => import('@/views/ForgotPassword.vue'),
-    meta: { guest: true }
-  }
+    meta: { guest: true },
+  },
+  // Añadir rutas para manejo de errores
+  {
+    path: '/unauthorized',
+    name: 'unauthorized',
+    component: () => import('@/views/Unauthorized.vue'),
+  },
+  {
+    path: '/admin',
+    name: 'admin-panel',
+    component: () => import('@/views/AdminPanel.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ['Admin'] // Solo admins pueden acceder
+    }
+  },
+  // NotFound debe ser siempre la última ruta
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFound.vue'),
+  },
 ]
 
 export default routes
