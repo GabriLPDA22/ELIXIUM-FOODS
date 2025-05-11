@@ -10,8 +10,4 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
-
-// La inicialización del auth ya se hace automáticamente en el store
-// según el código que me mostraste, no necesitamos llamarlo aquí
-
 app.mount('#app')
