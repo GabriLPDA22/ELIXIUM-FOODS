@@ -48,8 +48,11 @@
     </div>
 
     <!-- Tabla de pedidos -->
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
+    <div v-if="!isLoading" class="overflow-x-auto">
+      <div v-if="filteredOrders.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
+        <p class="text-gray-500">No hay pedidos que coincidan con los criterios de búsqueda</p>
+      </div>
+      <table v-else class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
@@ -66,14 +69,18 @@
           <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-gray-50">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ order.id }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">{{ order.user.firstName }} {{ order.user.lastName }}</div>
-              <div class="text-sm text-gray-500">{{ order.user.email }}</div>
+              <div v-if="order.user" class="text-sm font-medium text-gray-900">
+                {{ order.user.firstName || '' }} {{ order.user.lastName || '' }}
+              </div>
+              <div v-if="order.user" class="text-sm text-gray-500">{{ order.user.email || '' }}</div>
+              <div v-if="!order.user" class="text-sm text-gray-500">Usuario no disponible</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">{{ order.restaurant.name }}</div>
+              <div v-if="order.restaurant" class="text-sm font-medium text-gray-900">{{ order.restaurant.name || 'N/A' }}</div>
+              <div v-else class="text-sm text-gray-500">Restaurante no disponible</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-              €{{ order.total.toFixed(2) }}
+              €{{ order.total ? order.total.toFixed(2) : '0.00' }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -84,7 +91,7 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div v-if="order.deliveryPerson">
                 <div class="text-sm font-medium text-gray-900">
-                  {{ order.deliveryPerson.firstName }} {{ order.deliveryPerson.lastName }}
+                  {{ order.deliveryPerson.firstName || '' }} {{ order.deliveryPerson.lastName || '' }}
                 </div>
               </div>
               <div v-else class="text-sm text-gray-500">No asignado</div>
@@ -128,9 +135,12 @@
         </tbody>
       </table>
     </div>
+    <div v-else class="py-8 text-center bg-gray-50 rounded-lg">
+      <p class="text-gray-500">Cargando pedidos...</p>
+    </div>
 
     <!-- Paginación -->
-    <div class="flex items-center justify-between">
+    <div v-if="!isLoading && filteredOrders.length > 0" class="flex items-center justify-between">
       <div class="text-sm text-gray-700">
         Página <span class="font-medium">{{ orderPage }}</span> de <span class="font-medium">{{ totalOrderPages }}</span>
       </div>
@@ -167,8 +177,8 @@
                 <h4 class="text-lg font-semibold">Información General</h4>
               </div>
               <span class="px-3 py-1 inline-flex text-sm font-semibold rounded-full"
-                :class="getOrderStatusBadgeColor(viewingOrder.status)">
-                {{ getOrderStatusText(viewingOrder.status) }}
+                :class="getOrderStatusBadgeColor(viewingOrder.status || '')">
+                {{ getOrderStatusText(viewingOrder.status || '') }}
               </span>
             </div>
 
@@ -176,17 +186,21 @@
               <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="mb-3">
                   <span class="text-sm text-gray-500">Cliente:</span>
-                  <p class="font-medium">{{ viewingOrder.user?.firstName }} {{ viewingOrder.user?.lastName }}</p>
-                  <p class="text-sm text-gray-600">{{ viewingOrder.user?.email }}</p>
+                  <p v-if="viewingOrder.user" class="font-medium">
+                    {{ viewingOrder.user.firstName || '' }} {{ viewingOrder.user.lastName || '' }}
+                  </p>
+                  <p v-if="viewingOrder.user" class="text-sm text-gray-600">{{ viewingOrder.user.email || '' }}</p>
+                  <p v-if="!viewingOrder.user" class="text-sm text-gray-600">Usuario no disponible</p>
                 </div>
                 <div class="mb-3">
                   <span class="text-sm text-gray-500">Restaurante:</span>
-                  <p class="font-medium">{{ viewingOrder.restaurant?.name }}</p>
+                  <p v-if="viewingOrder.restaurant" class="font-medium">{{ viewingOrder.restaurant.name || 'N/A' }}</p>
+                  <p v-else class="text-sm text-gray-600">Restaurante no disponible</p>
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Repartidor:</span>
                   <p v-if="viewingOrder.deliveryPerson" class="font-medium">
-                    {{ viewingOrder.deliveryPerson?.firstName }} {{ viewingOrder.deliveryPerson?.lastName }}
+                    {{ viewingOrder.deliveryPerson.firstName || '' }} {{ viewingOrder.deliveryPerson.lastName || '' }}
                   </p>
                   <p v-else class="text-gray-600">No asignado</p>
                 </div>
@@ -202,17 +216,18 @@
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Dirección de entrega:</span>
-                  <p class="font-medium">
-                    {{ viewingOrder.deliveryAddress?.street }} {{ viewingOrder.deliveryAddress?.number }},
-                    {{ viewingOrder.deliveryAddress?.city }}
+                  <p v-if="viewingOrder.deliveryAddress" class="font-medium">
+                    {{ viewingOrder.deliveryAddress.street || '' }} {{ viewingOrder.deliveryAddress.number || '' }},
+                    {{ viewingOrder.deliveryAddress.city || '' }}
                   </p>
+                  <p v-else class="text-sm text-gray-600">Dirección no disponible</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Resumen de artículos -->
-          <div class="mb-6">
+          <div v-if="viewingOrder.orderItems && viewingOrder.orderItems.length > 0" class="mb-6">
             <h4 class="text-lg font-semibold mb-3">Detalles del pedido</h4>
             <div class="bg-gray-50 rounded-lg overflow-hidden">
               <table class="min-w-full divide-y divide-gray-200">
@@ -227,39 +242,42 @@
                 <tbody class="divide-y divide-gray-200">
                   <tr v-for="item in viewingOrder.orderItems" :key="item.id">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {{ item.product.name }}
+                      {{ item.product?.name || 'Producto no disponible' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                      {{ item.quantity }}
+                      {{ item.quantity || 0 }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                      €{{ item.unitPrice.toFixed(2) }}
+                      €{{ item.unitPrice ? item.unitPrice.toFixed(2) : '0.00' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                      €{{ item.subtotal.toFixed(2) }}
+                      €{{ item.subtotal ? item.subtotal.toFixed(2) : '0.00' }}
                     </td>
                   </tr>
                 </tbody>
                 <tfoot class="bg-gray-50">
                   <tr>
                     <td colspan="3" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Subtotal:</td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.subtotal.toFixed(2) }}</td>
+                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.subtotal ? viewingOrder.subtotal.toFixed(2) : '0.00' }}</td>
                   </tr>
                   <tr>
                     <td colspan="3" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Gastos de envío:</td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.deliveryFee.toFixed(2) }}</td>
+                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.deliveryFee ? viewingOrder.deliveryFee.toFixed(2) : '0.00' }}</td>
                   </tr>
                   <tr>
                     <td colspan="3" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Impuestos:</td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.tax.toFixed(2) }}</td>
+                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.tax ? viewingOrder.tax.toFixed(2) : '0.00' }}</td>
                   </tr>
                   <tr class="bg-gray-100">
                     <td colspan="3" class="px-6 py-3 text-right text-base font-semibold text-gray-900">Total:</td>
-                    <td class="px-6 py-3 text-right text-base font-semibold text-gray-900">€{{ viewingOrder.total.toFixed(2) }}</td>
+                    <td class="px-6 py-3 text-right text-base font-semibold text-gray-900">€{{ viewingOrder.total ? viewingOrder.total.toFixed(2) : '0.00' }}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
+          </div>
+          <div v-else class="mb-6 bg-gray-50 p-4 rounded-lg text-center">
+            <p class="text-gray-500">No hay detalles de productos disponibles</p>
           </div>
 
           <!-- Información de pago -->
@@ -269,11 +287,11 @@
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <span class="text-sm text-gray-500">Método de pago:</span>
-                  <p class="font-medium">{{ viewingOrder.payment.paymentMethod }}</p>
+                  <p class="font-medium">{{ viewingOrder.payment.paymentMethod || 'N/A' }}</p>
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Estado:</span>
-                  <p class="font-medium capitalize">{{ viewingOrder.payment.status }}</p>
+                  <p class="font-medium capitalize">{{ viewingOrder.payment.status || 'N/A' }}</p>
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Fecha:</span>
@@ -281,6 +299,9 @@
                 </div>
               </div>
             </div>
+          </div>
+          <div v-else class="mb-6 bg-gray-50 p-4 rounded-lg text-center">
+            <p class="text-gray-500">No hay información de pago disponible</p>
           </div>
 
           <!-- Acciones del pedido -->
@@ -315,8 +336,11 @@
 
         <div class="p-6">
           <div class="mb-4">
-            <p class="text-sm text-gray-600 mb-2">Pedido #{{ updatingOrder.id }} para {{ updatingOrder.user?.firstName }} {{ updatingOrder.user?.lastName }}</p>
-            <p class="text-sm text-gray-600 mb-4">Estado actual: <span class="font-semibold">{{ getOrderStatusText(updatingOrder.status) }}</span></p>
+            <p class="text-sm text-gray-600 mb-2">
+              Pedido #{{ updatingOrder.id }} para 
+              {{ updatingOrder.user ? (updatingOrder.user.firstName + ' ' + updatingOrder.user.lastName) : 'Usuario no disponible' }}
+            </p>
+            <p class="text-sm text-gray-600 mb-4">Estado actual: <span class="font-semibold">{{ getOrderStatusText(updatingOrder.status || '') }}</span></p>
 
             <label class="block text-sm font-medium text-gray-700 mb-1">Nuevo estado:</label>
             <select v-model="newOrderStatus" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
@@ -365,8 +389,10 @@
         <div class="p-6">
           <div class="mb-6">
             <p class="text-sm text-gray-600 mb-2">¿Estás seguro de que deseas eliminar el siguiente pedido?</p>
-            <div class="bg-gray-50 p-4 rounded-lg text-sm">
-              <strong>Pedido #{{ itemToDelete?.id }}:</strong> {{ itemToDelete?.restaurant?.name }} - €{{ itemToDelete?.total?.toFixed(2) }}
+            <div v-if="itemToDelete" class="bg-gray-50 p-4 rounded-lg text-sm">
+              <strong>Pedido #{{ itemToDelete.id }}:</strong> 
+              {{ itemToDelete.restaurant ? itemToDelete.restaurant.name : 'Restaurante no disponible' }} - 
+              €{{ itemToDelete.total ? itemToDelete.total.toFixed(2) : '0.00' }}
             </div>
             <p class="text-sm text-red-600 mt-2">Esta acción no se puede deshacer.</p>
           </div>
@@ -388,18 +414,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { api } from '@/services/api';
 
 // Props
 const props = defineProps({
   orders: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   },
   deliveryPersons: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   }
 });
 
@@ -408,6 +436,7 @@ const emit = defineEmits(['refresh', 'update', 'add-alert']);
 
 // Estados
 const refreshing = ref(false);
+const isLoading = ref(true);
 const orderSearch = ref('');
 const orderStatusFilter = ref('');
 const orderDateFilter = ref('');
@@ -419,9 +448,9 @@ const showConfirmDelete = ref(false);
 const itemToDelete = ref(null);
 const isUpdatingOrderStatus = ref(false);
 
-// Estados para el modal de orden
-const viewingOrder = reactive({
-  id: null,
+// Valores iniciales para evitar errores de nullish
+const defaultOrder = {
+  id: 0,
   user: null,
   restaurant: null,
   deliveryAddress: null,
@@ -431,33 +460,48 @@ const viewingOrder = reactive({
   deliveryFee: 0,
   tax: 0,
   total: 0,
-  estimatedDeliveryTime: '',
-  createdAt: '',
-  updatedAt: '',
+  estimatedDeliveryTime: new Date(),
+  createdAt: new Date(),
+  updatedAt: new Date(),
   orderItems: [],
   payment: null
-});
+};
 
-// Estado para actualización de orden
-const updatingOrder = reactive({
-  id: null,
-  status: '',
-  user: null,
-  deliveryPersonId: null
-});
+// Estados para el modal de orden usando valores por defecto para evitar errores
+const viewingOrder = reactive({...defaultOrder});
+
+// Estado para actualización de orden con valores seguros
+const updatingOrder = reactive({...defaultOrder});
 const newOrderStatus = ref('');
 const selectedDeliveryPerson = ref('');
 
+// Lifecycle hooks
+onMounted(() => {
+  // Marcar como cargado después de un breve periodo para evitar parpadeos
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 500);
+});
+
+// Observar cambios en props.orders para actualizar la UI
+watch(() => props.orders, (newValue) => {
+  isLoading.value = false;
+}, { deep: true });
+
 // Computed
 const filteredOrders = computed(() => {
+  if (!props.orders || props.orders.length === 0) {
+    return [];
+  }
+
   let filtered = [...props.orders];
 
   if (orderSearch.value) {
     const searchTerm = orderSearch.value.toLowerCase();
     filtered = filtered.filter(order =>
-      order.id.toString().includes(searchTerm) ||
-      (order.user && `${order.user.firstName} ${order.user.lastName}`.toLowerCase().includes(searchTerm)) ||
-      (order.restaurant && order.restaurant.name.toLowerCase().includes(searchTerm))
+      (order.id && order.id.toString().includes(searchTerm)) ||
+      (order.user && order.user.firstName && `${order.user.firstName} ${order.user.lastName}`.toLowerCase().includes(searchTerm)) ||
+      (order.restaurant && order.restaurant.name && order.restaurant.name.toLowerCase().includes(searchTerm))
     );
   }
 
@@ -467,7 +511,7 @@ const filteredOrders = computed(() => {
 
   if (orderDateFilter.value) {
     const searchDate = orderDateFilter.value;
-    filtered = filtered.filter(order => order.createdAt.startsWith(searchDate));
+    filtered = filtered.filter(order => order.createdAt && order.createdAt.startsWith(searchDate));
   }
 
   const start = (orderPage.value - 1) * ordersPerPage;
@@ -476,14 +520,16 @@ const filteredOrders = computed(() => {
 });
 
 const totalOrderPages = computed(() => {
+  if (!props.orders) return 1;
+  
   let filtered = [...props.orders];
 
   if (orderSearch.value) {
     const searchTerm = orderSearch.value.toLowerCase();
     filtered = filtered.filter(order =>
-      order.id.toString().includes(searchTerm) ||
-      (order.user && `${order.user.firstName} ${order.user.lastName}`.toLowerCase().includes(searchTerm)) ||
-      (order.restaurant && order.restaurant.name.toLowerCase().includes(searchTerm))
+      (order.id && order.id.toString().includes(searchTerm)) ||
+      (order.user && order.user.firstName && `${order.user.firstName} ${order.user.lastName}`.toLowerCase().includes(searchTerm)) ||
+      (order.restaurant && order.restaurant.name && order.restaurant.name.toLowerCase().includes(searchTerm))
     );
   }
 
@@ -493,14 +539,14 @@ const totalOrderPages = computed(() => {
 
   if (orderDateFilter.value) {
     const searchDate = orderDateFilter.value;
-    filtered = filtered.filter(order => order.createdAt.startsWith(searchDate));
+    filtered = filtered.filter(order => order.createdAt && order.createdAt.startsWith(searchDate));
   }
 
-  return Math.ceil(filtered.length / ordersPerPage);
+  return Math.ceil(filtered.length / ordersPerPage) || 1;
 });
 
 const availableOrderStatuses = computed(() => {
-  const currentStatus = updatingOrder.status;
+  const currentStatus = updatingOrder.status || '';
 
   // Definir las transiciones válidas para cada estado
   const validTransitions = {
@@ -533,38 +579,59 @@ const availableOrderStatuses = computed(() => {
 
 // Métodos de gestión de pedidos
 const refreshOrders = async () => {
+  refreshing.value = true;
+  isLoading.value = true;
   emit('refresh');
+  
+  // Simular un pequeño retraso para mostrar el feedback al usuario
+  setTimeout(() => {
+    refreshing.value = false;
+    isLoading.value = false;
+  }, 800);
 };
 
 const searchOrders = async () => {
+  isLoading.value = true;
   orderPage.value = 1;
   emit('refresh');
+  
+  // Simular un pequeño retraso para mostrar el feedback al usuario
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 500);
 };
 
 const viewOrder = (order) => {
-  // Copiar los datos del pedido al objeto reactivo
-  Object.assign(viewingOrder, order);
+  // Crear una copia profunda para evitar problemas de reactivity
+  const orderCopy = JSON.parse(JSON.stringify(order));
+  
+  // Usar Object.assign para preservar las propiedades reactivas
+  Object.assign(viewingOrder, defaultOrder, orderCopy);
+  
   showOrderModal.value = true;
 };
 
 const closeOrderModal = () => {
   showOrderModal.value = false;
+  // Reiniciar el viewingOrder para evitar datos obsoletos
+  Object.assign(viewingOrder, defaultOrder);
 };
 
 const updateOrderStatus = (order) => {
-  // Inicializar el modal de actualización
-  Object.assign(updatingOrder, {
-    id: order.id,
-    status: order.status,
-    user: order.user,
-    deliveryPersonId: order.deliveryPersonId
-  });
+  // Crear una copia profunda para evitar problemas de reactivity
+  const orderCopy = JSON.parse(JSON.stringify(order));
+  
+  // Inicializar el modal de actualización con valores seguros
+  Object.assign(updatingOrder, defaultOrder, orderCopy);
 
   // Seleccionar el primer estado disponible por defecto
   if (availableOrderStatuses.value.length > 0) {
     newOrderStatus.value = availableOrderStatuses.value[0].value;
+  } else {
+    newOrderStatus.value = '';
   }
 
+  selectedDeliveryPerson.value = '';
   showUpdateStatusModal.value = true;
 };
 
@@ -576,6 +643,8 @@ const closeUpdateStatusModal = () => {
   showUpdateStatusModal.value = false;
   newOrderStatus.value = '';
   selectedDeliveryPerson.value = '';
+  // Reiniciar el updatingOrder
+  Object.assign(updatingOrder, defaultOrder);
 };
 
 const submitOrderStatusUpdate = async () => {
@@ -669,7 +738,8 @@ const cancelOrder = async (order) => {
 
 // Métodos para el manejo de la eliminación
 const confirmDelete = (order) => {
-  itemToDelete.value = order;
+  // Hacer una copia para evitar problemas de referencia
+  itemToDelete.value = JSON.parse(JSON.stringify(order));
   showConfirmDelete.value = true;
 };
 
@@ -705,6 +775,8 @@ const handleDelete = async () => {
     showConfirmDelete.value = false;
     emit('add-alert', 'Pedido eliminado con éxito', 'success');
     emit('update'); // Actualizar estadísticas
+  } finally {
+    itemToDelete.value = null;
   }
 };
 
@@ -750,11 +822,11 @@ const getOrderStatusText = (status) => {
     'Delivered': 'Entregado',
     'Cancelled': 'Cancelado'
   };
-  return statuses[status] || status;
+  return statuses[status] || status || 'Desconocido';
 };
 
 const canUpdateOrderStatus = (order) => {
   // Un pedido se puede actualizar si no está en un estado final
-  return !['Delivered', 'Cancelled'].includes(order.status);
+  return order && !['Delivered', 'Cancelled'].includes(order.status);
 };
 </script>
