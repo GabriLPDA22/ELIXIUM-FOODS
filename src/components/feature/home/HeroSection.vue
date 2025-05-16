@@ -273,7 +273,7 @@ const address = ref('')
         border-top: 1px solid rgba(0,0,0,0.05); // Línea sutil de separación en mobile
 
         &:hover {
-            background: linear-gradient(to right, darken(#FF416C, 5%), darken(#FF4B2B, 5%));
+            background: linear-gradient(to right, #FF416C, #FF4B2B);
         }
 
         svg {

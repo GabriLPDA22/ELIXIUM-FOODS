@@ -192,7 +192,7 @@ $transition: all 0.25s ease;
         transform: translateY(4px);
 
         &:hover {
-            background-color: darken($primary-color, 5%);
+            background-color: $primary-color;
             transform: scale(1.1) translateY(0);
         }
 

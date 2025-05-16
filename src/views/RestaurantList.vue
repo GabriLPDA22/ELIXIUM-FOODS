@@ -946,7 +946,7 @@ $transition: all 0.2s ease;
     color: $white;
 
     &:hover {
-      background-color: darken($primary-color, 5%);
+      background-color: $primary-color;
     }
   }
 }
@@ -1225,7 +1225,7 @@ $transition: all 0.2s ease;
     transition: $transition;
 
     &:hover {
-      background-color: darken($primary-color, 5%);
+      background-color: $primary-color;
     }
   }
 }
