@@ -198,7 +198,7 @@
                             </div>
 
                             <!-- Menu sections -->
-                            <div v-for="category in menuCategories" :key="category.id" :id="category.id"
+                            <div v-for="category in menuCategories" :key="category.id" :id="category.id.toString()"
                                 class="menu-section" ref="menuSections">
                                 <h2 class="menu-section__title">{{ category.name }}</h2>
 
