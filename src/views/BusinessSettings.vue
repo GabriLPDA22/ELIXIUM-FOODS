@@ -528,7 +528,7 @@ const loadRestaurantData = () => {
       description: businessAuthStore.business.description || '',
       estimatedDeliveryTime: businessAuthStore.business.estimatedDeliveryTime || 30,
       deliveryFee: businessAuthStore.business.deliveryFee || 2.99,
-      tipo: businessAuthStore.business.typeId || 1, // Asegúrate que el store tenga typeId o similar
+      tipo: businessAuthStore.business.typeId || 1,
       isOpen: businessAuthStore.business.isOpen !== undefined ? businessAuthStore.business.isOpen : true,
       logoUrl: businessAuthStore.business.logoUrl || null,
       coverImageUrl: businessAuthStore.business.coverImageUrl || null,
