@@ -303,9 +303,10 @@
                                         </div>
                                     </div>
 
-                                    <button class="cart__checkout-btn">
-                                        Realizar pedido
-                                    </button>
+                                    <CartCheckoutButton 
+                                        :disabled="cart.items.length === 0" 
+                                        :button-text="cart.items.length > 0 ? 'Realizar pedido' : 'Agrega productos'"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -331,11 +332,14 @@
     </div>
 </template>
 
+<!-- Script completo actualizado para RestaurantDetail.vue -->
+
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuItem } from '@/services/restaurantService'
 import { useCartStore } from '@/stores/cart'
+import CartCheckoutButton from '@/components/feature/cart/CartCheckoutButton.vue'
 
 // Router y route
 const route = useRoute()
@@ -419,10 +423,25 @@ const fetchRestaurantData = async () => {
 
 // Funciones de interacción con el carrito
 const addToCart = (item: MenuItem) => {
+    // Si el carrito tiene elementos de otro restaurante, preguntar si quiere vaciarlo
+    if (cartStore.restaurantId !== null && 
+        cartStore.restaurantId !== restaurantId.value) {
+        if (confirm(
+            `Tu carrito contiene elementos de otro restaurante. ¿Deseas vaciarlo para pedir de ${restaurant.value?.name}?`
+        )) {
+            // Vaciar carrito
+            cartStore.clearCart();
+            cart.value.items = [];
+        } else {
+            return; // Usuario canceló
+        }
+    }
+
+    // Buscar si el ítem ya está en el carrito local
     const existingItemIndex = cart.value.items.findIndex(cartItem => cartItem.id === item.id)
 
     if (existingItemIndex >= 0) {
-        // Si el item ya está en el carrito, incrementar cantidad
+        // Si ya existe, incrementar cantidad
         cart.value.items[existingItemIndex].quantity += 1
     } else {
         // Si no, añadirlo con cantidad 1
@@ -433,26 +452,56 @@ const addToCart = (item: MenuItem) => {
             quantity: 1
         })
     }
+    
+    // Actualizar el store global del carrito
+    cartStore.addToCart({
+        id: item.id,
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        imageUrl: item.imageUrl || '',
+        restaurantId: restaurantId.value || 0,
+        restaurantName: restaurant.value?.name || '',
+        categoryId: 0,
+        isAvailable: true,
+        description: item.description || ''
+    }, 1)
 }
 
 const incrementItem = (index: number) => {
-    cart.value.items[index].quantity += 1
+    const item = cart.value.items[index]
+    item.quantity += 1
+    
+    // Actualizar el store del carrito real
+    cartStore.updateQuantity(item.id, item.quantity)
 }
 
 const decrementItem = (index: number) => {
     if (cart.value.items[index].quantity > 1) {
         cart.value.items[index].quantity -= 1
+        
+        // Actualizar el store del carrito real
+        cartStore.updateQuantity(cart.value.items[index].id, cart.value.items[index].quantity)
     } else {
         removeItem(index)
     }
 }
 
 const removeItem = (index: number) => {
+    const itemId = cart.value.items[index].id
     cart.value.items.splice(index, 1)
+    
+    // Eliminar del store del carrito real
+    cartStore.removeItem(itemId)
 }
 
 const clearCart = () => {
-    cart.value.items = []
+    if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
+        cart.value.items = []
+        
+        // Limpiar el store del carrito real
+        cartStore.clearCart()
+    }
 }
 
 // Navegación de categorías
@@ -555,6 +604,16 @@ watch(() => route.params.id, (newId, oldId) => {
 // Inicialización
 onMounted(async () => {
     await fetchRestaurantData()
+
+    // Sincroniza el carrito local con el store global
+    if (cartStore.items.length > 0 && cartStore.restaurantId === restaurantId.value) {
+        cart.value.items = cartStore.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+        }))
+    }
 
     nextTick(() => {
         // Configurar observer después de que el DOM se haya actualizado
