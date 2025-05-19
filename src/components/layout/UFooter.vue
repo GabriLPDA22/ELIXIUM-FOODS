@@ -63,7 +63,7 @@
                 <li><a href="#" class="u-footer__link">Sobre Nosotros</a></li>
                 <li><a href="#" class="u-footer__link">Empleos</a></li>
                 <li><a href="#" class="u-footer__link">Blog</a></li>
-                <li><a href="#" class="u-footer__link">Asociarse</a></li>
+                <li><a href="#" class="u-footer__link">Elixium Business</a></li>
                 <li><a href="#" class="u-footer__link">Inversores</a></li>
               </ul>
             </div>

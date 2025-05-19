@@ -1,4 +1,3 @@
-// src/router/routes.ts
 import { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
@@ -83,7 +82,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ForgotPassword.vue'),
     meta: { guest: true },
   },
-  // Añadir rutas para manejo de errores
   {
     path: '/unauthorized',
     name: 'unauthorized',
@@ -95,10 +93,74 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AdminPanel.vue'),
     meta: {
       requiresAuth: true,
-      requiresRole: ['Admin'] // Solo admins pueden acceder
+      requiresRole: ['Admin']
     }
   },
-  // NotFound debe ser siempre la última ruta
+  {
+    path: '/business',
+    name: 'business',
+    redirect: '/business/login'
+  },
+  {
+    path: '/business/login',
+    name: 'business-login',
+    component: () => import('@/views/BusinessLogin.vue'),
+    meta: { businessGuest: true }
+  },
+  {
+    path: '/business/register',
+    name: 'business-register',
+    component: () => import('@/views/BusinessRegister.vue'),
+    meta: { businessGuest: true }
+  },
+  {
+    path: '/business/forgot-password',
+    name: 'business-forgot-password',
+    component: () => import('@/views/BusinessForgotPassword.vue'),
+    meta: { businessGuest: true }
+  },
+  {
+    path: '/business/dashboard',
+    component: () => import('@/views/BusinessDashboard.vue'),
+    meta: { requiresBusinessAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'business-dashboard',
+        component: () => import('@/views/BusinessHome.vue')
+      },
+      {
+        path: 'products',
+        name: 'business-products',
+        component: () => import('@/views/BusinessProducts.vue')
+      },
+      {
+        path: 'orders',
+        name: 'business-orders',
+        component: () => import('@/views/BusinessOrders.vue')
+      },
+      {
+        path: 'promotions',
+        name: 'business-promotions',
+        component: () => import('@/views/BusinessPromotions.vue')
+      },
+      {
+        path: 'analytics',
+        name: 'business-analytics',
+        component: () => import('@/views/BusinessAnalytics.vue')
+      },
+      {
+        path: 'settings',
+        name: 'business-settings',
+        component: () => import('@/views/BusinessSettings.vue')
+      }
+    ]
+  },
+  {
+    path: '/business/unauthorized',
+    name: 'business-unauthorized',
+    component: () => import('@/views/BusinessUnauthorized.vue'),
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',

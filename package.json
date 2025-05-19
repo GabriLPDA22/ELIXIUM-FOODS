@@ -20,6 +20,7 @@
         "vue-router": "^4.2.5"
     },
     "devDependencies": {
+        "@types/node": "^22.15.19",
         "@vitejs/plugin-vue": "^5.0.2",
         "autoprefixer": "^10.4.21",
         "eslint": "^8.57.0",
