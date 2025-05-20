@@ -162,7 +162,7 @@
               <h3 class="about-team__member-name">Presi Martínez</h3>
               <p class="about-team__member-role">CEO & Fundador</p>
               <p class="about-team__member-bio">
-                Emprendedor con 70 años de experiencia en tecnología y servicios de delivery.
+                El que paga el claude.
               </p>
             </div>
             <div class="about-team__member">
