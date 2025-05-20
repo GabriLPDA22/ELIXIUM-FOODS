@@ -181,14 +181,14 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="../../public/images/Balatrez.jpg" 
+                  src="../../public/images/Claudia.png" 
                   alt="COO" 
                 />
               </div>
-              <h3 class="about-team__member-name">Balatro Balatrez</h3>
-              <p class="about-team__member-role">COO</p>
+              <h3 class="about-team__member-name">Claude</h3>
+              <p class="about-team__member-role">Esclavo y carry</p>
               <p class="about-team__member-bio">
-                Balatro Balatrez esta jugando balatro.
+                Tercer miembro del equipo, el encargado de hacer los inserts que me dan pereza.
               </p>
             </div>
           </div>
