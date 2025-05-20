@@ -146,51 +146,28 @@
           <!-- Tab: Dashboard principal -->
           <div v-if="activeTab === 'dashboard'" class="space-y-6">
             <!-- Gráficas del Dashboard -->
-            <DashboardCharts
-              :totalUsers="users.length"
-              :orders="orders"
-              :restaurants="restaurants"
-            />
+            <DashboardCharts :totalUsers="users.length" :orders="orders" :restaurants="restaurants" />
           </div>
 
           <!-- Tabs de componentes -->
-          <AdminUsers 
-            v-if="activeTab === 'users'" 
-            :users="users"
-            @refresh="refreshAllData"
-            @update="updateStats"
-            @add-alert="addAlert"
-          />
-          
-          <AdminRestaurants 
-            v-if="activeTab === 'restaurants'" 
-            :restaurants="restaurants"
-            :restaurantOwners="restaurantOwners"
-            @refresh="refreshAllData"
-            @update="updateStats"
-            @add-alert="addAlert"
-          />
-          
-          <AdminOrders 
-            v-if="activeTab === 'orders'" 
-            :orders="orders"
-            :deliveryPersons="deliveryPersons"
-            @refresh="refreshOrders"
-            @update="updateStats"
-            @add-alert="addAlert"
-          />
-          
-          <AdminJwtDebug 
-            v-if="activeTab === 'jwt'" 
-            :users="users"
-            @add-alert="addAlert"
-          />
-          
-          <AdminLogs 
-            v-if="activeTab === 'logs'" 
-            :logs="logs"
-            @add-alert="addAlert"
-          />
+          <AdminUsers v-if="activeTab === 'users'" :users="users" @refresh="refreshAllData" @update="updateStats"
+            @add-alert="addAlert" />
+
+          <!-- Nuevo componente para Business -->
+          <AdminBusinesses v-if="activeTab === 'businesses'" :businesses="businesses" @refresh="refreshAllData"
+            @update="updateStats" @add-alert="addAlert" @view-restaurants="handleViewBusinessRestaurants"
+            @edit-restaurant="handleEditRestaurant" />
+
+          <AdminRestaurants v-if="activeTab === 'restaurants'" :restaurants="restaurants"
+            :restaurantOwners="restaurantOwners" :businesses="businesses" :filterByBusinessId="activeFilterBusinessId"
+            @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert" />
+
+          <AdminOrders v-if="activeTab === 'orders'" :orders="orders" :deliveryPersons="deliveryPersons"
+            @refresh="refreshOrders" @update="updateStats" @add-alert="addAlert" />
+
+          <AdminJwtDebug v-if="activeTab === 'jwt'" :users="users" @add-alert="addAlert" />
+
+          <AdminLogs v-if="activeTab === 'logs'" :logs="logs" @add-alert="addAlert" />
         </div>
       </div>
     </div>
@@ -205,6 +182,7 @@ import authService from '@/services/authService';
 import { useAuthStore } from '@/stores/auth';
 import DashboardCharts from '@/components/DashboardCharts.vue';
 import AdminUsers from '@/views/admin/AdminUsers.vue';
+import AdminBusinesses from '@/views/admin/AdminBusinesses.vue';
 import AdminRestaurants from '@/views/admin/AdminRestaurants.vue';
 import AdminOrders from '@/views/admin/AdminOrders.vue';
 import AdminJwtDebug from '@/views/admin/AdminJwtDebug.vue';
@@ -217,10 +195,12 @@ const authStore = useAuthStore();
 const refreshing = ref(false);
 const activeTab = ref('dashboard'); // Mostrar el dashboard por defecto
 const alerts = ref([]);
+const activeFilterBusinessId = ref(null);
 
 // Datos compartidos
 const users = ref([]);
 const restaurants = ref([]);
+const businesses = ref([]); // Nuevo array para negocios
 const orders = ref([]);
 const logs = ref([]);
 const restaurantOwners = ref([]);
@@ -236,6 +216,7 @@ const stats = reactive({
 const mainTabs = [
   { id: 'dashboard', name: 'Dashboard', icon: '📊' },
   { id: 'users', name: 'Usuarios', icon: '👥' },
+  { id: 'businesses', name: 'Negocios', icon: '🏢' }, // Nueva tab para negocios
   { id: 'restaurants', name: 'Restaurantes', icon: '🍽️' },
   { id: 'orders', name: 'Pedidos', icon: '📦' },
   { id: 'jwt', name: 'JWT Debug', icon: '🔐' },
@@ -317,6 +298,7 @@ const refreshAllData = async () => {
   try {
     await Promise.all([
       fetchUsers(),
+      fetchBusinesses(), // Añadir carga de negocios
       fetchRestaurants(),
       fetchOrders(),
       fetchLogs()
@@ -385,6 +367,133 @@ const fetchUsers = async () => {
   }
 };
 
+// Nuevo método para cargar negocios
+const fetchBusinesses = async () => {
+  try {
+    // Obtener negocios del backend
+    const response = await api.get('/api/Business');
+
+    // Si no hay datos, usar datos de ejemplo
+    if (!response.data || response.data.length === 0) {
+      businesses.value = [
+        {
+          id: 1,
+          name: 'Food Enterprises',
+          description: 'Grupo de restaurantes de comida rápida',
+          contactEmail: 'contact@foodenterprises.com',
+          contactPhone: '123-456-7890',
+          taxId: 'B12345678',
+          businessType: 'Restaurant',
+          isActive: true,
+          createdAt: '2024-01-10',
+          updatedAt: '2024-04-15',
+          restaurants: [
+            {
+              id: 1,
+              name: 'Burger King',
+              description: 'Fast food restaurant',
+              tipo: 1,
+              isOpen: true,
+              averageRating: 4.2
+            },
+            {
+              id: 2,
+              name: 'Pizza Hut',
+              description: 'Pizza restaurant',
+              tipo: 2,
+              isOpen: true,
+              averageRating: 4.5
+            }
+          ]
+        },
+        {
+          id: 2,
+          name: 'Gourmet Group',
+          description: 'Restaurantes gourmet',
+          contactEmail: 'info@gourmetgroup.com',
+          contactPhone: '987-654-3210',
+          taxId: 'B87654321',
+          businessType: 'Restaurant',
+          isActive: true,
+          createdAt: '2024-02-15',
+          updatedAt: '2024-04-10',
+          restaurants: [
+            {
+              id: 3,
+              name: 'Taco Bell',
+              description: 'Mexican food',
+              tipo: 4,
+              isOpen: false,
+              averageRating: 3.8
+            }
+          ]
+        }
+      ];
+    } else {
+      businesses.value = response.data;
+    }
+  } catch (error) {
+    console.error('Error fetchBusinesses:', error);
+    addAlert('Error al obtener negocios', 'error');
+
+    // Si hay un error, usamos datos de ejemplo
+    businesses.value = [
+      {
+        id: 1,
+        name: 'Food Enterprises',
+        description: 'Grupo de restaurantes de comida rápida',
+        contactEmail: 'contact@foodenterprises.com',
+        contactPhone: '123-456-7890',
+        taxId: 'B12345678',
+        businessType: 'Restaurant',
+        isActive: true,
+        createdAt: '2024-01-10',
+        updatedAt: '2024-04-15',
+        restaurants: [
+          {
+            id: 1,
+            name: 'Burger King',
+            description: 'Fast food restaurant',
+            tipo: 1,
+            isOpen: true,
+            averageRating: 4.2
+          },
+          {
+            id: 2,
+            name: 'Pizza Hut',
+            description: 'Pizza restaurant',
+            tipo: 2,
+            isOpen: true,
+            averageRating: 4.5
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: 'Gourmet Group',
+        description: 'Restaurantes gourmet',
+        contactEmail: 'info@gourmetgroup.com',
+        contactPhone: '987-654-3210',
+        taxId: 'B87654321',
+        businessType: 'Restaurant',
+        isActive: true,
+        createdAt: '2024-02-15',
+        updatedAt: '2024-04-10',
+        restaurants: [
+          {
+            id: 3,
+            name: 'Taco Bell',
+            description: 'Mexican food',
+            tipo: 4,
+            isOpen: false,
+            averageRating: 3.8
+          }
+        ]
+      }
+    ];
+  }
+};
+
 const fetchRestaurants = async () => {
   try {
     // Obtener restaurantes del backend
@@ -402,7 +511,8 @@ const fetchRestaurants = async () => {
           isOpen: true,
           averageRating: 4.2,
           createdAt: '2024-01-15',
-          logoUrl: 'https://via.placeholder.com/40'
+          logoUrl: 'https://via.placeholder.com/40',
+          businessId: 1
         },
         {
           id: 2,
@@ -413,7 +523,8 @@ const fetchRestaurants = async () => {
           isOpen: true,
           averageRating: 4.5,
           createdAt: '2024-02-10',
-          logoUrl: 'https://via.placeholder.com/40'
+          logoUrl: 'https://via.placeholder.com/40',
+          businessId: 1
         },
         {
           id: 3,
@@ -424,7 +535,8 @@ const fetchRestaurants = async () => {
           isOpen: false,
           averageRating: 3.8,
           createdAt: '2024-03-05',
-          logoUrl: 'https://via.placeholder.com/40'
+          logoUrl: 'https://via.placeholder.com/40',
+          businessId: 2
         },
       ];
     } else {
@@ -445,7 +557,8 @@ const fetchRestaurants = async () => {
         isOpen: true,
         averageRating: 4.2,
         createdAt: '2024-01-15',
-        logoUrl: 'https://via.placeholder.com/40'
+        logoUrl: 'https://via.placeholder.com/40',
+        businessId: 1
       },
       {
         id: 2,
@@ -456,7 +569,8 @@ const fetchRestaurants = async () => {
         isOpen: true,
         averageRating: 4.5,
         createdAt: '2024-02-10',
-        logoUrl: 'https://via.placeholder.com/40'
+        logoUrl: 'https://via.placeholder.com/40',
+        businessId: 1
       },
       {
         id: 3,
@@ -467,7 +581,8 @@ const fetchRestaurants = async () => {
         isOpen: false,
         averageRating: 3.8,
         createdAt: '2024-03-05',
-        logoUrl: 'https://via.placeholder.com/40'
+        logoUrl: 'https://via.placeholder.com/40',
+        businessId: 2
       },
     ];
   }
@@ -635,6 +750,19 @@ const refreshOrders = async () => {
   } finally {
     refreshing.value = false;
   }
+};
+
+// Manejadores para interacción entre componentes
+const handleViewBusinessRestaurants = (data) => {
+  activeFilterBusinessId.value = data.businessId;
+  activeTab.value = 'restaurants';
+  addAlert(`Mostrando restaurantes de ${data.businessName}`, 'info');
+};
+
+const handleEditRestaurant = (restaurant) => {
+  activeTab.value = 'restaurants';
+  // Aquí podrías emitir un evento o establecer un estado para que el componente de restaurantes sepa que debe abrir el modal de edición
+  addAlert(`Editando restaurante ${restaurant.name}`, 'info');
 };
 
 // Exportar datos

@@ -2,10 +2,18 @@
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
-      <h2 class="text-xl font-semibold text-gray-900">Gestión de Restaurantes</h2>
-      <button @click="addRestaurant" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-        <span class="mr-1">+</span> Nuevo Restaurante
-      </button>
+      <h2 class="text-xl font-semibold text-gray-900">
+        {{ businessFilterName ? `Restaurantes de ${businessFilterName}` : 'Gestión de Restaurantes' }}
+      </h2>
+      <div class="flex gap-2">
+        <button v-if="businessFilterName" @click="clearBusinessFilter"
+          class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition">
+          Mostrar todos
+        </button>
+        <button @click="addRestaurant" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+          <span class="mr-1">+</span> Nuevo Restaurante
+        </button>
+      </div>
     </div>
 
     <!-- Filtros y búsqueda -->
@@ -35,6 +43,16 @@
           <option value="7">Postres</option>
           <option value="8">Saludable</option>
         </select>
+
+        <!-- Nuevo selector de negocios -->
+        <select v-model="businessFilter"
+          class="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+          <option value="">Todos los negocios</option>
+          <option v-for="business in businesses" :key="business.id" :value="business.id">
+            {{ business.name }}
+          </option>
+        </select>
+
         <button @click="searchRestaurants"
           class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
           Buscar
@@ -49,7 +67,7 @@
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propietario</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Negocio</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valoración</th>
@@ -75,7 +93,7 @@
               </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ restaurant.owner?.firstName }} {{ restaurant.owner?.lastName }}
+              {{ getBusinessName(restaurant.businessId) || 'Sin asignar' }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -188,11 +206,12 @@
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
-             <label class="block text-sm font-medium text-gray-700 mb-1">Propietario:</label>
-              <select v-model="editingRestaurant.userId" required
+              <label class="block text-sm font-medium text-gray-700 mb-1">Negocio:</label>
+              <select v-model="editingRestaurant.businessId"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                <option v-for="user in restaurantOwners" :key="user.id" :value="user.id">
-                  {{ user.firstName }} {{ user.lastName }} ({{ user.email }})
+                <option :value="null">Sin negocio asignado</option>
+                <option v-for="business in businesses" :key="business.id" :value="business.id">
+                  {{ business.name }}
                 </option>
               </select>
             </div>
@@ -325,7 +344,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import { api } from '@/services/api';
 
 // Props
@@ -337,6 +356,15 @@ const props = defineProps({
   restaurantOwners: {
     type: Array,
     required: true
+  },
+  businesses: {
+    type: Array,
+    required: true,
+    default: () => []
+  },
+  filterByBusinessId: {
+    type: Number,
+    default: null
   }
 });
 
@@ -346,11 +374,30 @@ const emit = defineEmits(['refresh', 'update', 'add-alert']);
 // Estados
 const restaurantSearch = ref('');
 const restaurantFilter = ref('');
+const businessFilter = ref('');
 const restaurantPage = ref(1);
 const restaurantsPerPage = 10;
 const showRestaurantModal = ref(false);
 const showConfirmDelete = ref(false);
 const itemToDelete = ref(null);
+
+// Estado para el nombre del negocio en el filtro activo
+const businessFilterName = computed(() => {
+  if (props.filterByBusinessId) {
+    const business = props.businesses.find(b => b.id === props.filterByBusinessId);
+    return business ? business.name : '';
+  }
+  return '';
+});
+
+// Sincronizar filtro de negocio con el prop filterByBusinessId
+watch(() => props.filterByBusinessId, (newVal) => {
+  if (newVal) {
+    businessFilter.value = newVal.toString();
+  } else {
+    businessFilter.value = '';
+  }
+}, { immediate: true });
 
 const editingRestaurant = reactive({
   id: null,
@@ -363,7 +410,7 @@ const editingRestaurant = reactive({
   estimatedDeliveryTime: 30,
   averageRating: 0,
   tipo: 1,
-  userId: null,
+  businessId: null,
   address: {
     street: '',
     number: '',
@@ -378,6 +425,19 @@ const editingRestaurant = reactive({
 // Computed
 const filteredRestaurants = computed(() => {
   let filtered = [...props.restaurants];
+
+  // Primero aplicar filtro por negocio si viene desde el prop
+  if (props.filterByBusinessId) {
+    filtered = filtered.filter(restaurant =>
+      restaurant.businessId === props.filterByBusinessId
+    );
+  }
+  // Si no hay filtro desde el prop, usar el filtro del selector
+  else if (businessFilter.value) {
+    filtered = filtered.filter(restaurant =>
+      restaurant.businessId === parseInt(businessFilter.value)
+    );
+  }
 
   if (restaurantSearch.value) {
     filtered = filtered.filter(restaurant =>
@@ -398,6 +458,17 @@ const filteredRestaurants = computed(() => {
 const totalRestaurantPages = computed(() => {
   let filtered = [...props.restaurants];
 
+  // Filtro por negocio
+  if (props.filterByBusinessId) {
+    filtered = filtered.filter(restaurant =>
+      restaurant.businessId === props.filterByBusinessId
+    );
+  } else if (businessFilter.value) {
+    filtered = filtered.filter(restaurant =>
+      restaurant.businessId === parseInt(businessFilter.value)
+    );
+  }
+
   if (restaurantSearch.value) {
     filtered = filtered.filter(restaurant =>
       restaurant.name.toLowerCase().includes(restaurantSearch.value.toLowerCase()) ||
@@ -414,11 +485,8 @@ const totalRestaurantPages = computed(() => {
 
 // Métodos
 const addRestaurant = () => {
-  // Asegurar que tengamos usuarios tipo Restaurant
-  if (props.restaurantOwners.length === 0) {
-    emit('add-alert', 'No hay usuarios con rol de Restaurante disponibles. Crea uno primero.', 'warning');
-    return;
-  }
+  // Inicialización del BusinessId según el filtro activo
+  const initialBusinessId = props.filterByBusinessId || (businessFilter.value ? parseInt(businessFilter.value) : null);
 
   Object.assign(editingRestaurant, {
     id: null,
@@ -431,7 +499,7 @@ const addRestaurant = () => {
     estimatedDeliveryTime: 30,
     averageRating: 0,
     tipo: 1,
-    userId: props.restaurantOwners[0].id, // Seleccionar el primero por defecto
+    businessId: initialBusinessId,
     address: {
       street: '',
       number: '',
@@ -457,7 +525,7 @@ const editRestaurant = (restaurant) => {
     estimatedDeliveryTime: restaurant.estimatedDeliveryTime,
     averageRating: restaurant.averageRating,
     tipo: restaurant.tipo,
-    userId: restaurant.userId,
+    businessId: restaurant.businessId,
     address: { ...restaurant.address }
   });
   showRestaurantModal.value = true;
@@ -475,11 +543,19 @@ const saveRestaurant = async () => {
         isOpen: editingRestaurant.isOpen,
         deliveryFee: editingRestaurant.deliveryFee,
         estimatedDeliveryTime: editingRestaurant.estimatedDeliveryTime,
-        tipo: editingRestaurant.tipo
+        tipo: editingRestaurant.tipo,
+        businessId: editingRestaurant.businessId
       };
 
       // Actualizar el restaurante
       await api.put(`/api/Restaurants/${editingRestaurant.id}`, restaurantData);
+
+      // Actualizar en la lista local
+      const index = props.restaurants.findIndex(r => r.id === editingRestaurant.id);
+      if (index !== -1) {
+        Object.assign(props.restaurants[index], restaurantData);
+      }
+
       emit('add-alert', 'Restaurante actualizado correctamente', 'success');
     } else {
       // Crear nuevo restaurante
@@ -492,7 +568,7 @@ const saveRestaurant = async () => {
         deliveryFee: editingRestaurant.deliveryFee,
         estimatedDeliveryTime: editingRestaurant.estimatedDeliveryTime,
         tipo: editingRestaurant.tipo,
-        userId: editingRestaurant.userId,
+        businessId: editingRestaurant.businessId,
         address: {
           street: editingRestaurant.address.street,
           number: editingRestaurant.address.number,
@@ -503,12 +579,28 @@ const saveRestaurant = async () => {
         }
       };
 
-      await api.post('/api/Restaurants', createRestaurantData);
+      const response = await api.post('/api/Restaurants', createRestaurantData);
+
+      // Si hay respuesta, añadir a la lista local
+      if (response.data) {
+        props.restaurants.push(response.data);
+      } else {
+        // Para demostración/desarrollo, crear un objeto básico
+        const newId = Math.max(0, ...props.restaurants.map(r => r.id)) + 1;
+        props.restaurants.push({
+          ...createRestaurantData,
+          id: newId,
+          averageRating: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
       emit('add-alert', 'Restaurante creado correctamente', 'success');
     }
 
     showRestaurantModal.value = false;
-    emit('refresh'); // Solicitar recarga de datos
+    emit('update'); // Solicitar recarga de datos
   } catch (error) {
     console.error('Error al guardar restaurante:', error);
     emit('add-alert', 'Error al guardar restaurante: ' + (error.response?.data?.message || error.message), 'error');
@@ -524,16 +616,17 @@ const viewRestaurant = (restaurant) => {
 const toggleRestaurantStatus = async (restaurant) => {
   try {
     restaurant.isOpen = !restaurant.isOpen;
-    
+
     await api.put(`/api/Restaurants/${restaurant.id}`, {
       name: restaurant.name,
       description: restaurant.description,
       isOpen: restaurant.isOpen,
       // Incluir otros campos necesarios para el backend
       deliveryFee: restaurant.deliveryFee,
-      tipo: restaurant.tipo
+      tipo: restaurant.tipo,
+      businessId: restaurant.businessId
     });
-    
+
     emit('add-alert', `Restaurante ${restaurant.isOpen ? 'abierto' : 'cerrado'} correctamente`, 'success');
     emit('update');
   } catch (error) {
@@ -561,7 +654,7 @@ const cancelDelete = () => {
 
 const handleDelete = async () => {
   if (!itemToDelete.value) return;
-  
+
   try {
     await api.delete(`/api/Restaurants/${itemToDelete.value.id}`);
 
@@ -587,6 +680,13 @@ const handleDelete = async () => {
     emit('add-alert', 'Restaurante eliminado con éxito', 'success');
     emit('update'); // Actualizar estadísticas
   }
+};
+
+// Métodos para el filtro por negocio
+const clearBusinessFilter = () => {
+  businessFilter.value = '';
+  // Informar al componente padre que se ha quitado el filtro
+  emit('update');
 };
 
 // Métodos de paginación
@@ -639,5 +739,12 @@ const getRestaurantTypeName = (tipo) => {
     8: 'Saludable'
   };
   return types[tipo] || 'Otro';
+};
+
+// Método para obtener el nombre del negocio por ID
+const getBusinessName = (businessId) => {
+  if (!businessId) return null;
+  const business = props.businesses.find(b => b.id === businessId);
+  return business ? business.name : null;
 };
 </script>

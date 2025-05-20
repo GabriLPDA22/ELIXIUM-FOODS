@@ -1,4 +1,3 @@
-<!-- src/views/BusinessLogin.vue -->
 <template>
   <div class="business-login">
     <div class="business-login__container">
@@ -9,7 +8,7 @@
       </div>
 
       <h1 class="business-login__title">Bienvenido de nuevo</h1>
-      <p class="business-login__subtitle">Accede a tu portal de gestión de restaurante</p>
+      <p class="business-login__subtitle">Accede a tu portal de gestión</p>
 
       <form @submit.prevent="handleLogin" class="business-login__form">
         <div class="business-login__form-group">
@@ -21,7 +20,7 @@
               <polyline points="22,6 12,13 2,6"></polyline>
             </svg>
             <input type="email" id="email" v-model="form.email" class="business-login__input"
-              placeholder="restaurante@email.com" required autocomplete="email" />
+              placeholder="tu-email@ejemplo.com" required autocomplete="email" />
           </div>
         </div>
 
@@ -80,38 +79,19 @@
           <span v-else>Iniciar sesión</span>
         </button>
       </form>
-
-      <div class="business-login__divider">
-        <span>o</span>
-      </div>
-
-      <button class="business-login__social-button">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-          class="business-login__google-icon">
-          <path
-            d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z">
-          </path>
-        </svg>
-        Continuar con Google
-      </button>
-
-      <div class="business-login__signup">
-        ¿No tienes una cuenta?
-        <router-link to="/business/register" class="business-login__signup-link">
-          Regístrate
-        </router-link>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { useBusinessAuthStore } from '@/stores/businessAuth'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { api } from '@/services/api';
 
 const router = useRouter()
-const businessAuthStore = useBusinessAuthStore()
+const route = useRoute()
+const authStore = useAuthStore()
 
 const form = reactive({
   email: '',
@@ -125,20 +105,47 @@ const showPassword = ref(false)
 
 const handleLogin = async () => {
   try {
-    loading.value = true
-    error.value = ''
+    loading.value = true;
+    error.value = '';
 
-    // Call authentication method from store
-    await businessAuthStore.login(form.email, form.password, form.remember)
+    // Usar el objeto correcto para la API
+    const loginResult = await authStore.login({
+      email: form.email,
+      password: form.password
+    });
 
-    // If authentication is successful, redirect to business dashboard
-    router.push('/business/dashboard')
-  } catch (err: any) {
-    error.value = err.message || 'Error al iniciar sesión. Por favor, inténtalo de nuevo.'
+    // Si no hay un método isAuthenticated, verificar el token
+    if (loginResult && authStore.token && authStore.user && authStore.user.id) {
+      const userId = authStore.user.id;
+
+      try {
+        const response = await api.get(`/api/Business/user/${userId}`);
+
+        if (response.data && response.data.id) {
+          const businessId = response.data.id;
+
+          // Navegación forzada - esto siempre funcionará
+          window.location.href = `/business/dashboard/${businessId}`;
+          return;
+        } else {
+          error.value = 'Este usuario no está asociado a ningún negocio.';
+          await authStore.logout();
+        }
+      } catch (apiError) {
+        console.error("Error obteniendo datos de negocio:", apiError);
+        error.value = 'No se pudo verificar la información del negocio.';
+        await authStore.logout();
+      }
+    } else {
+      error.value = 'Error de autenticación. Verifica tus credenciales.';
+    }
+  } catch (loginErr) {
+    console.error("Error completo de login:", loginErr);
+    error.value = 'Error al iniciar sesión. Verifica tus credenciales.';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -387,83 +394,6 @@ const handleLogin = async () => {
     animation: spin 0.8s linear infinite;
     margin-right: 0.5rem;
   }
-
-  &__divider {
-    position: relative;
-    text-align: center;
-    margin: 1.5rem 0;
-
-    &::before,
-    &::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      width: calc(50% - 20px);
-      height: 1px;
-      background-color: #e2e8f0;
-    }
-
-    &::before {
-      left: 0;
-    }
-
-    &::after {
-      right: 0;
-    }
-
-    span {
-      display: inline-block;
-      padding: 0 10px;
-      background-color: white;
-      color: #94a3b8;
-      font-size: 0.9rem;
-      position: relative;
-      z-index: 1;
-    }
-  }
-
-  &__social-button {
-    width: 100%;
-    padding: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    background-color: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #1e293b;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #f8fafc;
-    }
-  }
-
-  &__google-icon {
-    width: 20px;
-    height: 20px;
-    color: #DB4437;
-  }
-
-  &__signup {
-    font-size: 0.9rem;
-    color: #64748b;
-    margin-top: 1.5rem;
-  }
-
-  &__signup-link {
-    color: #06a98d;
-    font-weight: 600;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
 }
 
 @keyframes spin {
@@ -472,7 +402,6 @@ const handleLogin = async () => {
   }
 }
 
-/* Mobile responsiveness */
 @media (max-width: 480px) {
   .business-login {
     padding: 1rem;
