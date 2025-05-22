@@ -97,33 +97,9 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/business',
-    name: 'business',
-    redirect: '/business/login'
-  },
-  {
-    path: '/business/login',
-    name: 'business-login',
-    component: () => import('@/views/BusinessLogin.vue'),
-    meta: { businessGuest: true }
-  },
-  {
-    path: '/business/register',
-    name: 'business-register',
-    component: () => import('@/views/BusinessRegister.vue'),
-    meta: { businessGuest: true }
-  },
-  {
-    path: '/business/forgot-password',
-    name: 'business-forgot-password',
-    component: () => import('@/views/BusinessForgotPassword.vue'),
-    meta: { businessGuest: true }
-  },
-  {
     path: '/business/dashboard',
     component: () => import('@/views/BusinessDashboard.vue'),
-    meta: { requiresBusinessAuth: true },
-    children: [
+        children: [
       {
         path: '',
         name: 'business-dashboard',
