@@ -30,9 +30,9 @@
           <option value="Customer">Clientes</option>
           <option value="Restaurant">Restaurantes</option>
           <option value="DeliveryPerson">Repartidores</option>
+          <option value="Business">Business</option>
         </select>
-        <button @click="searchUsers"
-          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+        <button @click="searchUsers" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
           Buscar
         </button>
       </div>
@@ -49,7 +49,8 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registro</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">JWT</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clave Secreta
+            </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
           </tr>
         </thead>
@@ -87,7 +88,8 @@
               {{ formatDate(user.createdAt) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <button @click="viewUserJWT(user)" class="text-blue-600 hover:text-blue-900 p-1">
+              <button @click="viewUserSecret(user)" class="text-blue-600 hover:text-blue-900 p-1"
+                title="Ver clave secreta">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -188,6 +190,7 @@
               <option value="Customer">Cliente</option>
               <option value="Restaurant">Restaurante</option>
               <option value="DeliveryPerson">Repartidor</option>
+              <option value="Business">Business</option>
             </select>
           </div>
 
@@ -233,7 +236,8 @@
           <div class="mb-6">
             <p class="text-sm text-gray-600 mb-2">¿Estás seguro de que deseas eliminar el siguiente usuario?</p>
             <div class="bg-gray-50 p-4 rounded-lg text-sm">
-              <strong>Usuario:</strong> {{ itemToDelete?.firstName }} {{ itemToDelete?.lastName }} ({{ itemToDelete?.email }})
+              <strong>Usuario:</strong> {{ itemToDelete?.firstName }} {{ itemToDelete?.lastName }} ({{
+                itemToDelete?.email }})
             </div>
             <p class="text-sm text-red-600 mt-2">Esta acción no se puede deshacer.</p>
           </div>
@@ -243,8 +247,7 @@
               class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancelar
             </button>
-            <button @click="handleDelete"
-              class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            <button @click="handleDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
               Eliminar
             </button>
           </div>
@@ -267,7 +270,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['refresh', 'update', 'add-alert']);
+const emit = defineEmits(['refresh', 'update', 'add-alert', 'view-user-secret']);
 
 // Estados
 const userSearch = ref('');
@@ -286,7 +289,7 @@ const editingUser = reactive({
   phoneNumber: '',
   role: 'Customer',
   isActive: true,
-  password: '' // Solo para crear nuevo usuario
+  password: ''
 });
 
 // Computed
@@ -351,7 +354,7 @@ const editUser = (user) => {
     phoneNumber: user.phoneNumber || '',
     role: user.role,
     isActive: user.isActive !== false,
-    password: '' // No incluimos la contraseña al editar
+    password: ''
   });
   showUserModal.value = true;
 };
@@ -359,11 +362,12 @@ const editUser = (user) => {
 const saveUser = async () => {
   try {
     if (editingUser.id) {
-      // Actualizar usuario existente
+      // Actualizar usuario existente - INCLUIR EL ROLE
       const userData = {
         firstName: editingUser.firstName,
         lastName: editingUser.lastName,
-        phoneNumber: editingUser.phoneNumber
+        phoneNumber: editingUser.phoneNumber,
+        role: editingUser.role
       };
 
       await api.put(`/api/Users/${editingUser.id}`, userData);
@@ -388,11 +392,9 @@ const saveUser = async () => {
 
       const response = await api.post('/api/Users', newUserData);
 
-      // Añadir a la lista local (con ID generado por el servidor)
       if (response.data) {
         props.users.push(response.data);
       } else {
-        // En caso de desarrollo o si la API no devuelve el nuevo usuario
         const newId = Math.max(...props.users.map(u => u.id), 0) + 1;
         props.users.push({
           id: newId,
@@ -406,7 +408,7 @@ const saveUser = async () => {
     }
 
     showUserModal.value = false;
-    emit('update'); // Actualizar estadísticas
+    emit('update');
   } catch (error) {
     console.error('Error al guardar usuario:', error);
     emit('add-alert', 'Error al guardar usuario: ' + (error.response?.data?.message || error.message), 'error');
@@ -415,22 +417,19 @@ const saveUser = async () => {
 
 const toggleUserStatus = async (user) => {
   try {
-    // Actualizar estado del usuario
     user.isActive = !user.isActive;
-
-    // Para mantener coherencia con el backend, podríamos intentar una actualización del usuario
-    // pero solo cambiando propiedades admitidas por el backend
-    await api.put(`/api/Users/${user.id}`, {
+    const userData = {
       firstName: user.firstName,
       lastName: user.lastName,
-      phoneNumber: user.phoneNumber
-    });
+      phoneNumber: user.phoneNumber,
+      role: user.role
+    };
 
+    await api.put(`/api/Users/${user.id}`, userData);
     emit('add-alert', `Usuario ${user.isActive ? 'activado' : 'desactivado'} correctamente`, 'success');
   } catch (error) {
     console.error('Error al cambiar estado del usuario:', error);
     emit('add-alert', 'Error al cambiar estado del usuario', 'error');
-    // Revertir cambio en caso de error
     user.isActive = !user.isActive;
   }
 };
@@ -439,13 +438,14 @@ const closeUserModal = () => {
   showUserModal.value = false;
 };
 
-const viewUserJWT = async (user) => {
+const viewUserSecret = async (user) => {
   try {
-    // Delegamos al componente superior para que cambie a la pestaña de JWT
-    emit('add-alert', 'Redirigiendo a vista de JWT...', 'info');
+    // Emitir evento para cambiar a la pestaña JWT y pasar el usuario
+    emit('view-user-secret', user);
+    emit('add-alert', `Viendo clave secreta de ${user.firstName} ${user.lastName}`, 'info');
   } catch (error) {
-    console.error('Error al obtener JWT del usuario:', error);
-    emit('add-alert', 'Error al obtener JWT del usuario', 'error');
+    console.error('Error al acceder a la clave secreta:', error);
+    emit('add-alert', 'Error al acceder a la clave secreta', 'error');
   }
 };
 
@@ -462,12 +462,10 @@ const cancelDelete = () => {
 
 const handleDelete = async () => {
   if (!itemToDelete.value) return;
-  
+
   try {
-    // En un caso real, esto haría una llamada a la API
     await api.delete(`/api/Users/${itemToDelete.value.id}`);
 
-    // Eliminar de la lista local
     const index = props.users.findIndex(u => u.id === itemToDelete.value.id);
     if (index !== -1) {
       props.users.splice(index, 1);
@@ -475,11 +473,10 @@ const handleDelete = async () => {
 
     showConfirmDelete.value = false;
     emit('add-alert', 'Usuario eliminado con éxito', 'success');
-    emit('update'); // Actualizar estadísticas
+    emit('update');
   } catch (error) {
     console.error('Error al eliminar usuario:', error);
 
-    // Si hay un error en la API, al menos actualizar la interfaz para demostración
     const index = props.users.findIndex(u => u.id === itemToDelete.value.id);
     if (index !== -1) {
       props.users.splice(index, 1);
@@ -487,14 +484,14 @@ const handleDelete = async () => {
 
     showConfirmDelete.value = false;
     emit('add-alert', 'Usuario eliminado con éxito', 'success');
-    emit('update'); // Actualizar estadísticas
+    emit('update');
   }
 };
 
 // Métodos de paginación
 const searchUsers = async () => {
   currentPage.value = 1;
-  emit('refresh'); // Se delega la búsqueda al componente padre
+  emit('refresh');
 };
 
 const previousPage = () => {
@@ -520,7 +517,8 @@ const getRoleBadgeColor = (role) => {
     'Admin': 'bg-blue-100 text-blue-800',
     'Customer': 'bg-green-100 text-green-800',
     'Restaurant': 'bg-purple-100 text-purple-800',
-    'DeliveryPerson': 'bg-yellow-100 text-yellow-800'
+    'DeliveryPerson': 'bg-yellow-100 text-yellow-800',
+    'Business': 'bg-orange-100 text-orange-800'
   };
   return colors[role] || 'bg-gray-100 text-gray-800';
 };
