@@ -6,6 +6,24 @@
         <p class="business-home__welcome">Aquí tienes un resumen de tu actividad.</p>
       </div>
       <div class="business-home__header-right">
+        <div class="business-home__restaurant-selector" v-if="restaurants.length > 1">
+          <label for="restaurantSelect" class="business-home__selector-label">Restaurante:</label>
+          <select 
+            id="restaurantSelect" 
+            v-model="selectedRestaurantId" 
+            @change="onRestaurantChange"
+            class="business-home__selector"
+          >
+            <option value="all">Todos los restaurantes</option>
+            <option 
+              v-for="restaurant in restaurants" 
+              :key="restaurant.id" 
+              :value="restaurant.id"
+            >
+              {{ restaurant.name }}
+            </option>
+          </select>
+        </div>
         <div class="business-home__date">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round" class="business-home__date-icon">
@@ -39,7 +57,7 @@
         </svg>
       </div>
       <div class="business-home__alert-content">
-        <h3 class="business-home__alert-title">Tu negocio está cerrado</h3>
+        <h3 class="business-home__alert-title">{{ selectedRestaurantName }} está cerrado</h3>
         <p class="business-home__alert-message">No estás aceptando pedidos nuevos en este momento.</p>
       </div>
       <button @click="toggleRestaurantOpen" class="business-home__alert-action">Abrir negocio</button>
@@ -58,10 +76,10 @@
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Pedidos de Hoy</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ todayOrders }}</p>
-            <p v-if="orderChange !== 0"
-              :class="['business-home__card-change', orderChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
-              <svg v-if="orderChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+            <p class="business-home__card-value">{{ currentStats.todayOrders }}</p>
+            <p v-if="currentStats.orderChange !== 0"
+              :class="['business-home__card-change', currentStats.orderChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
+              <svg v-if="currentStats.orderChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="17 11 12 6 7 11"></polyline>
                 <line x1="12" y1="18" x2="12" y2="6"></line>
@@ -71,7 +89,7 @@
                 <polyline points="7 13 12 18 17 13"></polyline>
                 <line x1="12" y1="6" x2="12" y2="18"></line>
               </svg>
-              <span>{{ Math.abs(orderChange) }}%</span>
+              <span>{{ Math.abs(currentStats.orderChange) }}%</span>
             </p>
           </div>
           <p class="business-home__card-period">vs ayer</p>
@@ -89,10 +107,10 @@
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Ingresos de Hoy</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ formatCurrency(todayRevenue) }}</p>
-            <p v-if="revenueChange !== 0"
-              :class="['business-home__card-change', revenueChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
-              <svg v-if="revenueChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+            <p class="business-home__card-value">{{ formatCurrency(currentStats.todayRevenue) }}</p>
+            <p v-if="currentStats.revenueChange !== 0"
+              :class="['business-home__card-change', currentStats.revenueChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
+              <svg v-if="currentStats.revenueChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round">
                 <polyline points="17 11 12 6 7 11"></polyline>
@@ -103,7 +121,7 @@
                 <polyline points="7 13 12 18 17 13"></polyline>
                 <line x1="12" y1="6" x2="12" y2="18"></line>
               </svg>
-              <span>{{ Math.abs(revenueChange) }}%</span>
+              <span>{{ Math.abs(currentStats.revenueChange) }}%</span>
             </p>
           </div>
           <p class="business-home__card-period">vs ayer</p>
@@ -124,9 +142,9 @@
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Total Productos</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ totalProducts }}</p>
+            <p class="business-home__card-value">{{ currentStats.totalProducts }}</p>
           </div>
-          <p class="business-home__card-period">en tu catálogo</p>
+          <p class="business-home__card-period">{{ selectedRestaurantId === 'all' ? 'en todos tus restaurantes' : 'en este restaurante' }}</p>
         </div>
       </div>
 
@@ -141,10 +159,64 @@
         </div>
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Valoración Media</h3>
-          <p class="business-home__card-value">{{ averageRating.toFixed(1) }}</p>
+          <p class="business-home__card-value">{{ currentStats.averageRating.toFixed(1) }}</p>
           <div class="business-home__rating-stars">
-            <div class="business-home__stars-filled" :style="{ width: `${(averageRating / 5) * 100}%` }">★★★★★</div>
+            <div class="business-home__stars-filled" :style="{ width: `${(currentStats.averageRating / 5) * 100}%` }">★★★★★</div>
             <div class="business-home__stars-empty">★★★★★</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nueva sección de restaurantes -->
+    <div v-if="restaurants.length > 1" class="business-home__restaurants-overview">
+      <div class="business-home__section-header">
+        <h2 class="business-home__section-title">Tus Restaurantes</h2>
+        <router-link :to="{ name: 'business-settings' }" class="business-home__section-link">
+          Gestionar
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </router-link>
+      </div>
+      <div class="business-home__restaurants-grid">
+        <div 
+          v-for="restaurant in restaurants" 
+          :key="restaurant.id" 
+          :class="['business-home__restaurant-card', { 'business-home__restaurant-card--selected': selectedRestaurantId === restaurant.id }]"
+          @click="selectRestaurant(restaurant.id)"
+        >
+          <div class="business-home__restaurant-image">
+            <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name">
+            <div v-if="!restaurant.isOpen" class="business-home__restaurant-status business-home__restaurant-status--closed">
+              Cerrado
+            </div>
+            <div v-else class="business-home__restaurant-status business-home__restaurant-status--open">
+              Abierto
+            </div>
+          </div>
+          <div class="business-home__restaurant-info">
+            <h4 class="business-home__restaurant-name">{{ restaurant.name }}</h4>
+            <p class="business-home__restaurant-address">{{ getRestaurantAddress(restaurant) }}</p>
+            <div class="business-home__restaurant-stats">
+              <div class="business-home__restaurant-stat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span>{{ getRestaurantProductCount(restaurant.id) }} productos</span>
+              </div>
+              <div class="business-home__restaurant-stat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>{{ restaurant.averageRating?.toFixed(1) || '0.0' }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -344,22 +416,60 @@ const router = useRouter()
 
 // Estados básicos
 const business = ref(null)
+const restaurants = ref([])
+const selectedRestaurantId = ref('all')
 const isRefreshing = ref(false)
 const popularProducts = ref([])
-const totalProducts = ref(0)
+const allProducts = ref([])
 
 // Nombre del negocio REAL desde el business cargado
 const businessName = computed(() => {
   return business.value?.name || authStore.user?.businessName || 'Mi Negocio'
 })
 
-// Stats hardcodeadas por ahora
+const selectedRestaurantName = computed(() => {
+  if (selectedRestaurantId.value === 'all') {
+    return 'Tu negocio'
+  }
+  const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
+  return restaurant?.name || 'Restaurante'
+})
+
+// Stats hardcodeadas que cambian según el restaurante seleccionado
+const allStats = ref({
+  all: {
+    todayOrders: 25,
+    todayRevenue: 680.50,
+    orderChange: 12,
+    revenueChange: 18,
+    averageRating: 4.5,
+    totalProducts: 0
+  }
+})
+
+// Stats actuales basadas en el restaurante seleccionado
+const currentStats = computed(() => {
+  if (selectedRestaurantId.value === 'all') {
+    return {
+      ...allStats.value.all,
+      totalProducts: allProducts.value.length
+    }
+  }
+  
+  // Stats para restaurante específico (simuladas pero basadas en productos reales)
+  const restaurantProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value)
+  return {
+    todayOrders: Math.floor(allStats.value.all.todayOrders * 0.6), // Simulado como 60% del total
+    todayRevenue: allStats.value.all.todayRevenue * 0.6,
+    orderChange: allStats.value.all.orderChange - 3,
+    revenueChange: allStats.value.all.revenueChange - 5,
+    averageRating: 4.3, // Hardcodeado pero diferente
+    totalProducts: restaurantProducts.length
+  }
+})
+
+// Estados existentes
 const isRestaurantOpen = ref(true)
-const todayOrders = ref(12)
-const todayRevenue = ref(450.80)
-const orderChange = ref(8)
-const revenueChange = ref(15)
-const averageRating = ref(4.5)
 
 // Pedidos hardcodeados por ahora
 const pendingOrders = ref([
@@ -409,6 +519,15 @@ const getStatusLabel = (status: string): string => {
   return labels[status] || status
 }
 
+const getRestaurantAddress = (restaurant: any): string => {
+  if (!restaurant.address) return 'Dirección no disponible'
+  return `${restaurant.address.street}, ${restaurant.address.city}`
+}
+
+const getRestaurantProductCount = (restaurantId: number): number => {
+  return allProducts.value.filter(p => p.restaurantId === restaurantId).length
+}
+
 // Cargar business REAL usando tu endpoint
 const loadBusiness = async () => {
   try {
@@ -425,42 +544,77 @@ const loadBusiness = async () => {
   }
 }
 
+// Cargar restaurantes REALES del business
+const loadRestaurants = async () => {
+  try {
+    if (!business.value?.id) return
+
+    const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
+    if (response.data) {
+      restaurants.value = response.data
+      console.log('Restaurantes cargados:', restaurants.value)
+    }
+  } catch (error) {
+    console.error('Error cargando restaurantes:', error)
+    restaurants.value = []
+  }
+}
+
 // Cargar productos REALES usando tus endpoints
 const loadProducts = async () => {
   try {
     if (!business.value?.id) return
 
-    // Usar el endpoint que tienes para restaurantes por business
-    const restaurantsResponse = await api.get(`/api/Restaurants/business/${business.value.id}`)
+    const allProductsData = []
     
-    if (restaurantsResponse.data && restaurantsResponse.data.length > 0) {
-      const allProducts = []
-      
-      for (const restaurant of restaurantsResponse.data) {
-        try {
-          const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
-          if (productsResponse.data) {
-            allProducts.push(...productsResponse.data)
-          }
-        } catch (error) {
-          console.error(`Error productos restaurante ${restaurant.id}:`, error)
+    for (const restaurant of restaurants.value) {
+      try {
+        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
+        if (productsResponse.data) {
+          const restaurantProducts = productsResponse.data.map((product: any) => ({
+            ...product,
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name,
+            image: product.imageUrl
+          }))
+          allProductsData.push(...restaurantProducts)
         }
+      } catch (error) {
+        console.error(`Error productos restaurante ${restaurant.id}:`, error)
       }
-      
-      popularProducts.value = allProducts.slice(0, 4)
-      totalProducts.value = allProducts.length
     }
+    
+    allProducts.value = allProductsData
+    
+    // Filtrar productos populares (simulado por ahora)
+    popularProducts.value = allProductsData.slice(0, 8).map(product => ({
+      ...product,
+      ordersCount: Math.floor(Math.random() * 50) + 5,
+      revenue: product.price * (Math.floor(Math.random() * 50) + 5)
+    }))
+    
+    console.log('Productos cargados:', allProducts.value.length)
   } catch (error) {
     console.error('Error cargando productos:', error)
+    allProducts.value = []
     popularProducts.value = []
-    totalProducts.value = 0
   }
+}
+
+const selectRestaurant = (restaurantId: number | string) => {
+  selectedRestaurantId.value = restaurantId
+  console.log('Restaurante seleccionado:', restaurantId)
+}
+
+const onRestaurantChange = () => {
+  console.log('Cambio de restaurante:', selectedRestaurantId.value)
 }
 
 const refreshData = async () => {
   isRefreshing.value = true
   try {
     await loadBusiness()
+    await loadRestaurants()
     await loadProducts()
   } finally {
     isRefreshing.value = false
@@ -488,10 +642,6 @@ const updateOrderStatus = () => {
   closeOrderDetails()
 }
 
-const loadMorePendingOrders = () => {
-  console.log('Cargar más pedidos')
-}
-
 onMounted(async () => {
   if (!authStore.isAuthenticated()) {
     const isAuth = await authStore.checkAuth()
@@ -501,15 +651,170 @@ onMounted(async () => {
     }
   }
 
-  // Cargar business primero, luego productos
+  // Cargar todo en secuencia
   await loadBusiness()
+  await loadRestaurants()
   await loadProducts()
 })
 </script>
 
 <style lang="scss" scoped>
-/* Todos los estilos que ya tenías en BusinessHome.vue */
 .business-home {
+  &__restaurant-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    
+    @media (max-width: 480px) {
+      width: 100%;
+    }
+  }
+
+  &__selector-label {
+    color: #64748b;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  &__selector {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    color: #1e293b;
+    font-size: 0.9rem;
+    min-width: 180px;
+
+    &:focus {
+      outline: none;
+      border-color: #06a98d;
+      box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1);
+    }
+
+    @media (max-width: 480px) {
+      width: 100%;
+      min-width: unset;
+    }
+  }
+
+  &__restaurants-overview {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  &__restaurants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  &__restaurant-card {
+    background-color: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #cbd5e0;
+    }
+
+    &--selected {
+      border-color: #06a98d;
+      background-color: rgba(6, 169, 141, 0.05);
+      
+      &:hover {
+        border-color: #058a73;
+      }
+    }
+  }
+
+  &__restaurant-image {
+    height: 120px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f1f5f9;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__restaurant-status {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &--open {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    &--closed {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+  }
+
+  &__restaurant-info {
+    padding: 1rem;
+  }
+
+  &__restaurant-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.5rem;
+    line-height: 1.3;
+  }
+
+  &__restaurant-address {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0 0 0.75rem;
+    line-height: 1.4;
+  }
+
+  &__restaurant-stats {
+    display: flex;
+    gap: 1rem;
+  }
+
+  &__restaurant-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: #64748b;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.8;
+    }
+
+    span {
+      font-weight: 500;
+    }
+  }
+
+  // Resto de estilos existentes...
   &__header {
     display: flex;
     justify-content: space-between;
