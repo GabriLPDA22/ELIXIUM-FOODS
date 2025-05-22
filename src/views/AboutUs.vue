@@ -155,40 +155,40 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" 
+                  src="../../public/images/Abuelo.jpg" 
                   alt="CEO" 
                 />
               </div>
-              <h3 class="about-team__member-name">Carlos Martínez</h3>
+              <h3 class="about-team__member-name">Presi Martínez</h3>
               <p class="about-team__member-role">CEO & Fundador</p>
               <p class="about-team__member-bio">
-                Emprendedor con 10 años de experiencia en tecnología y servicios de delivery.
+                El que paga el claude.
               </p>
             </div>
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" 
-                  alt="CTO" 
+                  src="../../public/images/BigBoss.jpg" 
+                  alt="BIG BOSS" 
                 />
               </div>
-              <h3 class="about-team__member-name">Ana García</h3>
-              <p class="about-team__member-role">CTO</p>
+              <h3 class="about-team__member-name">Francisco Villa</h3>
+              <p class="about-team__member-role">BIG BOSS</p>
               <p class="about-team__member-bio">
-                Ingeniera de software con pasión por crear experiencias digitales excepcionales.
+                El cerebro detrás de nuestras operaciones y estrategia de crecimiento.
               </p>
             </div>
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" 
+                  src="../../public/images/Claudia.png" 
                   alt="COO" 
                 />
               </div>
-              <h3 class="about-team__member-name">David López</h3>
-              <p class="about-team__member-role">COO</p>
+              <h3 class="about-team__member-name">Claude</h3>
+              <p class="about-team__member-role">Esclavo y carry</p>
               <p class="about-team__member-bio">
-                Experto en operaciones con experiencia en startups de alto crecimiento.
+                Tercer miembro del equipo, el encargado de hacer los inserts que me dan pereza.
               </p>
             </div>
           </div>

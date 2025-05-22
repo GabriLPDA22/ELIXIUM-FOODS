@@ -1,4 +1,3 @@
-<!-- src/views/BusinessProducts.vue -->
 <template>
   <div class="business-products">
     <div class="business-products__header">
@@ -605,452 +604,501 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useBusinessAuthStore } from '@/stores/businessAuth'
+import { ref, computed, reactive, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { api } from '@/services/api';
 
-// Store
-const businessAuthStore = useBusinessAuthStore()
+// Interfaces
+interface Product {
+  id?: number;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+  isAvailable: boolean;
+  categoryId: number;
+  categoryName?: string;
+  restaurantName?: string;
+}
 
-// Estado
-const loading = ref(true)
-const products = ref([])
-const categories = ref([
-  { id: 1, name: 'Hamburguesas' },
-  { id: 2, name: 'Pizzas' },
-  { id: 3, name: 'Ensaladas' },
-  { id: 4, name: 'Entrantes' },
-  { id: 5, name: 'Postres' },
-  { id: 6, name: 'Bebidas' }
-])
-const searchQuery = ref('')
-const categoryFilter = ref('')
-const sortOption = ref('name_asc')
-const currentPage = ref(1)
-const itemsPerPage = 12
-const viewMode = ref('grid')
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+}
 
-// Modales
-const showAddModal = ref(false)
-const showEditModal = ref(false)
-const showDeleteModal = ref(false)
-const showAdvancedOptions = ref(false)
-const productToDelete = ref(null)
-const formSubmitting = ref(false)
-const deleteLoading = ref(false)
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
 
-// Formulario
+// Estados principales
+const business = ref(null);
+const restaurants = ref([]);
+const loading = ref(false);
+const isRefreshing = ref(false);
+const products = ref<Product[]>([]);
+const categories = ref<Category[]>([]);
+
+// Estados de UI
+const searchQuery = ref('');
+const categoryFilter = ref('');
+const sortOption = ref('name_asc');
+const viewMode = ref('grid');
+const currentPage = ref(1);
+const itemsPerPage = ref(12);
+
+// Estados del modal
+const showAddModal = ref(false);
+const showEditModal = ref(false);
+const showDeleteModal = ref(false);
+const showAdvancedOptions = ref(false);
+const formSubmitting = ref(false);
+const deleteLoading = ref(false);
+const productToDelete = ref<Product | null>(null);
+const imagePreview = ref('');
+
+// Formulario del producto
 const productForm = reactive({
-  id: null,
+  id: undefined,
   name: '',
   description: '',
-  price: null,
+  price: 0,
   originalPrice: null,
-  categoryId: '',
-  imageUrl: '',
+  categoryId: 0,
   available: true,
+  imageUrl: '',
   sku: '',
   stock: null,
   tags: '',
   featured: false
-})
-const imagePreview = ref('')
-const fileInput = ref(null)
+});
+
+const shouldOpenNewProductModal = computed(() => {
+  return route.name === 'business-products-new' || route.query.openModal === 'true';
+});
 
 // Computed properties
 const filteredProducts = computed(() => {
-  let result = [...products.value]
+  let result = [...products.value];
 
-  // Filtrar por búsqueda
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase();
     result = result.filter(product =>
       product.name.toLowerCase().includes(query) ||
       product.description.toLowerCase().includes(query)
-    )
+    );
   }
 
-  // Filtrar por categoría
   if (categoryFilter.value) {
-    result = result.filter(product =>
-      product.categoryId.toString() === categoryFilter.value
-    )
+    result = result.filter(product => product.categoryId === parseInt(categoryFilter.value));
   }
 
-  // Ordenar resultados
+  // Aplicar ordenamiento
   switch (sortOption.value) {
-    case 'name_asc':
-      result.sort((a, b) => a.name.localeCompare(b.name))
-      break
     case 'name_desc':
-      result.sort((a, b) => b.name.localeCompare(a.name))
-      break
+      result.sort((a, b) => b.name.localeCompare(a.name));
+      break;
     case 'price_asc':
-      result.sort((a, b) => a.price - b.price)
-      break
+      result.sort((a, b) => a.price - b.price);
+      break;
     case 'price_desc':
-      result.sort((a, b) => b.price - a.price)
-      break
-    case 'newest':
-      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      break
-    default:
-      break
+      result.sort((a, b) => b.price - a.price);
+      break;
+    default: // name_asc
+      result.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  return result
-})
+  return result;
+});
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredProducts.value.length / itemsPerPage)
-})
-
-const paginatedProducts = computed(() => {
-  const startIndex = (currentPage.value - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  return filteredProducts.value.slice(startIndex, endIndex)
-})
+  return Math.ceil(filteredProducts.value.length / itemsPerPage.value);
+});
 
 const paginationButtons = computed(() => {
-  const buttons = []
-  const maxButtons = 5 // Número máximo de botones a mostrar
+  const total = totalPages.value;
+  const current = currentPage.value;
+  const buttons = [];
 
-  if (totalPages.value <= maxButtons) {
-    // Si hay menos páginas que botones máximos, mostrar todas las páginas
-    for (let i = 1; i <= totalPages.value; i++) {
-      buttons.push(i)
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      buttons.push(i);
     }
   } else {
-    // Siempre mostrar la primera página
-    buttons.push(1)
-
-    // Calcular dónde empezar y terminar
-    let startPage = Math.max(2, currentPage.value - 1)
-    let endPage = Math.min(totalPages.value - 1, currentPage.value + 1)
-
-    // Ajustar si estamos en los extremos
-    if (currentPage.value <= 2) {
-      endPage = maxButtons - 1
-    } else if (currentPage.value >= totalPages.value - 1) {
-      startPage = totalPages.value - (maxButtons - 2)
+    if (current <= 4) {
+      for (let i = 1; i <= 5; i++) buttons.push(i);
+      buttons.push('...');
+      buttons.push(total);
+    } else if (current >= total - 3) {
+      buttons.push(1);
+      buttons.push('...');
+      for (let i = total - 4; i <= total; i++) buttons.push(i);
+    } else {
+      buttons.push(1);
+      buttons.push('...');
+      for (let i = current - 1; i <= current + 1; i++) buttons.push(i);
+      buttons.push('...');
+      buttons.push(total);
     }
-
-    // Añadir elipsis si es necesario
-    if (startPage > 2) {
-      buttons.push('...')
-    }
-
-    // Añadir páginas intermedias
-    for (let i = startPage; i <= endPage; i++) {
-      buttons.push(i)
-    }
-
-    // Añadir elipsis si es necesario
-    if (endPage < totalPages.value - 1) {
-      buttons.push('...')
-    }
-
-    // Siempre mostrar la última página
-    buttons.push(totalPages.value)
   }
 
-  return buttons
-})
+  return buttons;
+});
 
-// Métodos
+// Watchers
+watch([searchQuery, categoryFilter, sortOption], () => {
+  currentPage.value = 1;
+});
+
+// Cargar business usando la misma lógica que BusinessHome.vue
+const loadBusiness = async () => {
+  try {
+    const userId = authStore.user?.id;
+    if (!userId) {
+      console.error('No se encontró userId en authStore');
+      return;
+    }
+
+    console.log('Cargando business para userId:', userId);
+    const response = await api.get(`/api/Business/user/${userId}`);
+    if (response.data) {
+      business.value = response.data;
+      console.log('Business cargado:', business.value);
+    } else {
+      console.error('No se encontró business para este usuario');
+      business.value = null;
+    }
+  } catch (error) {
+    console.error('Error cargando business:', error);
+    business.value = null;
+  }
+};
+
+// Cargar restaurantes del business
+const loadRestaurants = async () => {
+  try {
+    if (!business.value?.id) {
+      console.log('No hay businessId disponible');
+      return;
+    }
+
+    console.log('Cargando restaurantes para businessId:', business.value.id);
+    const response = await api.get(`/api/Restaurants/business/${business.value.id}`);
+    if (response.data && response.data.length > 0) {
+      restaurants.value = response.data;
+      console.log('Restaurantes cargados:', restaurants.value.length);
+    } else {
+      console.log('No se encontraron restaurantes para este business');
+      restaurants.value = [];
+    }
+  } catch (error) {
+    console.error('Error cargando restaurantes:', error);
+    restaurants.value = [];
+  }
+};
+
+// Cargar productos de todos los restaurantes
 const loadProducts = async () => {
-  loading.value = true
+  if (!restaurants.value.length) {
+    console.log('No hay restaurantes disponibles');
+    products.value = [];
+    return;
+  }
+
+  loading.value = true;
+  
+  try {
+    const allProducts: Product[] = [];
+    
+    for (const restaurant of restaurants.value) {
+      try {
+        console.log('Cargando productos del restaurante:', restaurant.id);
+        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`);
+        if (productsResponse.data) {
+          const restaurantProducts = productsResponse.data.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            isAvailable: product.isAvailable ?? true,
+            available: product.isAvailable ?? true, // Alias para compatibilidad
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            restaurantName: restaurant.name,
+            originalPrice: product.originalPrice
+          }));
+          allProducts.push(...restaurantProducts);
+        }
+      } catch (error) {
+        console.error(`Error cargando productos del restaurante ${restaurant.id}:`, error);
+      }
+    }
+    
+    products.value = allProducts;
+    console.log('Total productos cargados:', products.value.length);
+  } catch (error) {
+    console.error('Error cargando productos:', error);
+    products.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Cargar categorías de todos los restaurantes
+const loadCategories = async () => {
+  if (!restaurants.value.length) {
+    categories.value = [];
+    return;
+  }
 
   try {
-    // En un entorno real, esto sería una llamada a la API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Datos de ejemplo
-    products.value = [
-      {
-        id: 1,
-        name: 'Hamburguesa Clásica',
-        description: 'Deliciosa hamburguesa con carne de ternera, lechuga, tomate, cebolla y nuestra salsa especial.',
-        price: 9.95,
-        originalPrice: 12.50,
-        categoryId: 1,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-10T14:30:00Z',
-        updatedAt: '2023-05-15T10:15:00Z'
-      },
-      {
-        id: 2,
-        name: 'Pizza Margarita',
-        description: 'Pizza tradicional italiana con salsa de tomate, mozzarella y albahaca fresca.',
-        price: 12.50,
-        originalPrice: null,
-        categoryId: 2,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-08T11:20:00Z',
-        updatedAt: '2023-05-14T09:45:00Z'
-      },
-      {
-        id: 3,
-        name: 'Ensalada César',
-        description: 'Lechuga romana, crutones, pollo a la parrilla, queso parmesano y nuestra salsa César casera.',
-        price: 8.75,
-        originalPrice: null,
-        categoryId: 3,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-12T16:45:00Z',
-        updatedAt: '2023-05-12T16:45:00Z'
-      },
-      {
-        id: 4,
-        name: 'Patatas Bravas',
-        description: 'Patatas crujientes con salsa brava picante y alioli.',
-        price: 5.95,
-        originalPrice: null,
-        categoryId: 4,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-09T12:10:00Z',
-        updatedAt: '2023-05-13T14:20:00Z'
-      },
-      {
-        id: 5,
-        name: 'Tarta de Chocolate',
-        description: 'Tarta de chocolate con ganache de chocolate negro y virutas de chocolate.',
-        price: 6.50,
-        originalPrice: null,
-        categoryId: 5,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-11T15:30:00Z',
-        updatedAt: '2023-05-11T15:30:00Z'
-      },
-      {
-        id: 6,
-        name: 'Refresco de Cola',
-        description: 'Refresco de cola servido con hielo y limón.',
-        price: 2.50,
-        originalPrice: null,
-        categoryId: 6,
-        imageUrl: '/images/product-placeholder.png',
-        available: false,
-        createdAt: '2023-05-10T10:15:00Z',
-        updatedAt: '2023-05-15T11:30:00Z'
-      },
-      {
-        id: 7,
-        name: 'Hamburguesa Vegetariana',
-        description: 'Hamburguesa vegetariana con quinoa, verduras, aguacate y salsa de yogur.',
-        price: 10.95,
-        originalPrice: null,
-        categoryId: 1,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-13T13:45:00Z',
-        updatedAt: '2023-05-13T13:45:00Z'
-      },
-      {
-        id: 8,
-        name: 'Pizza Cuatro Quesos',
-        description: 'Pizza con mezcla de cuatro quesos: mozzarella, gorgonzola, parmesano y fontina.',
-        price: 14.95,
-        originalPrice: 16.50,
-        categoryId: 2,
-        imageUrl: '/images/product-placeholder.png',
-        available: true,
-        createdAt: '2023-05-07T17:20:00Z',
-        updatedAt: '2023-05-14T12:10:00Z'
+    const allCategories: Category[] = [];
+    
+    for (const restaurant of restaurants.value) {
+      try {
+        // Obtener el restaurante con detalles (menús y categorías)
+        const restaurantResponse = await api.get(`/api/Restaurants/${restaurant.id}`);
+        if (restaurantResponse.data && restaurantResponse.data.menus) {
+          for (const menu of restaurantResponse.data.menus) {
+            if (menu.categories) {
+              allCategories.push(...menu.categories);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error cargando categorías del restaurante ${restaurant.id}:`, error);
       }
-    ]
+    }
+    
+    // Eliminar duplicados por ID
+    const uniqueCategories = allCategories.filter((category, index, self) => 
+      index === self.findIndex(c => c.id === category.id)
+    );
+    
+    categories.value = uniqueCategories;
+    console.log('Categorías cargadas:', categories.value.length);
   } catch (error) {
-    console.error('Error al cargar productos:', error)
-  } finally {
-    loading.value = false
+    console.error('Error cargando categorías:', error);
+    categories.value = [];
   }
-}
+};
 
-const getCategoryName = (categoryId) => {
-  const category = categories.value.find(c => c.id == categoryId)
-  return category ? category.name : 'Sin categoría'
-}
+// Funciones auxiliares
+const formatPrice = (value: number) => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(value);
+};
 
-const formatPrice = (price) => {
-  return price ? `${price.toFixed(2)}€` : '0.00€'
-}
+const truncateText = (text: string, maxLength: number) => {
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
 
-const truncateText = (text, maxLength) => {
-  if (!text) return ''
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
-}
+const getCategoryName = (categoryId: number) => {
+  const category = categories.value.find(c => c.id === categoryId);
+  return category ? category.name : 'Sin categoría';
+};
 
-const changePage = (page) => {
-  currentPage.value = page
-  // Scroll al inicio de la lista
-  window.scrollTo({
-    top: document.querySelector('.business-products__header').offsetTop - 20,
-    behavior: 'smooth'
-  })
-}
+// Funciones de modal
+const closeModals = () => {
+  showAddModal.value = false;
+  showEditModal.value = false;
+  showDeleteModal.value = false;
+  resetProductForm();
+  if (route.name === 'business-products-new') {
+    router.push({ name: 'business-products' });
+  }
+};
 
-const resetForm = () => {
+const resetProductForm = () => {
   Object.assign(productForm, {
-    id: null,
+    id: undefined,
     name: '',
     description: '',
-    price: null,
+    price: 0,
     originalPrice: null,
-    categoryId: '',
-    imageUrl: '',
+    categoryId: 0,
     available: true,
+    imageUrl: '',
     sku: '',
     stock: null,
     tags: '',
     featured: false
-  })
-  imagePreview.value = ''
-  showAdvancedOptions.value = false
-}
+  });
+  imagePreview.value = '';
+};
 
-const editProduct = (product) => {
+const editProduct = (product: Product) => {
+  showEditModal.value = true;
   Object.assign(productForm, {
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    price: product.price,
-    originalPrice: product.originalPrice,
-    categoryId: product.categoryId,
-    imageUrl: product.imageUrl,
-    available: product.available,
-    sku: product.sku || '',
-    stock: product.stock || null,
-    tags: product.tags || '',
-    featured: product.featured || false
-  })
+    ...product,
+    available: product.isAvailable
+  });
+  imagePreview.value = product.imageUrl || '';
+};
 
-  imagePreview.value = product.imageUrl
-  showEditModal.value = true
-}
+const confirmDelete = (product: Product) => {
+  productToDelete.value = product;
+  showDeleteModal.value = true;
+};
 
-const confirmDelete = (product) => {
-  productToDelete.value = product
-  showDeleteModal.value = true
-}
-
-const closeModals = () => {
-  showAddModal.value = false
-  showEditModal.value = false
-  resetForm()
-}
+const toggleProductAvailability = async (product: Product) => {
+  try {
+    const newAvailability = !product.isAvailable;
+    // Aquí llamarías a tu API para actualizar la disponibilidad
+    console.log(`Toggling availability for product ${product.id} to ${newAvailability}`);
+    
+    // Actualizar localmente
+    product.isAvailable = newAvailability;
+    product.available = newAvailability;
+  } catch (error) {
+    console.error('Error updating product availability:', error);
+  }
+};
 
 const toggleAdvancedOptions = () => {
-  showAdvancedOptions.value = !showAdvancedOptions.value
-}
+  showAdvancedOptions.value = !showAdvancedOptions.value;
+};
+
+// Manejo de archivos
+const fileInput = ref(null);
 
 const triggerFileInput = () => {
-  fileInput.value.click()
-}
+  fileInput.value?.click();
+};
 
-const handleFileChange = (event) => {
-  const file = event.target.files[0]
+const handleFileChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0];
   if (file) {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      imagePreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
+      if (e.target?.result) {
+        imagePreview.value = e.target.result as string;
+        productForm.imageUrl = e.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
   }
-}
+};
 
 const removeImage = () => {
-  imagePreview.value = ''
-  productForm.imageUrl = ''
+  imagePreview.value = '';
+  productForm.imageUrl = '';
   if (fileInput.value) {
-    fileInput.value.value = ''
+    fileInput.value.value = '';
   }
-}
+};
 
+// Formulario
 const submitProductForm = async () => {
-  formSubmitting.value = true
-
+  formSubmitting.value = true;
+  
   try {
-    // En un entorno real, esto sería una llamada a la API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const productData = {
+      name: productForm.name,
+      description: productForm.description,
+      price: productForm.price,
+      imageUrl: productForm.imageUrl || '',
+      isAvailable: productForm.available,
+      categoryId: productForm.categoryId
+    };
 
-    if (showEditModal.value) {
-      // Actualización de producto existente
-      const index = products.value.findIndex(p => p.id === productForm.id)
-      if (index !== -1) {
-        products.value[index] = {
-          ...productForm,
-          imageUrl: imagePreview.value || productForm.imageUrl,
-          updatedAt: new Date().toISOString()
-        }
-      }
+    if (showEditModal.value && productForm.id) {
+      await api.put(`/api/Products/${productForm.id}`, productData);
+      console.log('Producto actualizado');
     } else {
-      // Creación de nuevo producto
-      const newProduct = {
-        ...productForm,
-        id: Math.max(0, ...products.value.map(p => p.id)) + 1,
-        imageUrl: imagePreview.value,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      products.value.unshift(newProduct)
+      await api.post('/api/Products', productData);
+      console.log('Producto creado');
     }
 
-    closeModals()
+    await loadProducts();
+    closeModals();
+    alert(`Producto ${showEditModal.value ? 'actualizado' : 'creado'} correctamente.`);
 
   } catch (error) {
-    console.error('Error al guardar producto:', error)
+    console.error('Error guardando producto:', error);
+    alert(`Error al ${showEditModal.value ? 'actualizar' : 'crear'} el producto.`);
   } finally {
-    formSubmitting.value = false
+    formSubmitting.value = false;
   }
-}
+};
 
 const deleteProduct = async () => {
-  if (!productToDelete.value) return
+  if (!productToDelete.value?.id) return;
 
-  deleteLoading.value = true
+  deleteLoading.value = true;
 
   try {
-    // En un entorno real, esto sería una llamada a la API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Eliminar producto de la lista
-    products.value = products.value.filter(p => p.id !== productToDelete.value.id)
-
-    showDeleteModal.value = false
-    productToDelete.value = null
-
+    await api.delete(`/api/Products/${productToDelete.value.id}`);
+    await loadProducts();
+    showDeleteModal.value = false;
+    productToDelete.value = null;
+    alert('Producto eliminado correctamente.');
   } catch (error) {
-    console.error('Error al eliminar producto:', error)
+    console.error('Error eliminando producto:', error);
+    alert('Error al eliminar el producto.');
   } finally {
-    deleteLoading.value = false
+    deleteLoading.value = false;
   }
-}
+};
 
-const toggleProductAvailability = async (product) => {
+// Paginación
+const changePage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+};
+
+// Inicialización
+onMounted(async () => {
+  console.log('BusinessProducts mounted');
+
+  // Verificar autenticación
+  if (!authStore.isAuthenticated()) {
+    try {
+      const isAuth = await authStore.checkAuth();
+      if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
+        console.log('Usuario no autorizado, redirigiendo...');
+        router.push('/login?redirect=/business/products');
+        return;
+      }
+    } catch (error) {
+      console.error("Error en checkAuth:", error);
+      router.push('/login');
+      return;
+    }
+  }
+
+  console.log('Usuario autenticado:', authStore.user);
+
+  // Cargar datos en secuencia
   try {
-    // En un entorno real, esto sería una llamada a la API
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Actualizar disponibilidad
-    const index = products.value.findIndex(p => p.id === product.id)
-    if (index !== -1) {
-      products.value[index].available = !products.value[index].available
+    await loadBusiness();
+    if (!business.value) {
+      console.error('No se pudo cargar el business');
+      router.push('/business/unauthorized');
+      return;
     }
 
-  } catch (error) {
-    console.error('Error al cambiar disponibilidad:', error)
-  }
-}
+    await loadRestaurants();
+    if (!restaurants.value.length) {
+      console.log('No se encontraron restaurantes');
+      // No redirigir, simplemente mostrar mensaje vacío
+    }
 
-// Lifecycle hooks
-onMounted(() => {
-  loadProducts()
-})
+    await Promise.all([loadProducts(), loadCategories()]);
+
+    // Abrir modal si se indica en la ruta
+    if (shouldOpenNewProductModal.value) {
+      showAddModal.value = true;
+    }
+  } catch (error) {
+    console.error('Error en la inicialización:', error);
+  }
+});
 </script>
 
 <style lang="scss" scoped>
