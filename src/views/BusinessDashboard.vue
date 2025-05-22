@@ -118,28 +118,12 @@
           <h1>{{ currentPageTitle }}</h1>
         </div>
         <div class="business-dashboard__header-actions">
-          <div class="business-dashboard__notifications">
-            <button class="business-dashboard__notification-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="business-dashboard__icon">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-              <span class="business-dashboard__notification-badge">3</span>
-            </button>
-          </div>
+         
           <div class="business-dashboard__user-menu">
             <div class="business-dashboard__user-info">
               <span class="business-dashboard__user-name">
                 {{ business?.name }}
               </span>
-              <span class="business-dashboard__user-role">
-                {{ businessRoleLabel }}
-              </span>
-            </div>
-            <div class="business-dashboard__user-avatar">
-              <img :src="business?.logoUrl || '/images/restaurant-placeholder.png'" alt="Logo"
-                class="business-dashboard__avatar-img" />
             </div>
           </div>
         </div>

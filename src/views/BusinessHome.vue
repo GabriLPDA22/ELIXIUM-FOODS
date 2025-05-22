@@ -2,10 +2,28 @@
   <div class="business-home">
     <div class="business-home__header">
       <div class="business-home__header-left">
-        <h1 class="business-home__title">¡Hola, <span class="business-home__name">{{ businessName }}</span>!</h1>
+        <h1 class="business-home__title">¡Bienvenido a <span class="business-home__name">{{ businessName }}</span>!</h1>
         <p class="business-home__welcome">Aquí tienes un resumen de tu actividad.</p>
       </div>
       <div class="business-home__header-right">
+        <div class="business-home__restaurant-selector" v-if="restaurants.length > 1">
+          <label for="restaurantSelect" class="business-home__selector-label">Restaurante:</label>
+          <select 
+            id="restaurantSelect" 
+            v-model="selectedRestaurantId" 
+            @change="onRestaurantChange"
+            class="business-home__selector"
+          >
+            <option value="all">Todos los restaurantes</option>
+            <option 
+              v-for="restaurant in restaurants" 
+              :key="restaurant.id" 
+              :value="restaurant.id"
+            >
+              {{ restaurant.name }}
+            </option>
+          </select>
+        </div>
         <div class="business-home__date">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round" class="business-home__date-icon">
@@ -39,7 +57,7 @@
         </svg>
       </div>
       <div class="business-home__alert-content">
-        <h3 class="business-home__alert-title">Tu negocio está cerrado</h3>
+        <h3 class="business-home__alert-title">{{ selectedRestaurantName }} está cerrado</h3>
         <p class="business-home__alert-message">No estás aceptando pedidos nuevos en este momento.</p>
       </div>
       <button @click="toggleRestaurantOpen" class="business-home__alert-action">Abrir negocio</button>
@@ -58,10 +76,10 @@
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Pedidos de Hoy</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ todayOrders }}</p>
-            <p v-if="orderChange !== 0"
-              :class="['business-home__card-change', orderChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
-              <svg v-if="orderChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+            <p class="business-home__card-value">{{ currentStats.todayOrders }}</p>
+            <p v-if="currentStats.orderChange !== 0"
+              :class="['business-home__card-change', currentStats.orderChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
+              <svg v-if="currentStats.orderChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="17 11 12 6 7 11"></polyline>
                 <line x1="12" y1="18" x2="12" y2="6"></line>
@@ -71,7 +89,7 @@
                 <polyline points="7 13 12 18 17 13"></polyline>
                 <line x1="12" y1="6" x2="12" y2="18"></line>
               </svg>
-              <span>{{ Math.abs(orderChange) }}%</span>
+              <span>{{ Math.abs(currentStats.orderChange) }}%</span>
             </p>
           </div>
           <p class="business-home__card-period">vs ayer</p>
@@ -89,10 +107,10 @@
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Ingresos de Hoy</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ formatCurrency(todayRevenue) }}</p>
-            <p v-if="revenueChange !== 0"
-              :class="['business-home__card-change', revenueChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
-              <svg v-if="revenueChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+            <p class="business-home__card-value">{{ formatCurrency(currentStats.todayRevenue) }}</p>
+            <p v-if="currentStats.revenueChange !== 0"
+              :class="['business-home__card-change', currentStats.revenueChange > 0 ? 'business-home__card-change--positive' : 'business-home__card-change--negative']">
+              <svg v-if="currentStats.revenueChange > 0" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round">
                 <polyline points="17 11 12 6 7 11"></polyline>
@@ -103,7 +121,7 @@
                 <polyline points="7 13 12 18 17 13"></polyline>
                 <line x1="12" y1="6" x2="12" y2="18"></line>
               </svg>
-              <span>{{ Math.abs(revenueChange) }}%</span>
+              <span>{{ Math.abs(currentStats.revenueChange) }}%</span>
             </p>
           </div>
           <p class="business-home__card-period">vs ayer</p>
@@ -124,9 +142,9 @@
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Total Productos</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ totalProducts }}</p>
+            <p class="business-home__card-value">{{ currentStats.totalProducts }}</p>
           </div>
-          <p v-if="newProducts > 0" class="business-home__card-period">+{{ newProducts }} nuevos esta semana</p>
+          <p class="business-home__card-period">{{ selectedRestaurantId === 'all' ? 'en todos tus restaurantes' : 'en este restaurante' }}</p>
         </div>
       </div>
 
@@ -141,10 +159,64 @@
         </div>
         <div class="business-home__card-content">
           <h3 class="business-home__card-title">Valoración Media</h3>
-          <p class="business-home__card-value">{{ averageRating.toFixed(1) }}</p>
+          <p class="business-home__card-value">{{ currentStats.averageRating.toFixed(1) }}</p>
           <div class="business-home__rating-stars">
-            <div class="business-home__stars-filled" :style="{ width: `${(averageRating / 5) * 100}%` }">★★★★★</div>
+            <div class="business-home__stars-filled" :style="{ width: `${(currentStats.averageRating / 5) * 100}%` }">★★★★★</div>
             <div class="business-home__stars-empty">★★★★★</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nueva sección de restaurantes -->
+    <div v-if="restaurants.length > 1" class="business-home__restaurants-overview">
+      <div class="business-home__section-header">
+        <h2 class="business-home__section-title">Tus Restaurantes</h2>
+        <router-link :to="{ name: 'business-settings' }" class="business-home__section-link">
+          Gestionar
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </router-link>
+      </div>
+      <div class="business-home__restaurants-grid">
+        <div 
+          v-for="restaurant in restaurants" 
+          :key="restaurant.id" 
+          :class="['business-home__restaurant-card', { 'business-home__restaurant-card--selected': selectedRestaurantId === restaurant.id }]"
+          @click="selectRestaurant(restaurant.id)"
+        >
+          <div class="business-home__restaurant-image">
+            <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name">
+            <div v-if="!restaurant.isOpen" class="business-home__restaurant-status business-home__restaurant-status--closed">
+              Cerrado
+            </div>
+            <div v-else class="business-home__restaurant-status business-home__restaurant-status--open">
+              Abierto
+            </div>
+          </div>
+          <div class="business-home__restaurant-info">
+            <h4 class="business-home__restaurant-name">{{ restaurant.name }}</h4>
+            <p class="business-home__restaurant-address">{{ getRestaurantAddress(restaurant) }}</p>
+            <div class="business-home__restaurant-stats">
+              <div class="business-home__restaurant-stat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span>{{ getRestaurantProductCount(restaurant.id) }} productos</span>
+              </div>
+              <div class="business-home__restaurant-stat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>{{ restaurant.averageRating?.toFixed(1) || '0.0' }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -174,8 +246,7 @@
               </div>
               <div class="business-home__order-details">
                 <p class="business-home__customer-name">{{ order.customerName }}</p>
-                <p class="business-home__order-items">{{ typeof order.items === 'number' ? order.items :
-                  order.items?.length }} artículo(s)</p>
+                <p class="business-home__order-items">{{ order.items }} artículo(s)</p>
               </div>
             </div>
             <div class="business-home__order-actions">
@@ -185,15 +256,6 @@
               <button @click="viewOrderDetails(order)" class="business-home__order-btn">Ver Detalles</button>
             </div>
           </div>
-          <button v-if="pendingOrders.length > 3 && hasMorePendingOrders" @click="loadMorePendingOrders"
-            class="business-home__load-more">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15v-5m-3.5-2.5L12 12l3.5-2.5" />
-            </svg>
-            <span>Cargar más</span>
-          </button>
         </div>
         <div v-else class="business-home__empty">
           <div class="business-home__empty-icon">
@@ -260,7 +322,7 @@
           </div>
           <h4>Sin productos populares aún</h4>
           <p>A medida que recibas pedidos, tus productos más vendidos aparecerán aquí.</p>
-          <router-link :to="{ name: 'business-products-new' }" class="business-home__add-product-btn">
+          <router-link :to="{ name: 'business-products' }" class="business-home__add-product-btn">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -272,6 +334,7 @@
       </div>
     </div>
 
+    <!-- Modal de detalles de pedido -->
     <div v-if="selectedOrder" class="business-home__modal" @click.self="closeOrderDetails">
       <div class="business-home__modal-content">
         <div class="business-home__modal-header">
@@ -310,10 +373,6 @@
               </li>
             </ul>
             <div class="business-home__order-summary">
-              <div class="business-home__summary-item">
-                <span>Subtotal</span>
-                <span>{{ formatCurrency(calculateSubtotal()) }}</span>
-              </div>
               <div class="business-home__summary-item business-home__summary-item--total">
                 <span>Total</span>
                 <span>{{ formatCurrency(selectedOrder.total) }}</span>
@@ -347,56 +406,89 @@
 </template>
 
 <script setup lang="ts">
-// Tu script actual de BusinessHome.vue se mantiene igual
-// ... (el script que ya proporcionaste)
-// Solo asegúrate de que las variables referenciadas en el template (como businessName, isRestaurantOpen, etc.)
-// estén definidas y sean reactivas (usando ref o computed).
 import { ref, computed, onMounted } from 'vue'
-import { useBusinessAuthStore } from '@/stores/businessAuth' // Asumo que este store existe
+import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { api } from '@/services/api'
 
-const businessAuthStore = useBusinessAuthStore()
+const authStore = useAuthStore()
 const router = useRouter()
 
-const businessName = computed(() => businessAuthStore.businessName || 'Tu Negocio')
-const isRestaurantOpen = ref(true)
-const todayOrders = ref(12)
-const todayRevenue = ref(482.50)
-const orderChange = ref(5.7) // Porcentaje positivo
-const revenueChange = ref(-2.3) // Porcentaje negativo
-const totalProducts = ref(24)
-const newProducts = ref(3) // Nuevos productos esta semana
-const averageRating = ref(4.7)
+// Estados básicos
+const business = ref(null)
+const restaurants = ref([])
+const selectedRestaurantId = ref('all')
 const isRefreshing = ref(false)
+const popularProducts = ref([])
+const allProducts = ref([])
 
-interface OrderItemDetail { name: string; quantity: number; price: number; options: string | null; }
-interface Order { id: number; date?: Date; customerName?: string; items?: number | OrderItemDetail[]; total: number; status: string; } // items puede ser número o array
-interface Product { id: number; name: string; price: number; image?: string; ordersCount?: number; revenue?: number; }
+// Nombre del negocio REAL desde el business cargado
+const businessName = computed(() => {
+  return business.value?.name || authStore.user?.businessName || 'Mi Negocio'
+})
 
+const selectedRestaurantName = computed(() => {
+  if (selectedRestaurantId.value === 'all') {
+    return 'Tu negocio'
+  }
+  const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
+  return restaurant?.name || 'Restaurante'
+})
 
-const selectedOrder = ref<Order | null>(null)
-const selectedOrderStatus = ref('') // Para el select del modal
-const orderItems = ref<OrderItemDetail[]>([ // Ejemplo de items para el modal, cargar dinámicamente
-  { name: 'Pizza Margarita', quantity: 1, price: 12.95, options: 'Masa fina' },
-  { name: 'Ensalada César', quantity: 1, price: 7.50, options: null },
-  { name: 'Coca-Cola', quantity: 2, price: 2.50, options: null }
+// Stats hardcodeadas que cambian según el restaurante seleccionado
+const allStats = ref({
+  all: {
+    todayOrders: 25,
+    todayRevenue: 680.50,
+    orderChange: 12,
+    revenueChange: 18,
+    averageRating: 4.5,
+    totalProducts: 0
+  }
+})
+
+// Stats actuales basadas en el restaurante seleccionado
+const currentStats = computed(() => {
+  if (selectedRestaurantId.value === 'all') {
+    return {
+      ...allStats.value.all,
+      totalProducts: allProducts.value.length
+    }
+  }
+  
+  // Stats para restaurante específico (simuladas pero basadas en productos reales)
+  const restaurantProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value)
+  return {
+    todayOrders: Math.floor(allStats.value.all.todayOrders * 0.6), // Simulado como 60% del total
+    todayRevenue: allStats.value.all.todayRevenue * 0.6,
+    orderChange: allStats.value.all.orderChange - 3,
+    revenueChange: allStats.value.all.revenueChange - 5,
+    averageRating: 4.3, // Hardcodeado pero diferente
+    totalProducts: restaurantProducts.length
+  }
+})
+
+// Estados existentes
+const isRestaurantOpen = ref(true)
+
+// Pedidos hardcodeados por ahora
+const pendingOrders = ref([
+  {
+    id: 1,
+    date: new Date(),
+    customerName: 'Juan Pérez',
+    items: 3,
+    total: 24.50,
+    status: 'pending'
+  }
 ])
 
+// Modal
+const selectedOrder = ref(null)
+const selectedOrderStatus = ref('')
+const orderItems = ref([])
 
-const pendingOrders = ref<Order[]>([
-  { id: 1025, date: new Date(), customerName: 'María García', items: 3, total: 42.95, status: 'pending' },
-  { id: 1024, date: new Date(Date.now() - 30 * 60000), customerName: 'Juan Pérez', items: 2, total: 27.50, status: 'preparing' },
-  { id: 1023, date: new Date(Date.now() - 90 * 60000), customerName: 'Ana Martínez', items: 5, total: 63.75, status: 'ready' },
-  { id: 1022, date: new Date(Date.now() - 120 * 60000), customerName: 'Luis Fernández', items: 1, total: 15.00, status: 'pending' },
-])
-
-const popularProducts = ref<Product[]>([
-  { id: 1, name: 'Hamburguesa Clásica Súper Larga con Doble Queso', price: 12.95, image: 'https://via.placeholder.com/300x200/FFDDC1/8B5A2B?text=Hamburguesa', ordersCount: 42, revenue: 543.90 },
-  { id: 2, name: 'Pizza Margarita Fresca', price: 14.50, image: 'https://via.placeholder.com/300x200/C1FFD7/2B8B5A?text=Pizza', ordersCount: 38, revenue: 551.00 },
-  { id: 3, name: 'Ensalada César con Pollo', price: 9.95, image: 'https://via.placeholder.com/300x200/D7C1FF/5A2B8B?text=Ensalada', ordersCount: 26, revenue: 258.70 },
-  { id: 4, name: 'Pasta Carbonara Auténtica', price: 13.75, image: 'https://via.placeholder.com/300x200/FFC1C1/8B2B2B?text=Pasta', ordersCount: 24, revenue: 330.00 },
-])
-
+// Computed
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 })
@@ -405,126 +497,352 @@ const pendingOrdersCount = computed(() => {
   return pendingOrders.value.filter(order => ['pending', 'preparing', 'ready'].includes(order.status)).length
 })
 
-const hasMorePendingOrders = ref(true) // Para el botón "Cargar más"
-
+// Funciones
 const formatCurrency = (value: number): string => {
-  if (typeof value !== 'number' || isNaN(value)) return '0,00 €';
+  if (typeof value !== 'number' || isNaN(value)) return '0,00 €'
   return value.toFixed(2).replace('.', ',') + ' €'
 }
 
-const formatTime = (date?: Date): string => {
-  if (!date) return ''
+const formatTime = (date: Date): string => {
   return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
 }
 
 const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     pending: 'Pendiente',
-    preparing: 'En preparación',
+    preparing: 'En preparación', 
     ready: 'Listo',
     delivering: 'En reparto',
     delivered: 'Entregado',
     cancelled: 'Cancelado'
-  };
-  return labels[status] || status;
+  }
+  return labels[status] || status
 }
 
-
-const refreshData = async () => {
-  isRefreshing.value = true;
-  // Simular llamada API
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // Aquí actualizarías tus datos (pendingOrders, popularProducts, etc.)
-  console.log('Datos actualizados');
-  isRefreshing.value = false;
+const getRestaurantAddress = (restaurant: any): string => {
+  if (!restaurant.address) return 'Dirección no disponible'
+  return `${restaurant.address.street}, ${restaurant.address.city}`
 }
 
-const toggleRestaurantOpen = () => {
-  isRestaurantOpen.value = !isRestaurantOpen.value;
-  // Aquí podrías llamar a una API para persistir el estado
+const getRestaurantProductCount = (restaurantId: number): number => {
+  return allProducts.value.filter(p => p.restaurantId === restaurantId).length
 }
 
-const loadMorePendingOrders = () => {
-  // Lógica para cargar más pedidos pendientes
-  console.log('Cargando más pedidos pendientes...');
-  // Ejemplo: añadir más pedidos mock o llamar a API
-  // Por ahora, solo ocultamos el botón
-  hasMorePendingOrders.value = false;
-}
+// Cargar business REAL usando tu endpoint
+const loadBusiness = async () => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
 
-const viewOrderDetails = (order: Order) => {
-  selectedOrder.value = order;
-  selectedOrderStatus.value = order.status; // Pre-seleccionar el estado actual en el select
-  // Aquí cargarías los items específicos de 'order' en orderItems.value si es necesario
-  // Por ahora, usamos el 'orderItems' de ejemplo.
-  console.log('Viendo detalles del pedido:', order.id);
-}
-
-const closeOrderDetails = () => {
-  selectedOrder.value = null;
-}
-const calculateSubtotal = (): number => {
-  // Asegúrate de que orderItems está poblado con los items del selectedOrder
-  return orderItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-}
-
-const updateOrderStatus = () => {
-  if (selectedOrder.value) {
-    // Lógica para actualizar el estado del pedido en el backend
-    console.log(`Actualizando estado del pedido #${selectedOrder.value.id} a ${selectedOrderStatus.value}`);
-    // Actualizar localmente (simulación)
-    const orderInList = pendingOrders.value.find(o => o.id === selectedOrder.value!.id);
-    if (orderInList) {
-      orderInList.status = selectedOrderStatus.value;
+    const response = await api.get(`/api/Business/user/${userId}`)
+    if (response.data) {
+      business.value = response.data
     }
-    closeOrderDetails();
+  } catch (error) {
+    console.error('Error cargando business:', error)
+    business.value = null
   }
 }
 
+// Cargar restaurantes REALES del business
+const loadRestaurants = async () => {
+  try {
+    if (!business.value?.id) return
 
-onMounted(() => {
-  // Cargar datos iniciales si es necesario desde una API
-  console.log('Componente Home montado');
-  refreshData(); // Cargar datos al montar
+    const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
+    if (response.data) {
+      restaurants.value = response.data
+      console.log('Restaurantes cargados:', restaurants.value)
+    }
+  } catch (error) {
+    console.error('Error cargando restaurantes:', error)
+    restaurants.value = []
+  }
+}
+
+// Cargar productos REALES usando tus endpoints
+const loadProducts = async () => {
+  try {
+    if (!business.value?.id) return
+
+    const allProductsData = []
+    
+    for (const restaurant of restaurants.value) {
+      try {
+        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
+        if (productsResponse.data) {
+          const restaurantProducts = productsResponse.data.map((product: any) => ({
+            ...product,
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name,
+            image: product.imageUrl
+          }))
+          allProductsData.push(...restaurantProducts)
+        }
+      } catch (error) {
+        console.error(`Error productos restaurante ${restaurant.id}:`, error)
+      }
+    }
+    
+    allProducts.value = allProductsData
+    
+    // Filtrar productos populares (simulado por ahora)
+    popularProducts.value = allProductsData.slice(0, 8).map(product => ({
+      ...product,
+      ordersCount: Math.floor(Math.random() * 50) + 5,
+      revenue: product.price * (Math.floor(Math.random() * 50) + 5)
+    }))
+    
+    console.log('Productos cargados:', allProducts.value.length)
+  } catch (error) {
+    console.error('Error cargando productos:', error)
+    allProducts.value = []
+    popularProducts.value = []
+  }
+}
+
+const selectRestaurant = (restaurantId: number | string) => {
+  selectedRestaurantId.value = restaurantId
+  console.log('Restaurante seleccionado:', restaurantId)
+}
+
+const onRestaurantChange = () => {
+  console.log('Cambio de restaurante:', selectedRestaurantId.value)
+}
+
+const refreshData = async () => {
+  isRefreshing.value = true
+  try {
+    await loadBusiness()
+    await loadRestaurants()
+    await loadProducts()
+  } finally {
+    isRefreshing.value = false
+  }
+}
+
+const toggleRestaurantOpen = () => {
+  isRestaurantOpen.value = !isRestaurantOpen.value
+}
+
+const viewOrderDetails = (order: any) => {
+  selectedOrder.value = order
+  selectedOrderStatus.value = order.status
+  orderItems.value = [
+    { name: 'Producto ejemplo', quantity: 2, price: 12.50, options: null }
+  ]
+}
+
+const closeOrderDetails = () => {
+  selectedOrder.value = null
+  orderItems.value = []
+}
+
+const updateOrderStatus = () => {
+  closeOrderDetails()
+}
+
+onMounted(async () => {
+  if (!authStore.isAuthenticated()) {
+    const isAuth = await authStore.checkAuth()
+    if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
+      router.push('/login')
+      return
+    }
+  }
+
+  // Cargar todo en secuencia
+  await loadBusiness()
+  await loadRestaurants()
+  await loadProducts()
 })
-
 </script>
 
 <style lang="scss" scoped>
-// Tus estilos SCSS actuales se mantienen igual.
-// Asegúrate de que las clases usadas en el template de arriba
-// (como __summary, __card, __orders-list, __products-grid, etc.)
-// tengan estilos definidos.
-// ... (los estilos que ya proporcionaste)
 .business-home {
+  &__restaurant-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    
+    @media (max-width: 480px) {
+      width: 100%;
+    }
+  }
+
+  &__selector-label {
+    color: #64748b;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  &__selector {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    color: #1e293b;
+    font-size: 0.9rem;
+    min-width: 180px;
+
+    &:focus {
+      outline: none;
+      border-color: #06a98d;
+      box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1);
+    }
+
+    @media (max-width: 480px) {
+      width: 100%;
+      min-width: unset;
+    }
+  }
+
+  &__restaurants-overview {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  &__restaurants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  &__restaurant-card {
+    background-color: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #cbd5e0;
+    }
+
+    &--selected {
+      border-color: #06a98d;
+      background-color: rgba(6, 169, 141, 0.05);
+      
+      &:hover {
+        border-color: #058a73;
+      }
+    }
+  }
+
+  &__restaurant-image {
+    height: 120px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f1f5f9;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__restaurant-status {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &--open {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    &--closed {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+  }
+
+  &__restaurant-info {
+    padding: 1rem;
+  }
+
+  &__restaurant-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.5rem;
+    line-height: 1.3;
+  }
+
+  &__restaurant-address {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0 0 0.75rem;
+    line-height: 1.4;
+  }
+
+  &__restaurant-stats {
+    display: flex;
+    gap: 1rem;
+  }
+
+  &__restaurant-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: #64748b;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.8;
+    }
+
+    span {
+      font-weight: 500;
+    }
+  }
+
+  // Resto de estilos existentes...
   &__header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start; // Alinea los items al inicio para mejor distribución vertical
+    align-items: flex-start;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
     gap: 1rem;
 
     @media (max-width: 768px) {
       flex-direction: column;
-      align-items: stretch; // Para que los elementos ocupen el ancho
+      align-items: stretch;
     }
   }
 
   &__header-left {
-    flex: 1; // Permite que tome el espacio disponible
+    flex: 1;
   }
 
   &__header-right {
     display: flex;
     align-items: center;
     gap: 1rem;
-    flex-shrink: 0; // Evita que se encoja si el título es largo
+    flex-shrink: 0;
 
     @media (max-width: 480px) {
       width: 100%;
-      flex-direction: column; // Stack them on very small screens
-      align-items: flex-start; // Align to start
+      flex-direction: column;
+      align-items: flex-start;
     }
   }
 
@@ -584,7 +902,7 @@ onMounted(() => {
   &__title {
     font-size: 1.75rem;
     font-weight: 700;
-    margin: 0 0 0.25rem; // Menos margen inferior
+    margin: 0 0 0.25rem;
     color: #1e293b;
     line-height: 1.2;
   }
@@ -597,79 +915,79 @@ onMounted(() => {
 
   &__name {
     font-weight: 600;
-    color: #06a98d; // Color principal de tu marca
+    color: #06a98d;
   }
 
   &__alert {
     display: flex;
-    align-items: center; // Centra verticalmente el icono con el texto
+    align-items: center;
     gap: 1rem;
-    background-color: #fff7ed; // Naranja muy claro
-    border-left: 4px solid #f97316; // Naranja
-    border-radius: 8px; // Bordes redondeados
+    background-color: #fff7ed;
+    border-left: 4px solid #f97316;
+    border-radius: 8px;
     padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem; // Espacio antes de los cards
+    margin-bottom: 1.5rem;
 
     @media (max-width: 768px) {
       flex-direction: column;
-      align-items: flex-start; // El icono se queda arriba
+      align-items: flex-start;
     }
 
     &-icon {
-      background-color: #ffedd5; // Naranja más claro para el círculo del icono
+      background-color: #ffedd5;
       width: 40px;
       height: 40px;
-      border-radius: 50%; // Círculo perfecto
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0; // Evita que el icono se encoja
+      flex-shrink: 0;
 
       svg {
         width: 24px;
         height: 24px;
-        color: #f97316; // Naranja para el icono SVG
+        color: #f97316;
       }
     }
 
     &-content {
-      flex: 1; // El contenido toma el espacio restante
+      flex: 1;
     }
 
     &-title {
       font-size: 1rem;
       font-weight: 600;
-      color: #9a3412; // Naranja oscuro para el título
+      color: #9a3412;
       margin: 0 0 0.25rem;
     }
 
     &-message {
       font-size: 0.9rem;
-      color: #7c2d12; // Naranja medio-oscuro para el mensaje
+      color: #7c2d12;
       margin: 0;
       line-height: 1.4;
     }
 
     &-action {
-      background-color: transparent; // Botón transparente
-      border: 1px solid #fb923c; // Borde naranja claro
-      color: #c2410c; // Texto naranja oscuro
+      background-color: transparent;
+      border: 1px solid #fb923c;
+      color: #c2410c;
       padding: 0.5rem 1rem;
       border-radius: 6px;
       font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.15s ease;
-      margin-left: auto; // Empuja el botón a la derecha si hay espacio
+      margin-left: auto;
 
       &:hover {
-        background-color: #ffedd5; // Fondo naranja muy claro al pasar el mouse
-        border-color: #f97316; // Borde naranja
+        background-color: #ffedd5;
+        border-color: #f97316;
       }
 
       @media (max-width: 768px) {
         margin-top: 0.75rem;
-        align-self: flex-start; // Botón al inicio en móviles
+        align-self: flex-start;
         margin-left: 0;
       }
     }
@@ -677,7 +995,7 @@ onMounted(() => {
 
   &__summary {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); // Ajusta minmax según necesidad
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
   }
@@ -685,13 +1003,13 @@ onMounted(() => {
   &__card {
     background-color: white;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03); // Sombra más sutil
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
     padding: 1.25rem;
     display: flex;
-    align-items: flex-start; // Icono y contenido alineados arriba
+    align-items: flex-start;
     gap: 1rem;
     transition: all 0.2s ease-in-out;
-    border-left: 4px solid transparent; // Para el color de borde específico
+    border-left: 4px solid transparent;
 
     &:hover {
       transform: translateY(-2px);
@@ -702,35 +1020,30 @@ onMounted(() => {
       border-left-color: #3b82f6;
     }
 
-    // Azul
     &--revenue {
       border-left-color: #10b981;
     }
 
-    // Verde
     &--products {
       border-left-color: #8b5cf6;
     }
 
-    // Morado
     &--rating {
       border-left-color: #f59e0b;
     }
-
-    // Naranja/Amarillo
   }
 
   &__card-icon {
     width: 40px;
     height: 40px;
-    border-radius: 10px; // Ligeramente menos redondeado que un círculo
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 
     svg {
-      width: 20px; // Iconos un poco más pequeños
+      width: 20px;
       height: 20px;
     }
 
@@ -763,18 +1076,18 @@ onMounted(() => {
     font-size: 0.85rem;
     font-weight: 500;
     color: #64748b;
-    margin: 0 0 0.35rem; // Menos espacio
+    margin: 0 0 0.35rem;
   }
 
   &__card-stats {
     display: flex;
-    align-items: baseline; // Alinear valor y cambio
-    gap: 0.5rem; // Espacio entre valor y cambio
+    align-items: baseline;
+    gap: 0.5rem;
     margin-bottom: 0.1rem;
   }
 
   &__card-value {
-    font-size: 1.6rem; // Un poco más grande
+    font-size: 1.6rem;
     font-weight: 700;
     margin: 0;
     color: #1e293b;
@@ -784,12 +1097,12 @@ onMounted(() => {
   &__card-change {
     display: flex;
     align-items: center;
-    gap: 0.15rem; // Menos espacio para el icono de cambio
-    font-size: 0.8rem; // Un poco más pequeño
-    font-weight: 600; // Más grueso
+    gap: 0.15rem;
+    font-size: 0.8rem;
+    font-weight: 600;
 
     svg {
-      width: 14px; // Iconos de cambio más pequeños
+      width: 14px;
       height: 14px;
       stroke-width: 2.5px;
     }
@@ -804,7 +1117,7 @@ onMounted(() => {
   }
 
   &__card-period {
-    font-size: 0.75rem; // Texto del periodo más pequeño
+    font-size: 0.75rem;
     color: #94a3b8;
     margin-top: 0.1rem;
   }
@@ -812,9 +1125,9 @@ onMounted(() => {
   &__rating-stars {
     position: relative;
     display: inline-block;
-    font-size: 1.1rem; // Estrellas un poco más pequeñas
+    font-size: 1.1rem;
     line-height: 1;
-    margin-top: 0.3rem; // Espacio sobre las estrellas
+    margin-top: 0.3rem;
 
     .business-home__stars-filled {
       position: absolute;
@@ -832,11 +1145,9 @@ onMounted(() => {
 
   &__sections {
     display: grid;
-    // Para dos columnas, podrías usar: grid-template-columns: repeat(2, 1fr);
-    // O para que se adapte:
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr)); // Adaptable, mínimo 450px o 100% si es más pequeño
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
     gap: 1.5rem;
-    margin-top: 2rem; // Espacio después de los cards de resumen
+    margin-top: 2rem;
   }
 
   &__section {
@@ -844,14 +1155,8 @@ onMounted(() => {
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
     padding: 1.25rem;
-    // height: 100%; // Quitar para que el contenido defina la altura
-    display: flex; // Para controlar el crecimiento del contenido interno
-    flex-direction: column; // Contenido se apila verticalmente
-
-    &--pending {
-      // Podrías darle un fondo ligeramente diferente si quieres destacarlo
-      // background-color: #f7f9fc;
-    }
+    display: flex;
+    flex-direction: column;
   }
 
   &__section-header {
@@ -859,7 +1164,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.25rem;
-    flex-shrink: 0; // Evita que el header se encoja
+    flex-shrink: 0;
   }
 
   &__section-title {
@@ -873,22 +1178,22 @@ onMounted(() => {
   }
 
   &__section-badge {
-    display: inline-flex; // Para mejor alineación y tamaño
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px; // Ancho mínimo
+    min-width: 20px;
     height: 20px;
-    padding: 0 0.4em; // Padding horizontal para números de más de un dígito
-    background-color: #ef4444; // Rojo para la notificación
+    padding: 0 0.4em;
+    background-color: #ef4444;
     color: white;
     font-size: 0.75rem;
     font-weight: 600;
-    border-radius: 10px; // Píldora
-    line-height: 1; // Asegura que el texto no se salga
+    border-radius: 10px;
+    line-height: 1;
   }
 
   &__section-link {
-    display: inline-flex; // Mejor alineación con el icono
+    display: inline-flex;
     align-items: center;
     font-size: 0.9rem;
     color: #06a98d;
@@ -898,37 +1203,34 @@ onMounted(() => {
     svg {
       width: 16px;
       height: 16px;
-      margin-left: 0.35rem; // Un poco más de espacio
+      margin-left: 0.35rem;
       transition: transform 0.2s ease-out;
     }
 
     &:hover {
-      color: #058a73; // Un verde más oscuro al pasar el mouse
+      color: #058a73;
 
       svg {
         transform: translateX(2px);
       }
-
-      // Pequeño movimiento
     }
   }
 
   &__orders-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; // Espacio entre items de pedido
-    flex-grow: 1; // Para que ocupe el espacio si la sección es flex
+    gap: 0.75rem;
+    flex-grow: 1;
   }
 
   &__order-item {
     display: flex;
-    align-items: stretch; // Para que info y actions tengan la misma altura
+    align-items: stretch;
     border-radius: 8px;
-    // margin-bottom: 0.75rem; // No necesario si usamos gap en __orders-list
-    background-color: #fdfdfd; // Un blanco muy sutilmente diferente
+    background-color: #fdfdfd;
     border: 1px solid #e2e8f0;
     transition: all 0.15s ease;
-    overflow: hidden; // Para que el borde redondeado funcione
+    overflow: hidden;
 
     &:hover {
       border-color: #cbd5e0;
@@ -936,17 +1238,16 @@ onMounted(() => {
     }
 
     @media (max-width: 600px) {
-      // Punto de quiebre para apilar
       flex-direction: column;
     }
   }
 
   &__order-info {
-    flex: 1; // Toma el espacio principal
+    flex: 1;
     padding: 1rem;
     display: flex;
     flex-direction: column;
-    justify-content: center; // Centra el contenido si es corto
+    justify-content: center;
   }
 
   &__order-header {
@@ -958,7 +1259,7 @@ onMounted(() => {
 
   &__order-id {
     font-weight: 600;
-    color: #3b82f6; // Azul para el ID
+    color: #3b82f6;
     margin: 0;
     font-size: 0.9rem;
   }
@@ -972,7 +1273,7 @@ onMounted(() => {
   &__order-details {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem; // Pequeño espacio entre nombre y items
+    gap: 0.1rem;
   }
 
   &__customer-name {
@@ -991,17 +1292,17 @@ onMounted(() => {
   &__order-actions {
     display: flex;
     flex-direction: column;
-    align-items: flex-end; // Alinear a la derecha
-    justify-content: space-between; // Espacio entre total/status y botón
+    align-items: flex-end;
+    justify-content: space-between;
     gap: 0.5rem;
     padding: 1rem;
-    min-width: 130px; // Ancho mínimo para acciones
-    background-color: #f8fafc; // Fondo ligeramente diferente
-    border-left: 1px solid #e2e8f0; // Separador
+    min-width: 130px;
+    background-color: #f8fafc;
+    border-left: 1px solid #e2e8f0;
 
     @media (max-width: 600px) {
-      flex-direction: row; // Acciones en fila en móvil
-      align-items: center; // Alinear items
+      flex-direction: row;
+      align-items: center;
       justify-content: space-between;
       border-left: none;
       border-top: 1px solid #e2e8f0;
@@ -1013,7 +1314,7 @@ onMounted(() => {
     font-weight: 600;
     color: #1e293b;
     font-size: 1rem;
-    margin-bottom: 0.25rem; // Espacio antes del status
+    margin-bottom: 0.25rem;
 
     @media (max-width: 600px) {
       margin-bottom: 0;
@@ -1021,19 +1322,18 @@ onMounted(() => {
   }
 
   &__status {
-    // Estilos de los badges de estado
-    font-size: 0.7rem; // Más pequeño
-    font-weight: 600; // Más grueso
-    padding: 0.25rem 0.6rem; // Padding ajustado
-    border-radius: 12px; // Más redondeado (píldora)
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    align-self: flex-end; // Alinear a la derecha dentro de su contenedor
+    align-self: flex-end;
     margin-bottom: 0.5rem;
 
     @media (max-width: 600px) {
       margin-bottom: 0;
-      order: -1; // Poner el status antes del total en móvil
+      order: -1;
     }
 
     &--pending {
@@ -1041,37 +1341,30 @@ onMounted(() => {
       color: #b45309;
     }
 
-    // Amarillo/Naranja
     &--preparing {
       background-color: #dbeafe;
       color: #1e40af;
     }
 
-    // Azul
     &--ready {
       background-color: #e0e7ff;
       color: #3730a3;
     }
 
-    // Morado/Índigo
     &--delivering {
       background-color: #cffafe;
       color: #0891b2;
     }
 
-    // Cyan
     &--delivered {
       background-color: #dcfce7;
       color: #15803d;
     }
 
-    // Verde
     &--cancelled {
       background-color: #fee2e2;
       color: #991b1b;
     }
-
-    // Rojo
   }
 
   &__order-btn {
@@ -1080,107 +1373,73 @@ onMounted(() => {
     justify-content: center;
     font-size: 0.85rem;
     font-weight: 500;
-    padding: 0.4rem 0.8rem; // Padding ajustado
+    padding: 0.4rem 0.8rem;
     background-color: #06a98d;
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
-    width: 100%; // Botón ocupa todo el ancho disponible en su columna
+    width: 100%;
 
     &:hover {
       background-color: #058a73;
     }
 
     @media (max-width: 600px) {
-      width: auto; // No ocupar todo el ancho en móvil
+      width: auto;
       padding: 0.5rem 1rem;
     }
   }
 
-  &__load-more {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    padding: 0.6rem;
-    background-color: transparent;
-    border: 1px solid #e2e8f0; // Borde más sutil
-    border-radius: 8px;
-    color: #475569; // Color de texto más oscuro
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    width: 100%; // Ocupa todo el ancho
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    &:hover {
-      background-color: #f8fafc;
-      border-color: #06a98d; // Borde verde al pasar el mouse
-      color: #06a98d; // Texto verde
-    }
-  }
-
-
   &__empty {
-    // Estilos para los mensajes de "no hay elementos"
-    flex-grow: 1; // Ocupa el espacio vertical restante
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1rem; // Más padding vertical
+    padding: 2rem 1rem;
     text-align: center;
-    border-top: 1px solid #f1f5f9; // Separador sutil si hay header
-    margin-top: 1.25rem; // Si el header está presente
+    border-top: 1px solid #f1f5f9;
+    margin-top: 1.25rem;
 
     &-icon {
-      width: 56px; // Icono más grande
+      width: 56px;
       height: 56px;
-      background-color: #f1f5f9; // Fondo más claro
+      background-color: #f1f5f9;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 1.25rem; // Más espacio
+      margin-bottom: 1.25rem;
       color: #94a3b8;
 
       svg {
         width: 28px;
         height: 28px;
       }
-
-      // SVG dentro del icono más grande
     }
 
     h4 {
-      font-size: 1.15rem; // Título del empty state un poco más grande
+      font-size: 1.15rem;
       font-weight: 600;
-      color: #334155; // Color de texto un poco más oscuro
+      color: #334155;
       margin: 0 0 0.5rem;
     }
 
     p {
       color: #64748b;
       margin: 0 0 1.5rem;
-      max-width: 300px; // Ancho máximo del párrafo
+      max-width: 300px;
       line-height: 1.5;
     }
   }
 
   &__add-product-btn {
-    // Botón para añadir producto
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem; // Más espacio con el icono
-    padding: 0.7rem 1.2rem; // Botón más grande
+    gap: 0.6rem;
+    padding: 0.7rem 1.2rem;
     background-color: #06a98d;
     color: white;
     border-radius: 8px;
@@ -1203,7 +1462,7 @@ onMounted(() => {
 
   &__products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); // Ajusta minmax
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 1rem;
     flex-grow: 1;
   }
@@ -1211,11 +1470,11 @@ onMounted(() => {
   &__product-card {
     background-color: white;
     border-radius: 8px;
-    overflow: hidden; // Para la imagen y hover
+    overflow: hidden;
     border: 1px solid #e2e8f0;
     transition: all 0.2s ease-in-out;
     display: flex;
-    flex-direction: column; // Para que el contenido se expanda bien
+    flex-direction: column;
 
     &:hover {
       transform: translateY(-3px);
@@ -1225,41 +1484,37 @@ onMounted(() => {
   }
 
   &__product-image {
-    height: 120px; // Altura fija para la imagen
-    overflow: hidden; // Para el efecto de zoom de la imagen
-    background-color: #f8fafc; // Color de fondo para imágenes transparentes o mientras carga
+    height: 120px;
+    overflow: hidden;
+    background-color: #f8fafc;
 
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover; // Cubre el área sin distorsionar
+      object-fit: cover;
       transition: transform 0.3s ease;
     }
-
-    // No es necesario el hover aquí si el card ya tiene un hover
   }
 
   &:hover &__product-image img {
-    // Efecto de zoom en la imagen cuando se hace hover en la tarjeta
     transform: scale(1.05);
   }
 
-
   &__product-info {
-    padding: 0.85rem; // Padding consistente
+    padding: 0.85rem;
     display: flex;
     flex-direction: column;
-    flex-grow: 1; // Para que ocupe el espacio restante
+    flex-grow: 1;
   }
 
   &__product-name {
-    font-size: 0.9rem; // Un poco más pequeño si el espacio es limitado
+    font-size: 0.9rem;
     font-weight: 600;
     color: #1e293b;
     margin: 0 0 0.35rem;
-    white-space: nowrap; // Evita que el nombre se rompa en varias líneas
-    overflow: hidden; // Oculta el texto que se desborda
-    text-overflow: ellipsis; // Añade "..." al final del texto desbordado
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     line-height: 1.3;
   }
 
@@ -1274,46 +1529,46 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
-    font-size: 0.75rem; // Estadísticas más pequeñas
+    font-size: 0.75rem;
     color: #64748b;
-    margin-top: auto; // Empuja las estadísticas al final si hay espacio
+    margin-top: auto;
   }
 
   &__product-orders,
   &__product-revenue {
     display: flex;
     align-items: center;
-    gap: 0.4rem; // Menos espacio para el icono
+    gap: 0.4rem;
 
     svg {
-      width: 12px; // Iconos más pequeños
+      width: 12px;
       height: 12px;
-      opacity: 0.8; // Ligeramente más visibles
+      opacity: 0.8;
     }
   }
 
-  // --- Modal Styles ---
+  // Modal styles
   &__modal {
     position: fixed;
-    inset: 0; // Equivalente a top, left, right, bottom = 0
-    background-color: rgba(9, 30, 66, 0.54); // Color de fondo semi-transparente (más corporativo)
+    inset: 0;
+    background-color: rgba(9, 30, 66, 0.54);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000; // Asegura que esté por encima de todo
-    padding: 1rem; // Espacio por si el modal es muy grande
-    overflow-y: auto; // Permite scroll si el modal es más alto que la pantalla
+    z-index: 1000;
+    padding: 1rem;
+    overflow-y: auto;
   }
 
   &__modal-content {
     background-color: white;
-    border-radius: 12px; // Bordes más redondeados
+    border-radius: 12px;
     width: 100%;
-    max-width: 550px; // Ancho máximo del modal
-    max-height: calc(100vh - 2rem); // Altura máxima, dejando espacio
+    max-width: 550px;
+    max-height: calc(100vh - 2rem);
     display: flex;
     flex-direction: column;
-    overflow: hidden; // El scroll principal estará en modal-body
+    overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
   }
 
@@ -1321,37 +1576,35 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.25rem; // Padding ajustado
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid #e2e8f0;
-    flex-shrink: 0; // Evita que se encoja
+    flex-shrink: 0;
   }
 
   &__modal-title {
-    font-size: 1.15rem; // Título un poco más grande
+    font-size: 1.15rem;
     font-weight: 600;
     color: #1e293b;
     margin: 0;
   }
 
   &__modal-close {
-    background: transparent; // Botón transparente
+    background: transparent;
     border: none;
-    width: 32px; // Área de click más grande
+    width: 32px;
     height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #64748b;
     cursor: pointer;
-    border-radius: 50%; // Círculo
-    padding: 0; // Reset padding
+    border-radius: 50%;
+    padding: 0;
 
     svg {
       width: 20px;
       height: 20px;
     }
-
-    // Icono un poco más grande
 
     &:hover {
       background-color: #f1f5f9;
@@ -1361,9 +1614,9 @@ onMounted(() => {
 
   &__modal-body {
     padding: 1.25rem;
-    flex-grow: 1; // Ocupa el espacio disponible
-    overflow-y: auto; // Scroll interno para el contenido del cuerpo
-    -webkit-overflow-scrolling: touch; // Scroll suave en iOS
+    flex-grow: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   &__order-details-section {
@@ -1375,21 +1628,21 @@ onMounted(() => {
   }
 
   &__details-title {
-    font-size: 0.9rem; // Título de sección más pequeño
+    font-size: 0.9rem;
     font-weight: 600;
-    text-transform: uppercase; // Mayúsculas para destacar
+    text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #475569; // Color grisáceo
+    color: #475569;
     margin: 0 0 0.75rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f1f5f9;
   }
 
   &__details-item {
-    display: flex; // Para alinear etiqueta y valor
+    display: flex;
     align-items: baseline;
-    margin-bottom: 0.6rem; // Espacio entre items
-    font-size: 0.9rem; // Tamaño de fuente base
+    margin-bottom: 0.6rem;
+    font-size: 0.9rem;
     line-height: 1.5;
 
     &:last-child {
@@ -1399,60 +1652,57 @@ onMounted(() => {
 
   &__details-label {
     font-weight: 500;
-    color: #64748b; // Etiqueta en gris
-    width: 110px; // Ancho fijo para etiquetas
-    flex-shrink: 0; // Evita que se encoja
+    color: #64748b;
+    width: 110px;
+    flex-shrink: 0;
     margin-right: 0.5rem;
   }
 
   &__details-value {
-    color: #1e293b; // Valor en color oscuro
-    word-break: break-word; // Para valores largos
+    color: #1e293b;
+    word-break: break-word;
   }
 
   &__order-items-list {
     list-style: none;
     padding: 0;
-    margin: 0 0 1.25rem; // Margen inferior después de la lista
+    margin: 0 0 1.25rem;
   }
 
   &__order-item-detail {
     display: flex;
-    align-items: flex-start; // Alinear items al inicio
-    padding: 0.85rem 0; // Más padding vertical
+    align-items: flex-start;
+    padding: 0.85rem 0;
     border-bottom: 1px solid #f1f5f9;
 
     &:first-child {
       padding-top: 0.25rem;
     }
 
-    // Menos padding arriba para el primero
     &:last-child {
       border-bottom: none;
       padding-bottom: 0.25rem;
     }
-
-    // Sin borde y menos padding para el último
   }
 
   &__item-quantity {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #06a98d; // Color principal para la cantidad
-    margin-right: 1rem; // Más espacio
-    min-width: 25px; // Ancho mínimo para la cantidad
+    color: #06a98d;
+    margin-right: 1rem;
+    min-width: 25px;
     text-align: right;
   }
 
   &__item-info {
-    flex: 1; // Toma el espacio principal
+    flex: 1;
     display: flex;
     flex-direction: column;
   }
 
   &__item-name {
     font-size: 0.9rem;
-    font-weight: 500; // Nombre del item un poco más grueso
+    font-weight: 500;
     color: #1e293b;
     line-height: 1.3;
   }
@@ -1460,8 +1710,8 @@ onMounted(() => {
   &__item-options {
     font-size: 0.8rem;
     color: #64748b;
-    margin-top: 0.2rem; // Menos espacio
-    font-style: italic; // Opciones en cursiva
+    margin-top: 0.2rem;
+    font-style: italic;
   }
 
   &__item-price {
@@ -1469,53 +1719,50 @@ onMounted(() => {
     font-weight: 500;
     color: #1e293b;
     text-align: right;
-    min-width: 70px; // Ancho mínimo para el precio
+    min-width: 70px;
     margin-left: 0.5rem;
   }
 
   &__order-summary {
     background-color: #f8fafc;
     border-radius: 8px;
-    padding: 1rem; // Más padding
-    margin-top: 1rem; // Espacio antes del resumen
+    padding: 1rem;
+    margin-top: 1rem;
   }
 
   &__summary-item {
     display: flex;
     justify-content: space-between;
-    padding: 0.6rem 0; // Padding ajustado
+    padding: 0.6rem 0;
     font-size: 0.9rem;
-    color: #475569; // Color de texto del resumen
+    color: #475569;
 
     &--total {
       padding-top: 0.85rem;
-      margin-top: 0.5rem; // Más espacio antes del total
-      border-top: 1px solid #e2e8f0; // Borde más visible
-      font-weight: 700; // Total más grueso
-      font-size: 1rem; // Total un poco más grande
+      margin-top: 0.5rem;
+      border-top: 1px solid #e2e8f0;
+      font-weight: 700;
+      font-size: 1rem;
       color: #1e293b;
     }
 
     span:first-child {
       font-weight: 500;
     }
-
-    // Etiqueta del resumen un poco más gruesa
   }
 
   &__modal-footer {
     display: flex;
     align-items: center;
-    justify-content: space-between; // Espacio entre select y botones
-    padding: 1rem 1.25rem; // Padding ajustado
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
     border-top: 1px solid #e2e8f0;
-    background-color: #f8fafc; // Fondo sutil para el footer
-    flex-shrink: 0; // Evita que se encoja
+    background-color: #f8fafc;
+    flex-shrink: 0;
 
     @media (max-width: 520px) {
-      // Punto de quiebre para apilar el footer
       flex-direction: column;
-      align-items: stretch; // Botones y select ocupan todo el ancho
+      align-items: stretch;
       gap: 1rem;
     }
   }
@@ -1524,27 +1771,23 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-
-    @media (max-width: 520px) {
-      // Ya se estira por el flex-direction column del footer
-    }
   }
 
   &__status-label {
     font-size: 0.9rem;
     font-weight: 500;
     color: #1e293b;
-    white-space: nowrap; // Evita que se rompa la etiqueta
+    white-space: nowrap;
   }
 
   &__status-select {
-    padding: 0.6rem 0.85rem; // Padding del select
-    border: 1px solid #cbd5e1; // Borde un poco más oscuro
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
     font-size: 0.9rem;
     color: #1e293b;
     background-color: white;
-    flex-grow: 1; // Para que ocupe el espacio si está en flex
+    flex-grow: 1;
 
     &:focus {
       outline: none;
@@ -1556,23 +1799,19 @@ onMounted(() => {
   &__modal-actions {
     display: flex;
     gap: 0.75rem;
-
-    @media (max-width: 520px) {
-      // Ya se estira por el flex-direction column del footer
-    }
   }
 
   &__modal-btn {
-    padding: 0.6rem 1.1rem; // Padding de botones
+    padding: 0.6rem 1.1rem;
     border-radius: 6px;
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
-    border: 1px solid transparent; // Para mantener el layout
+    border: 1px solid transparent;
 
     @media (max-width: 520px) {
-      flex-grow: 1; // Botones ocupan el espacio
+      flex-grow: 1;
       text-align: center;
     }
 
@@ -1591,8 +1830,8 @@ onMounted(() => {
 
     &--secondary {
       background-color: white;
-      color: #475569; // Color de texto
-      border-color: #cbd5e1; // Borde
+      color: #475569;
+      border-color: #cbd5e1;
 
       &:hover {
         background-color: #f8fafc;
@@ -1604,7 +1843,6 @@ onMounted(() => {
       }
     }
   }
-
 }
 
 @keyframes rotate {
