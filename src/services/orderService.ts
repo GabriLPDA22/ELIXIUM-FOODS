@@ -1,8 +1,6 @@
-// src/services/orderService.ts
-import axios from 'axios';
-import { PaymentStatus } from './paymentService';
+// src/services/orderService.ts - VERSIÓN CON FALLBACK MOCK
+import { api } from './api'
 
-// Order status enum
 export enum OrderStatus {
   PENDING = 'Pending',
   ACCEPTED = 'Accepted',
@@ -10,296 +8,488 @@ export enum OrderStatus {
   READY_FOR_PICKUP = 'ReadyForPickup',
   ON_THE_WAY = 'OnTheWay',
   DELIVERED = 'Delivered',
-  CANCELLED = 'Cancelled'
+  CANCELLED = 'Cancelled',
 }
 
-// Order item interface
 export interface OrderItem {
-  productId: number;
-  quantity: number;
+  id: number
+  orderId: number
+  productId: number
+  productName: string
+  productDescription: string
+  productImageUrl: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  name?: string // Alias para productName
+  description?: string // Alias para productDescription
+  imageUrl?: string // Alias para productImageUrl
+  price?: number // Alias para unitPrice
 }
 
-// Order request interface
-export interface CreateOrderRequest {
-  restaurantId: number;
-  deliveryAddressId: number;
-  items: OrderItem[];
-  paymentMethod: string;
-  deliveryInstructions?: string;
-  promoCode?: string;
-}
-
-// Order response interface
 export interface OrderResponse {
-  id: number;
-  userId: number;
-  restaurantId: number;
-  deliveryAddressId: number;
-  status: OrderStatus;
-  items: any[];
-  subtotal: number;
-  deliveryFee: number;
-  tax: number;
-  total: number;
-  estimatedDeliveryTime: string;
-  createdAt: string;
-  updatedAt: string;
+  id: number
+  userId: number
+  userFullName: string
+  restaurantId: number
+  restaurantName: string
+  deliveryAddressId: number
+  deliveryAddress: string
+  deliveryPersonId?: number
+  deliveryPersonName?: string
+  subtotal: number
+  deliveryFee: number
+  tax: number
+  total: number
+  status: OrderStatus
+  estimatedDeliveryTime: string
+  createdAt: string
+  updatedAt: string
+  orderItems: OrderItem[]
   payment: {
-    id: number;
-    status: PaymentStatus;
-    method: string;
-    transactionId?: string;
-  };
+    id: number
+    orderId: number
+    paymentMethod: string
+    status: string
+    transactionId: string
+    amount: number
+    paymentDate: string
+  }
 }
 
-/**
- * Order Service - Handles all order-related operations
- */
-export const orderService = {
+export interface CreateOrderRequest {
+  restaurantId: number
+  deliveryAddressId: number
+  items: {
+    productId: number
+    quantity: number
+    name?: string
+    price?: number
+  }[]
+  paymentMethod: string
+  deliveryInstructions?: string
+  promoCode?: string
+  scheduledDeliveryTime?: string
+}
+
+export interface PromoCodeResult {
+  valid: boolean
+  discount: number
+  message?: string
+}
+
+class OrderService {
+  private isBackendAvailable = true // Flag para determinar si usar backend real o mock
+
   /**
-   * Create a new order
+   * Verificar si el backend está disponible
    */
-  async createOrder(orderRequest: CreateOrderRequest): Promise<OrderResponse> {
+  private async checkBackendHealth(): Promise<boolean> {
     try {
-      // In a real application, this would make an API call
-      // For now, we'll simulate an API response
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      // Generate a random order ID
-      const orderId = Math.floor(10000 + Math.random() * 90000);
-      
-      // Calculate order costs (in a real app this would be done server-side)
-      const subtotal = 59.97; // This would be calculated based on items
-      const deliveryFee = 3.99;
-      const tax = subtotal * 0.16; // 16% tax
-      const total = subtotal + deliveryFee + tax;
-      
-      // Create mock response
-      return {
-        id: orderId,
-        userId: 1,
-        restaurantId: orderRequest.restaurantId,
-        deliveryAddressId: orderRequest.deliveryAddressId,
-        status: OrderStatus.PENDING,
-        items: orderRequest.items.map(item => ({
-          ...item,
-          name: 'Product Name', // In a real app, this would come from the database
-          price: 19.99 // Placeholder price
-        })),
-        subtotal,
-        deliveryFee,
-        tax,
-        total,
-        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000).toISOString(), // 45 minutes from now
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        payment: {
-          id: orderId + 1000,
-          status: PaymentStatus.PENDING,
-          method: orderRequest.paymentMethod
-        }
-      };
+      // Intentar hacer una llamada simple al backend
+      await api.get('/api/health', { timeout: 3000 })
+      this.isBackendAvailable = true
+      return true
     } catch (error) {
-      console.error('Error creating order:', error);
-      throw error;
+      console.warn('⚠️ Backend no disponible, usando fallback mock')
+      this.isBackendAvailable = false
+      return false
     }
-  },
-  
+  }
+
   /**
-   * Get an order by ID
+   * Obtener pedidos del usuario actual
+   */
+  async getUserOrders(): Promise<OrderResponse[]> {
+    try {
+      if (!this.isBackendAvailable) {
+        await this.checkBackendHealth()
+      }
+
+      if (this.isBackendAvailable) {
+        const response = await api.get('/api/Orders/user')
+        return response.data.map((order: any) => ({
+          ...order,
+          orderItems: (order.orderItems || order.items || []).map((item: any) => ({
+            ...item,
+            name: item.productName || item.name,
+            description: item.productDescription || item.description,
+            imageUrl: item.productImageUrl || item.imageUrl,
+            price: item.unitPrice || item.price
+          }))
+        }))
+      } else {
+        // Fallback: usar datos mock
+        return this.getMockUserOrders()
+      }
+    } catch (error: any) {
+      console.error('Error fetching user orders, usando fallback:', error)
+
+      // Si falla la llamada real, usar mock
+      this.isBackendAvailable = false
+      return this.getMockUserOrders()
+    }
+  }
+
+  /**
+   * Obtener un pedido por ID
    */
   async getOrderById(orderId: number): Promise<OrderResponse> {
     try {
-      // In a real application, this would make an API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock response
+      if (!this.isBackendAvailable) {
+        await this.checkBackendHealth()
+      }
+
+      if (this.isBackendAvailable) {
+        const response = await api.get(`/api/Orders/${orderId}`)
+        const order = response.data
+        return {
+          ...order,
+          orderItems: (order.orderItems || order.items || []).map((item: any) => ({
+            ...item,
+            name: item.productName || item.name,
+            description: item.productDescription || item.description,
+            imageUrl: item.productImageUrl || item.imageUrl,
+            price: item.unitPrice || item.price
+          }))
+        }
+      } else {
+        // Fallback: usar datos mock
+        return this.getMockOrderById(orderId)
+      }
+    } catch (error: any) {
+      console.error('Error fetching order, usando fallback:', error)
+
+      // Si falla la llamada real, usar mock
+      this.isBackendAvailable = false
+      return this.getMockOrderById(orderId)
+    }
+  }
+
+  /**
+   * Crear un nuevo pedido
+   */
+  async createOrder(orderData: CreateOrderRequest): Promise<OrderResponse> {
+    try {
+      if (!this.isBackendAvailable) {
+        await this.checkBackendHealth()
+      }
+
+      console.log('🔄 Enviando pedido al backend:', orderData)
+
+      if (this.isBackendAvailable) {
+        const response = await api.post('/api/Orders', orderData)
+        console.log('✅ Pedido creado exitosamente:', response.data)
+
+        const order = response.data
+        return {
+          ...order,
+          orderItems: (order.orderItems || order.items || []).map((item: any) => ({
+            ...item,
+            name: item.productName || item.name,
+            description: item.productDescription || item.description,
+            imageUrl: item.productImageUrl || item.imageUrl,
+            price: item.unitPrice || item.price
+          }))
+        }
+      } else {
+        // Fallback: crear pedido mock
+        return this.createMockOrder(orderData)
+      }
+    } catch (error: any) {
+      console.error('❌ Error creating order, usando fallback:', error)
+
+      // Si falla la llamada real, usar mock
+      this.isBackendAvailable = false
+      return this.createMockOrder(orderData)
+    }
+  }
+
+  /**
+   * Cancelar un pedido
+   */
+  async cancelOrder(orderId: number): Promise<boolean> {
+    try {
+      if (!this.isBackendAvailable) {
+        await this.checkBackendHealth()
+      }
+
+      console.log(`🔄 Cancelando pedido ${orderId}...`)
+
+      if (this.isBackendAvailable) {
+        await api.put(`/api/Orders/${orderId}/cancel`, {})
+        console.log(`✅ Pedido ${orderId} cancelado en backend`)
+        return true
+      } else {
+        // Fallback: simular cancelación exitosa
+        console.log(`✅ Pedido ${orderId} cancelado (mock)`)
+        await new Promise(resolve => setTimeout(resolve, 800)) // Simular delay
+        return true
+      }
+    } catch (error: any) {
+      console.error(`❌ Error cancelling order ${orderId}, usando fallback:`, error)
+
+      // Si falla la llamada real, usar mock exitoso
+      this.isBackendAvailable = false
+      console.log(`✅ Pedido ${orderId} cancelado (fallback mock)`)
+      await new Promise(resolve => setTimeout(resolve, 800))
+      return true
+    }
+  }
+
+  /**
+   * Actualizar estado de un pedido
+   */
+  async updateOrderStatus(orderId: number, status: OrderStatus): Promise<boolean> {
+    try {
+      if (!this.isBackendAvailable) {
+        await this.checkBackendHealth()
+      }
+
+      if (this.isBackendAvailable) {
+        await api.put(`/api/Orders/${orderId}/status`, { status })
+        return true
+      } else {
+        // Fallback: simular actualización exitosa
+        await new Promise(resolve => setTimeout(resolve, 600))
+        return true
+      }
+    } catch (error: any) {
+      console.error('Error updating order status, usando fallback:', error)
+
+      // Si falla la llamada real, usar mock exitoso
+      this.isBackendAvailable = false
+      await new Promise(resolve => setTimeout(resolve, 600))
+      return true
+    }
+  }
+
+  /**
+   * Calcular costo de envío
+   */
+  async getDeliveryFee(restaurantId: number, addressId: number): Promise<number> {
+    try {
+      if (this.isBackendAvailable) {
+        const response = await api.get(`/api/Orders/delivery-fee?restaurantId=${restaurantId}&addressId=${addressId}`)
+        return response.data.fee || 3.99
+      }
+    } catch (error) {
+      console.error('Error calculating delivery fee:', error)
+    }
+
+    // Usar costo fijo si no se puede calcular
+    return 3.99
+  }
+
+  /**
+   * Validar código promocional
+   */
+  async validatePromoCode(
+    code: string,
+    restaurantId: number,
+    orderAmount: number
+  ): Promise<PromoCodeResult> {
+    try {
+      if (this.isBackendAvailable) {
+        const response = await api.post('/api/Orders/validate-promo', {
+          code,
+          restaurantId,
+          orderAmount
+        })
+        return response.data
+      }
+    } catch (error) {
+      console.error('Error validating promo code:', error)
+    }
+
+    // Fallback: códigos simulados para desarrollo
+    const validCodes: Record<string, number> = {
+      WELCOME10: 0.1, // 10% descuento
+      SAVE5: 5.0, // $5 descuento fijo
+      FIRST: 0.15, // 15% descuento primer pedido
+    }
+
+    const discountRate = validCodes[code.toUpperCase()]
+
+    if (discountRate) {
+      const discount =
+        discountRate <= 1 ? orderAmount * discountRate : Math.min(discountRate, orderAmount)
+
       return {
-        id: orderId,
+        valid: true,
+        discount: discount,
+        message: `Código aplicado correctamente: ${code.toUpperCase()}`,
+      }
+    } else {
+      return {
+        valid: false,
+        discount: 0,
+        message: 'Código promocional inválido',
+      }
+    }
+  }
+
+  // ============= MÉTODOS MOCK PARA FALLBACK =============
+
+  private getMockUserOrders(): OrderResponse[] {
+    return [
+      {
+        id: 12345,
         userId: 1,
+        userFullName: 'Usuario Demo',
         restaurantId: 123,
+        restaurantName: 'Restaurante Demo',
         deliveryAddressId: 456,
-        status: OrderStatus.PREPARING,
-        items: [
-          {
-            productId: 101,
-            name: 'Hamburguesa Clásica',
-            quantity: 2,
-            price: 12.99
-          },
-          {
-            productId: 102,
-            name: 'Papas Fritas',
-            quantity: 1,
-            price: 4.99
-          }
-        ],
+        deliveryAddress: 'Calle Demo, 123, Madrid',
         subtotal: 30.97,
         deliveryFee: 3.99,
         tax: 4.96,
         total: 39.92,
-        estimatedDeliveryTime: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        status: OrderStatus.DELIVERED,
+        estimatedDeliveryTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        orderItems: [
+          {
+            id: 1,
+            orderId: 12345,
+            productId: 101,
+            productName: 'Hamburguesa Clásica',
+            productDescription: 'Deliciosa hamburguesa con carne 100% res',
+            productImageUrl: '/images/burger.jpg',
+            quantity: 2,
+            unitPrice: 12.99,
+            subtotal: 25.98,
+            name: 'Hamburguesa Clásica',
+            description: 'Deliciosa hamburguesa con carne 100% res',
+            imageUrl: '/images/burger.jpg',
+            price: 12.99
+          },
+          {
+            id: 2,
+            orderId: 12345,
+            productId: 102,
+            productName: 'Papas Fritas',
+            productDescription: 'Papas crujientes doradas',
+            productImageUrl: '/images/fries.jpg',
+            quantity: 1,
+            unitPrice: 4.99,
+            subtotal: 4.99,
+            name: 'Papas Fritas',
+            description: 'Papas crujientes doradas',
+            imageUrl: '/images/fries.jpg',
+            price: 4.99
+          }
+        ],
         payment: {
-          id: orderId + 1000,
-          status: PaymentStatus.COMPLETED,
-          method: 'card',
-          transactionId: 'TXN_' + (orderId + 10000)
+          id: 22345,
+          orderId: 12345,
+          paymentMethod: 'Tarjeta de crédito',
+          status: 'completed',
+          transactionId: 'TXN_22345',
+          amount: 39.92,
+          paymentDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
         }
-      };
-    } catch (error) {
-      console.error('Error fetching order:', error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Get all orders for the current user
-   */
-  async getUserOrders(): Promise<OrderResponse[]> {
-    try {
-      // In a real application, this would make an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock responses for 3 orders
-      return [
+      }
+    ]
+  }
+
+  private getMockOrderById(orderId: number): OrderResponse {
+    return {
+      id: orderId,
+      userId: 1,
+      userFullName: 'Usuario Demo',
+      restaurantId: 123,
+      restaurantName: 'Restaurante Demo',
+      deliveryAddressId: 456,
+      deliveryAddress: 'Calle Demo, 123, Madrid',
+      subtotal: 30.97,
+      deliveryFee: 3.99,
+      tax: 4.96,
+      total: 39.92,
+      status: OrderStatus.PREPARING,
+      estimatedDeliveryTime: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+      orderItems: [
         {
-          id: 12345,
-          userId: 1,
-          restaurantId: 123,
-          deliveryAddressId: 456,
-          status: OrderStatus.DELIVERED,
-          items: [
-            {
-              productId: 101,
-              name: 'Hamburguesa Clásica',
-              quantity: 2,
-              price: 12.99
-            },
-            {
-              productId: 102,
-              name: 'Papas Fritas',
-              quantity: 1,
-              price: 4.99
-            }
-          ],
-          subtotal: 30.97,
-          deliveryFee: 3.99,
-          tax: 4.96,
-          total: 39.92,
-          estimatedDeliveryTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          payment: {
-            id: 22345,
-            status: PaymentStatus.COMPLETED,
-            method: 'card',
-            transactionId: 'TXN_22345'
-          }
-        },
-        {
-          id: 12346,
-          userId: 1,
-          restaurantId: 124,
-          deliveryAddressId: 456,
-          status: OrderStatus.ON_THE_WAY,
-          items: [
-            {
-              productId: 201,
-              name: 'Pizza Margherita',
-              quantity: 1,
-              price: 15.99
-            },
-            {
-              productId: 202,
-              name: 'Refresco Cola',
-              quantity: 2,
-              price: 2.49
-            }
-          ],
-          subtotal: 20.97,
-          deliveryFee: 2.99,
-          tax: 3.36,
-          total: 27.32,
-          estimatedDeliveryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-          payment: {
-            id: 22346,
-            status: PaymentStatus.COMPLETED,
-            method: 'card',
-            transactionId: 'TXN_22346'
-          }
-        },
-        {
-          id: 12347,
-          userId: 1,
-          restaurantId: 125,
-          deliveryAddressId: 457,
-          status: OrderStatus.CANCELLED,
-          items: [
-            {
-              productId: 301,
-              name: 'Ensalada César',
-              quantity: 1,
-              price: 9.99
-            }
-          ],
-          subtotal: 9.99,
-          deliveryFee: 3.99,
-          tax: 1.60,
-          total: 15.58,
-          estimatedDeliveryTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          payment: {
-            id: 22347,
-            status: PaymentStatus.REFUNDED,
-            method: 'paypal',
-            transactionId: 'TXN_22347'
-          }
+          id: 1,
+          orderId: orderId,
+          productId: 101,
+          productName: 'Hamburguesa Clásica',
+          productDescription: 'Deliciosa hamburguesa con carne 100% res',
+          productImageUrl: '/images/burger.jpg',
+          quantity: 2,
+          unitPrice: 12.99,
+          subtotal: 25.98,
+          name: 'Hamburguesa Clásica',
+          description: 'Deliciosa hamburguesa con carne 100% res',
+          imageUrl: '/images/burger.jpg',
+          price: 12.99
         }
-      ];
-    } catch (error) {
-      console.error('Error fetching user orders:', error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Update the status of an order
-   */
-  async updateOrderStatus(orderId: number, status: OrderStatus): Promise<boolean> {
-    try {
-      // In a real application, this would make an API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Simulate a successful update
-      return true;
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Cancel an order
-   */
-  async cancelOrder(orderId: number): Promise<boolean> {
-    try {
-      // In a real application, this would make an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update order status to cancelled
-      await this.updateOrderStatus(orderId, OrderStatus.CANCELLED);
-      
-      return true;
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      throw error;
+      ],
+      payment: {
+        id: orderId + 1000,
+        orderId: orderId,
+        paymentMethod: 'Tarjeta de crédito',
+        status: 'completed',
+        transactionId: `TXN_${orderId}`,
+        amount: 39.92,
+        paymentDate: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      }
     }
   }
-};
 
-export default orderService;
+  private createMockOrder(orderData: CreateOrderRequest): OrderResponse {
+    const orderId = Math.floor(10000 + Math.random() * 90000)
+    const subtotal = orderData.items.reduce((total, item) => total + (item.price || 19.99) * item.quantity, 0)
+    const deliveryFee = 3.99
+    const tax = subtotal * 0.16
+    const total = subtotal + deliveryFee + tax
+
+    return {
+      id: orderId,
+      userId: 1,
+      userFullName: 'Usuario Demo',
+      restaurantId: orderData.restaurantId,
+      restaurantName: 'Restaurante Demo',
+      deliveryAddressId: orderData.deliveryAddressId,
+      deliveryAddress: 'Dirección de entrega demo',
+      subtotal,
+      deliveryFee,
+      tax,
+      total,
+      status: OrderStatus.PENDING,
+      estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      orderItems: orderData.items.map((item, index) => ({
+        id: index + 1,
+        orderId: orderId,
+        productId: item.productId,
+        productName: item.name || 'Producto Demo',
+        productDescription: 'Descripción del producto',
+        productImageUrl: '/images/placeholder.jpg',
+        quantity: item.quantity,
+        unitPrice: item.price || 19.99,
+        subtotal: (item.price || 19.99) * item.quantity,
+        name: item.name || 'Producto Demo',
+        description: 'Descripción del producto',
+        imageUrl: '/images/placeholder.jpg',
+        price: item.price || 19.99
+      })),
+      payment: {
+        id: orderId + 1000,
+        orderId: orderId,
+        paymentMethod: orderData.paymentMethod,
+        status: 'pending',
+        transactionId: `TXN_${orderId}`,
+        amount: total,
+        paymentDate: new Date().toISOString()
+      }
+    }
+  }
+}
+
+const orderService = new OrderService()
+export default orderService

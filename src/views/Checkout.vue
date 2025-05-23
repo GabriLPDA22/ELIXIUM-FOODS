@@ -1,4 +1,3 @@
-<!-- src/views/Checkout.vue -->
 <template>
   <div class="checkout-page">
     <div class="container">
@@ -47,14 +46,122 @@
             <!-- Delivery options step (step 1) -->
             <div v-if="currentStep === 0" class="step-panel">
               <h2 class="step-panel__title">Opciones de entrega</h2>
-              <DeliveryOptions 
-                :addresses="addresses" 
-                :selectedAddress="selectedAddress"
-                @select-address="selectAddress"
-                @add-address="showAddAddressModal = true"
-              />
+
+              <!-- Delivery time options -->
+              <div class="delivery-options">
+                <div class="delivery-option"
+                     :class="{ 'delivery-option--active': deliveryType === 'now' }"
+                     @click="deliveryType = 'now'">
+                  <input type="radio" v-model="deliveryType" value="now" id="delivery-now">
+                  <label for="delivery-now">
+                    <div class="delivery-option__main">
+                      <h4>Entregar ahora</h4>
+                      <p>{{ estimatedDeliveryTime }}-{{ estimatedDeliveryTime + 15 }} min</p>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="delivery-option"
+                     :class="{ 'delivery-option--active': deliveryType === 'scheduled' }"
+                     @click="deliveryType = 'scheduled'">
+                  <input type="radio" v-model="deliveryType" value="scheduled" id="delivery-scheduled">
+                  <label for="delivery-scheduled">
+                    <div class="delivery-option__main">
+                      <h4>Programar para más tarde</h4>
+                      <p>Elige día y hora</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Scheduled delivery time picker -->
+              <div v-if="deliveryType === 'scheduled'" class="scheduled-delivery">
+                <h4>Selecciona fecha y hora de entrega</h4>
+                <div class="scheduled-delivery__inputs">
+                  <div class="input-group">
+                    <label for="delivery-date">Fecha</label>
+                    <input type="date"
+                           id="delivery-date"
+                           v-model="scheduledDate"
+                           :min="minDate"
+                           :max="maxDate">
+                  </div>
+                  <div class="input-group">
+                    <label for="delivery-time">Hora</label>
+                    <select id="delivery-time" v-model="scheduledTime" class="time-selector">
+                      <option value="">Seleccionar hora</option>
+                      <option v-for="time in availableTimeSlots" :key="time" :value="time">
+                        {{ time }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address selection -->
+              <div class="address-section">
+                <h4>Dirección de entrega</h4>
+                <div v-if="loadingAddresses" class="loading-addresses">
+                  <div class="loading-spinner"></div>
+                  <span>Cargando direcciones...</span>
+                </div>
+                <div v-else-if="addresses.length === 0" class="no-addresses">
+                  <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <p>No tienes direcciones guardadas</p>
+                    <p class="empty-state__subtitle">Agrega una dirección para continuar con tu pedido</p>
+                  </div>
+                  <button @click="showAddAddressModal = true" class="add-item-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Agregar primera dirección
+                  </button>
+                </div>
+                <div v-else class="address-list">
+                  <div v-for="address in addresses" :key="address.id"
+                       class="address-item"
+                       :class="{ 'address-item--selected': selectedAddress === address.id }"
+                       @click="selectAddress(address.id)">
+                    <div class="address-content">
+                      <h5>{{ address.name }}</h5>
+                      <p>{{ formatAddress(address) }}</p>
+                      <span v-if="address.isDefault" class="default-badge">Predeterminada</span>
+                    </div>
+                    <div class="radio-indicator">
+                      <input type="radio"
+                             :checked="selectedAddress === address.id"
+                             @change="selectAddress(address.id)">
+                    </div>
+                  </div>
+                  <!-- Botón funcional para agregar dirección -->
+                  <button @click="showAddAddressModal = true" class="add-item-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Agregar nueva dirección
+                  </button>
+                </div>
+              </div>
+
+              <!-- Delivery instructions -->
+              <div class="delivery-instructions">
+                <label for="instructions">Instrucciones para la entrega (opcional)</label>
+                <textarea id="instructions"
+                          v-model="deliveryInstructions"
+                          placeholder="Ej. Timbre no funciona, llamar por teléfono..."
+                          rows="3"></textarea>
+              </div>
+
               <div class="step-panel__actions">
-                <button @click="goToStep(1)" class="btn-next" :disabled="!selectedAddress">
+                <button @click="goToStep(1)"
+                        class="btn-next"
+                        :disabled="!canProceedToPayment">
                   Continuar al pago
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -67,12 +174,65 @@
             <!-- Payment methods step (step 2) -->
             <div v-else-if="currentStep === 1" class="step-panel">
               <h2 class="step-panel__title">Método de pago</h2>
-              <PaymentMethods 
-                :paymentMethods="paymentMethods" 
-                :selectedPaymentMethod="selectedPaymentMethod"
-                @select-payment="selectPaymentMethod"
-                @add-payment="showAddPaymentModal = true"
-              />
+
+              <div class="payment-methods">
+                <div v-if="loadingPaymentMethods" class="loading-payment">
+                  <div class="loading-spinner"></div>
+                  <span>Cargando métodos de pago...</span>
+                </div>
+                <div v-else-if="paymentMethods.length === 0" class="no-payment-methods">
+                  <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                      <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                    <p>No tienes métodos de pago guardados</p>
+                    <p class="empty-state__subtitle">Agrega un método de pago para finalizar tu pedido</p>
+                  </div>
+                  <button @click="showAddPaymentModal = true" class="add-item-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Agregar primer método de pago
+                  </button>
+                </div>
+                <div v-else class="payment-method-list">
+                  <div v-for="method in paymentMethods" :key="method.id"
+                       class="payment-method"
+                       :class="{ 'payment-method--selected': selectedPaymentMethod === method.id }"
+                       @click="selectPaymentMethod(method.id)">
+                    <div class="payment-method__icon">
+                      <svg v-if="method.type === 'card'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                      </svg>
+                      <svg v-else-if="method.type === 'paypal'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 12h8"></path>
+                      </svg>
+                    </div>
+                    <div class="payment-method__details">
+                      <h5>{{ method.name }}</h5>
+                      <p>{{ getPaymentMethodDescription(method) }}</p>
+                    </div>
+                    <div class="radio-indicator">
+                      <input type="radio"
+                             :checked="selectedPaymentMethod === method.id"
+                             @change="selectPaymentMethod(method.id)">
+                    </div>
+                  </div>
+                  <!-- Botón funcional para agregar método de pago -->
+                  <button @click="showAddPaymentModal = true" class="add-item-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Agregar nuevo método de pago
+                  </button>
+                </div>
+              </div>
+
               <div class="step-panel__actions">
                 <button @click="goToStep(0)" class="btn-back">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -94,16 +254,45 @@
             <!-- Order review step (step 3) -->
             <div v-else-if="currentStep === 2" class="step-panel">
               <h2 class="step-panel__title">Revisar pedido</h2>
-              <OrderSummary 
-                :cartItems="cartItems"
-                :subtotal="subtotal"
-                :deliveryFee="deliveryFee"
-                :tax="tax"
-                :total="total"
-                :selectedAddress="getSelectedAddress()"
-                :selectedPaymentMethod="getSelectedPaymentMethod()"
-                :estimatedDeliveryTime="estimatedDeliveryTime"
-              />
+
+              <!-- Order review content -->
+              <div class="order-review">
+                <div class="review-section">
+                  <h4>Detalles de entrega</h4>
+                  <div class="review-item">
+                    <strong>Tipo:</strong> {{ deliveryType === 'now' ? 'Entregar ahora' : 'Programado' }}
+                  </div>
+                  <div v-if="deliveryType === 'scheduled'" class="review-item">
+                    <strong>Fecha y hora:</strong> {{ formatScheduledDelivery() }}
+                  </div>
+                  <div class="review-item">
+                    <strong>Dirección:</strong> {{ getSelectedAddress()?.name }} - {{ formatAddress(getSelectedAddress()) }}
+                  </div>
+                  <div v-if="deliveryInstructions" class="review-item">
+                    <strong>Instrucciones:</strong> {{ deliveryInstructions }}
+                  </div>
+                </div>
+
+                <div class="review-section">
+                  <h4>Método de pago</h4>
+                  <div class="review-item">
+                    <strong>{{ getSelectedPaymentMethod()?.name }}</strong>
+                    <span>{{ getPaymentMethodDescription(getSelectedPaymentMethod()) }}</span>
+                  </div>
+                </div>
+
+                <div class="review-section">
+                  <h4>Productos</h4>
+                  <div class="review-items">
+                    <div v-for="item in cartItems" :key="item.id" class="review-product">
+                      <span class="quantity">{{ item.quantity }}×</span>
+                      <span class="name">{{ item.name }}</span>
+                      <span class="price">${{ (item.price * item.quantity).toFixed(2) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="step-panel__actions">
                 <button @click="goToStep(1)" class="btn-back">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -112,16 +301,40 @@
                   </svg>
                   Volver
                 </button>
-                <button @click="placeOrder" class="btn-place-order" :disabled="loading">
-                  <span v-if="!loading">Realizar pedido</span>
+                <button @click="placeOrder" class="btn-place-order" :disabled="placingOrder">
+                  <span v-if="!placingOrder">Realizar pedido</span>
                   <span v-else class="loading-spinner"></span>
                 </button>
               </div>
             </div>
 
-            <!-- Order confirmation step (step 4) -->
+            <!-- Order confirmation step (step 4) - CON VIDEOS ALEATORIOS -->
             <div v-else-if="currentStep === 3" class="step-panel step-panel--success">
               <div class="order-success">
+                <!-- Video aleatorio de delivery -->
+                <div class="delivery-animation-container">
+                  <video
+                    v-if="randomDeliveryGifUrl"
+                    :src="randomDeliveryGifUrl"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    class="delivery-video">
+                  </video>
+
+                  <!-- Textos animados -->
+                  <div class="delivery-text">
+                    <h3 class="delivery-title">¡Tu pedido está en camino!</h3>
+                    <p class="delivery-subtitle">El repartidor ya salió del restaurante</p>
+                    <div class="loading-dots">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="order-success__icon">
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -129,23 +342,15 @@
                   </svg>
                 </div>
                 <h2 class="order-success__title">¡Pedido realizado con éxito!</h2>
-                <p class="order-success__text">Tu pedido #{{ orderId }} ha sido recibido y está siendo procesado.</p>
+                <p class="order-success__text">Tu pedido #{{ createdOrderId }} ha sido recibido y está siendo procesado.</p>
                 <div class="order-success__details">
                   <div class="order-success__detail">
                     <span class="order-success__label">Número de pedido:</span>
-                    <span class="order-success__value">{{ orderId }}</span>
+                    <span class="order-success__value">{{ createdOrderId }}</span>
                   </div>
                   <div class="order-success__detail">
-                    <span class="order-success__label">Tiempo estimado de entrega:</span>
-                    <span class="order-success__value">{{ estimatedDeliveryTime }} minutos</span>
-                  </div>
-                  <div class="order-success__detail">
-                    <span class="order-success__label">Dirección de entrega:</span>
-                    <span class="order-success__value">{{ getSelectedAddress()?.street }}</span>
-                  </div>
-                  <div class="order-success__detail">
-                    <span class="order-success__label">Método de pago:</span>
-                    <span class="order-success__value">{{ getSelectedPaymentMethod()?.name }}</span>
+                    <span class="order-success__label">{{ deliveryType === 'now' ? 'Tiempo estimado de entrega:' : 'Entrega programada:' }}</span>
+                    <span class="order-success__value">{{ getDeliveryTimeText() }}</span>
                   </div>
                   <div class="order-success__detail">
                     <span class="order-success__label">Total:</span>
@@ -153,8 +358,8 @@
                   </div>
                 </div>
                 <div class="order-success__actions">
-                  <router-link to="/orders" class="order-success__button">Ver mis pedidos</router-link>
-                  <router-link to="/" class="order-success__button order-success__button--secondary">Volver al inicio</router-link>
+                  <router-link :to="`/orders/${createdOrderId}`" class="order-success__button">Ver detalles del pedido</router-link>
+                  <router-link to="/orders" class="order-success__button order-success__button--secondary">Ver todos mis pedidos</router-link>
                 </div>
               </div>
             </div>
@@ -168,15 +373,16 @@
               <h3 class="order-summary__title">Resumen del pedido</h3>
             </div>
             <div class="order-summary__content">
+              <!-- Restaurant info -->
               <div class="order-summary__restaurant">
-                <img :src="restaurantLogo" alt="Logo restaurante" class="order-summary__logo">
+                <div class="restaurant-placeholder">{{ restaurantName[0] || 'R' }}</div>
                 <div>
                   <h4 class="order-summary__restaurant-name">{{ restaurantName }}</h4>
                   <p class="order-summary__delivery-time">{{ estimatedDeliveryTime }} min</p>
                 </div>
               </div>
 
-              <!-- Cart item list (compact) -->
+              <!-- Cart item list -->
               <div class="order-summary__items">
                 <div v-for="item in cartItems" :key="item.id" class="order-summary__item">
                   <div class="item-quantity">{{ item.quantity }}×</div>
@@ -185,11 +391,41 @@
                 </div>
               </div>
 
+              <!-- Promo code -->
+              <div class="order-summary__promocode">
+                <input type="text"
+                       class="promocode-input"
+                       placeholder="Código promocional"
+                       v-model="promoCode"
+                       @keyup.enter="applyPromoCode">
+                <button class="promocode-button"
+                        @click="applyPromoCode"
+                        :disabled="validatingPromo">
+                  <span v-if="!validatingPromo">Aplicar</span>
+                  <span v-else class="loading-spinner loading-spinner--small"></span>
+                </button>
+              </div>
+
+              <!-- Promo discount display -->
+              <div v-if="promoDiscount > 0" class="promo-success">
+                <div class="promo-success__message">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Código aplicado: -${{ promoDiscount.toFixed(2) }}
+                </div>
+                <button @click="removePromoCode" class="remove-promo">×</button>
+              </div>
+
               <!-- Order totals -->
               <div class="order-summary__totals">
                 <div class="order-summary__row">
                   <span>Subtotal</span>
                   <span>${{ subtotal.toFixed(2) }}</span>
+                </div>
+                <div v-if="promoDiscount > 0" class="order-summary__row order-summary__row--discount">
+                  <span>Descuento</span>
+                  <span>-${{ promoDiscount.toFixed(2) }}</span>
                 </div>
                 <div class="order-summary__row">
                   <span>Costo de envío</span>
@@ -205,129 +441,120 @@
                   <span>${{ total.toFixed(2) }}</span>
                 </div>
               </div>
-
-              <div class="order-summary__promocode">
-                <input type="text" class="promocode-input" placeholder="Código promocional" v-model="promoCode">
-                <button class="promocode-button">Aplicar</button>
-              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal for adding a new address -->
-    <div v-if="showAddAddressModal" class="modal-overlay">
-      <div class="modal">
-        <div class="modal__header">
-          <h3 class="modal__title">Añadir nueva dirección</h3>
-          <button class="modal__close" @click="showAddAddressModal = false">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="modal__content">
-          <form @submit.prevent="addNewAddress" class="address-form">
+      <!-- Modal para agregar dirección -->
+      <div v-if="showAddAddressModal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Agregar Nueva Dirección</h3>
+            <button @click="showAddAddressModal = false" class="modal-close">×</button>
+          </div>
+          <div class="modal-body">
             <div class="form-group">
-              <label for="addressName">Nombre de la dirección</label>
-              <input type="text" id="addressName" v-model="newAddress.name" placeholder="Ej. Casa, Oficina" required>
+              <label>Nombre de la dirección</label>
+              <input v-model="newAddress.name" type="text" placeholder="Casa, Trabajo, etc.">
             </div>
             <div class="form-group">
-              <label for="addressStreet">Calle y número</label>
-              <input type="text" id="addressStreet" v-model="newAddress.street" placeholder="Ej. Av. Siempreviva 742" required>
+              <label>Calle</label>
+              <input v-model="newAddress.street" type="text" placeholder="Calle Principal">
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="addressNumber">Número exterior</label>
-                <input type="text" id="addressNumber" v-model="newAddress.number" placeholder="Ej. 123" required>
+                <label>Número</label>
+                <input v-model="newAddress.number" type="text" placeholder="123">
               </div>
               <div class="form-group">
-                <label for="addressInterior">Interior (opcional)</label>
-                <input type="text" id="addressInterior" v-model="newAddress.interior" placeholder="Ej. Apto 4B">
+                <label>Interior</label>
+                <input v-model="newAddress.interior" type="text" placeholder="Apt 4B">
               </div>
             </div>
             <div class="form-group">
-              <label for="addressNeighborhood">Colonia</label>
-              <input type="text" id="addressNeighborhood" v-model="newAddress.neighborhood" placeholder="Ej. Centro" required>
+              <label>Colonia</label>
+              <input v-model="newAddress.neighborhood" type="text" placeholder="Centro">
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="addressCity">Ciudad</label>
-                <input type="text" id="addressCity" v-model="newAddress.city" placeholder="Ej. Zaragoza" required>
+                <label>Ciudad</label>
+                <input v-model="newAddress.city" type="text" placeholder="Zaragoza">
               </div>
               <div class="form-group">
-                <label for="addressState">Estado</label>
-                <input type="text" id="addressState" v-model="newAddress.state" placeholder="Ej. Aragón" required>
+                <label>Estado</label>
+                <input v-model="newAddress.state" type="text" placeholder="Aragón">
               </div>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="addressZipCode">Código postal</label>
-                <input type="text" id="addressZipCode" v-model="newAddress.zipCode" placeholder="Ej. 50001" required>
-              </div>
-              <div class="form-group">
-                <label for="addressPhone">Teléfono</label>
-                <input type="tel" id="addressPhone" v-model="newAddress.phone" placeholder="Ej. 555-123-4567" required>
-              </div>
+            <div class="form-group">
+              <label>Código Postal</label>
+              <input v-model="newAddress.zipCode" type="text" placeholder="50001">
             </div>
-            <div class="form-group form-checkbox">
-              <input type="checkbox" id="addressDefault" v-model="newAddress.isDefault">
-              <label for="addressDefault">Establecer como dirección predeterminada</label>
+            <div class="form-group">
+              <label>Teléfono</label>
+              <input v-model="newAddress.phone" type="tel" placeholder="612 345 678">
             </div>
-            <div class="form-actions">
-              <button type="button" class="btn-cancel" @click="showAddAddressModal = false">Cancelar</button>
-              <button type="submit" class="btn-save">Guardar dirección</button>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input v-model="newAddress.isDefault" type="checkbox">
+                Establecer como dirección predeterminada
+              </label>
             </div>
-          </form>
+          </div>
+          <div class="modal-footer">
+            <button @click="showAddAddressModal = false" class="btn-secondary">Cancelar</button>
+            <button @click="saveNewAddress" class="btn-primary" :disabled="savingAddress">
+              <span v-if="!savingAddress">Guardar</span>
+              <span v-else class="loading-spinner loading-spinner--small"></span>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal for adding a new payment method -->
-    <div v-if="showAddPaymentModal" class="modal-overlay">
-      <div class="modal">
-        <div class="modal__header">
-          <h3 class="modal__title">Añadir nuevo método de pago</h3>
-          <button class="modal__close" @click="showAddPaymentModal = false">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="modal__content">
-          <form @submit.prevent="addNewPaymentMethod" class="payment-form">
+      <!-- Modal para agregar método de pago -->
+      <div v-if="showAddPaymentModal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Agregar Método de Pago</h3>
+            <button @click="showAddPaymentModal = false" class="modal-close">×</button>
+          </div>
+          <div class="modal-body">
             <div class="form-group">
-              <label for="cardNumber">Número de tarjeta</label>
-              <input type="text" id="cardNumber" v-model="newPayment.cardNumber" placeholder="1234 5678 9012 3456" required>
+              <label>Número de tarjeta</label>
+              <input v-model="newPayment.cardNumber"
+                     type="text"
+                     placeholder="1234 5678 9012 3456"
+                     maxlength="19"
+                     @input="formatCardNumber">
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="cardName">Nombre en la tarjeta</label>
-                <input type="text" id="cardName" v-model="newPayment.cardName" placeholder="Juan Pérez" required>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="cardExpiry">Fecha de expiración</label>
-                <input type="text" id="cardExpiry" v-model="newPayment.cardExpiry" placeholder="MM/AA" required>
+                <label>Fecha de vencimiento</label>
+                <input v-model="newPayment.expiryDate" type="text" placeholder="MM/AA" maxlength="5">
               </div>
               <div class="form-group">
-                <label for="cardCvv">CVV</label>
-                <input type="text" id="cardCvv" v-model="newPayment.cardCvv" placeholder="123" required>
+                <label>CVV</label>
+                <input v-model="newPayment.cvv" type="text" placeholder="123" maxlength="3">
               </div>
             </div>
-            <div class="form-group form-checkbox">
-              <input type="checkbox" id="cardDefault" v-model="newPayment.isDefault">
-              <label for="cardDefault">Establecer como método predeterminado</label>
+            <div class="form-group">
+              <label>Nombre en la tarjeta</label>
+              <input v-model="newPayment.cardholderName" type="text" placeholder="Juan Pérez">
             </div>
-            <div class="form-actions">
-              <button type="button" class="btn-cancel" @click="showAddPaymentModal = false">Cancelar</button>
-              <button type="submit" class="btn-save">Guardar método de pago</button>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input v-model="newPayment.isDefault" type="checkbox">
+                Establecer como método predeterminado
+              </label>
             </div>
-          </form>
+          </div>
+          <div class="modal-footer">
+            <button @click="showAddPaymentModal = false" class="btn-secondary">Cancelar</button>
+            <button @click="saveNewPayment" class="btn-primary" :disabled="savingPayment">
+              <span v-if="!savingPayment">Guardar</span>
+              <span v-else class="loading-spinner loading-spinner--small"></span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -335,19 +562,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
-import DeliveryOptions from '@/components/feature/checkout/DeliveryOptions.vue';
-import PaymentMethods from '@/components/feature/checkout/PaymentMethods.vue';
-import OrderSummary from '@/components/feature/checkout/OrderSummary.vue';
-import type { CartItem } from '@/stores/cart';
+import { useOrderStore } from '@/stores/orderStore';
+import { useAuthStore } from '@/stores/auth';
+import userService from '@/services/userService';
+import orderService from '@/services/orderService';
+import type { Address } from '@/types';
 
-// Router
 const router = useRouter();
-
-// Cart store
 const cartStore = useCartStore();
+const orderStore = useOrderStore();
+const authStore = useAuthStore();
 
 // Checkout steps
 const steps = [
@@ -359,15 +586,24 @@ const steps = [
 
 // State
 const currentStep = ref(0);
-const loading = ref(false);
-const promoCode = ref('');
-const orderId = ref('');
-const estimatedDeliveryTime = ref(30);
+const placingOrder = ref(false);
+const createdOrderId = ref('');
 
-// Addresses
-const selectedAddress = ref<number | null>(null);
-const addresses = ref<any[]>([]);
+// Videos de delivery aleatorios
+const deliveryGifFiles = ['Bici.mp4', 'Moto.mp4', 'Scooter.mp4'];
+const randomDeliveryGifUrl = ref<string | null>(null);
+
+// Función para obtener la URL del video desde assets
+const getVideoUrl = (filename: string) => {
+  return new URL(`../assets/videos/${filename}`, import.meta.url).href;
+};
+
+// Modales
 const showAddAddressModal = ref(false);
+const showAddPaymentModal = ref(false);
+const savingAddress = ref(false);
+const savingPayment = ref(false);
+
 const newAddress = ref({
   name: '',
   street: '',
@@ -381,39 +617,76 @@ const newAddress = ref({
   isDefault: false
 });
 
-// Payment methods
-const selectedPaymentMethod = ref<number | null>(null);
-const paymentMethods = ref<any[]>([]);
-const showAddPaymentModal = ref(false);
 const newPayment = ref({
   cardNumber: '',
-  cardName: '',
-  cardExpiry: '',
-  cardCvv: '',
+  expiryDate: '',
+  cvv: '',
+  cardholderName: '',
   isDefault: false
 });
 
-// Restaurant and order information
+const deliveryType = ref('now');
+const scheduledDate = ref('');
+const scheduledTime = ref('');
+const deliveryInstructions = ref('');
+const availableTimeSlots = ref<string[]>([]);
+
+const addresses = ref<Address[]>([]);
+const selectedAddress = ref<number | null>(null);
+const loadingAddresses = ref(true);
+
+const paymentMethods = ref<any[]>([]);
+const selectedPaymentMethod = ref<number | null>(null);
+const loadingPaymentMethods = ref(true);
+
+const promoCode = ref('');
+const promoDiscount = ref(0);
+const validatingPromo = ref(false);
+
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
-const restaurantLogo = ref('https://via.placeholder.com/50');
 const cartItems = computed(() => cartStore.items);
-
-// Calculate order values
 const subtotal = computed(() => cartStore.totalAmount);
-const deliveryFee = ref(3.99);
-const taxRate = 0.16; // 16% IVA
-const tax = computed(() => subtotal.value * taxRate);
-const total = computed(() => subtotal.value + deliveryFee.value + tax.value);
+const deliveryFee = ref(0);
+const taxRate = 0.16;
+const tax = computed(() => (subtotal.value - promoDiscount.value) * taxRate);
+const total = computed(() => subtotal.value - promoDiscount.value + deliveryFee.value + tax.value);
+const estimatedDeliveryTime = ref(30);
 
-// Methods
+const minDate = computed(() => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+});
+
+const maxDate = computed(() => {
+  const future = new Date();
+  future.setDate(future.getDate() + 7);
+  return future.toISOString().split('T')[0];
+});
+
+const canProceedToPayment = computed(() => {
+  if (!selectedAddress.value) return false;
+  if (deliveryType.value === 'scheduled') {
+    return scheduledDate.value && scheduledTime.value;
+  }
+  return true;
+});
+
 const goToStep = (step: number) => {
   currentStep.value = step;
   window.scrollTo(0, 0);
 };
 
-const selectAddress = (addressId: number) => {
+const selectAddress = async (addressId: number) => {
   selectedAddress.value = addressId;
+  if (restaurantId.value) {
+    try {
+      const fee = await orderService.getDeliveryFee(restaurantId.value, addressId);
+      deliveryFee.value = fee;
+    } catch (error) {
+      deliveryFee.value = 3.99; // Tarifa de respaldo
+    }
+  }
 };
 
 const selectPaymentMethod = (paymentId: number) => {
@@ -428,187 +701,260 @@ const getSelectedPaymentMethod = () => {
   return paymentMethods.value.find(method => method.id === selectedPaymentMethod.value) || null;
 };
 
-const addNewAddress = () => {
-  // In a real app, we would make an API call to save the address
-  const newId = addresses.value.length + 1;
-  const address = {
-    id: newId,
-    ...newAddress.value
-  };
-  
-  addresses.value.push(address);
-  selectedAddress.value = newId;
-  showAddAddressModal.value = false;
-  
-  // Reset form
-  newAddress.value = {
-    name: '',
-    street: '',
-    number: '',
-    interior: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    phone: '',
-    isDefault: false
-  };
+const formatAddress = (address: Address | null) => {
+  if (!address) return '';
+  return `${address.street} ${address.number || ''}, ${address.city}, ${address.state}`;
 };
 
-const addNewPaymentMethod = () => {
-  // In a real app, we would make an API call to save the payment method
-  const newId = paymentMethods.value.length + 1;
-  const paymentMethod = {
-    id: newId,
-    type: 'card',
-    name: `**** ${newPayment.value.cardNumber.slice(-4)}`,
-    cardType: getCardType(newPayment.value.cardNumber),
-    ...newPayment.value
-  };
-  
-  paymentMethods.value.push(paymentMethod);
-  selectedPaymentMethod.value = newId;
-  showAddPaymentModal.value = false;
-  
-  // Reset form
-  newPayment.value = {
-    cardNumber: '',
-    cardName: '',
-    cardExpiry: '',
-    cardCvv: '',
-    isDefault: false
-  };
+const getPaymentMethodDescription = (method: any) => {
+  if (!method) return '';
+  if (method.type === 'card') {
+    return `Termina en ${method.name.slice(-4)}`;
+  }
+  return method.type;
 };
 
-const getCardType = (cardNumber: string) => {
-  // Basic card type detection based on first digit
-  const firstDigit = cardNumber.charAt(0);
-  
-  if (firstDigit === '4') return 'visa';
-  if (firstDigit === '5') return 'mastercard';
-  if (firstDigit === '3') return 'amex';
-  
-  return 'generic';
+const formatScheduledDelivery = () => {
+  if (!scheduledDate.value || !scheduledTime.value) return '';
+  const date = new Date(scheduledDate.value);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  let dateStr = '';
+  if (date.toDateString() === today.toDateString()) {
+    dateStr = 'Hoy';
+  } else {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (date.toDateString() === tomorrow.toDateString()) {
+      dateStr = 'Mañana';
+    } else {
+      dateStr = date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+    }
+  }
+  return `${dateStr} a las ${scheduledTime.value}`;
+};
+
+const getDeliveryTimeText = () => {
+  if (deliveryType.value === 'scheduled') {
+    return formatScheduledDelivery();
+  }
+  return `${estimatedDeliveryTime.value}-${estimatedDeliveryTime.value + 15} minutos`;
+};
+
+const applyPromoCode = async () => {
+  if (!promoCode.value.trim() || !restaurantId.value) return;
+  validatingPromo.value = true;
+  try {
+    const result = await orderService.validatePromoCode(
+      promoCode.value.trim(),
+      restaurantId.value,
+      subtotal.value
+    );
+    if (result.valid) {
+      promoDiscount.value = result.discount;
+    } else {
+      alert(result.message || 'Código promocional inválido');
+      promoCode.value = '';
+    }
+  } catch (error) {
+    alert('Error al validar el código promocional');
+  } finally {
+    validatingPromo.value = false;
+  }
+};
+
+const removePromoCode = () => {
+  promoCode.value = '';
+  promoDiscount.value = 0;
 };
 
 const placeOrder = async () => {
   if (!selectedAddress.value || !selectedPaymentMethod.value) {
+    alert('Por favor completa todos los campos requeridos');
     return;
   }
-  
-  loading.value = true;
-  
+  placingOrder.value = true;
+
   try {
-    // Here we would call the API to place the order
-    // For now, we'll simulate the API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Create order request
     const orderRequest = {
-      restaurantId: restaurantId.value,
+      restaurantId: restaurantId.value!,
+      deliveryAddressId: selectedAddress.value,
       items: cartItems.value.map(item => ({
         productId: item.productId,
-        quantity: item.quantity
+        quantity: item.quantity,
+        name: item.name,
+        price: item.price
       })),
-      addressId: selectedAddress.value,
-      paymentMethod: getSelectedPaymentMethod()?.type || 'card'
+      paymentMethod: getSelectedPaymentMethod()?.type || 'card',
+      deliveryInstructions: deliveryInstructions.value || undefined,
+      promoCode: promoCode.value || undefined,
+      scheduledDeliveryTime: deliveryType.value === 'scheduled'
+        ? `${scheduledDate.value}T${scheduledTime.value}:00`
+        : undefined
     };
-    
-    console.log('Order placed:', orderRequest);
-    
-    // Generate a fake order ID
-    orderId.value = Math.floor(Math.random() * 10000).toString().padStart(5, '0');
-    
-    // Order success - clear cart and move to confirmation step
+
+    const order = await orderStore.createOrder(orderRequest);
+    createdOrderId.value = order.id.toString();
+
     cartStore.clearCart();
+
+    // Seleccionar video aleatorio
+    const randomIndex = Math.floor(Math.random() * deliveryGifFiles.length);
+    const selectedVideo = deliveryGifFiles[randomIndex];
+    randomDeliveryGifUrl.value = getVideoUrl(selectedVideo);
+
     goToStep(3);
-  } catch (error) {
-    console.error('Error placing order:', error);
-    alert('Error al procesar el pedido. Por favor, inténtalo de nuevo.');
+
+  } catch (error: any) {
+    alert(error.message || 'Error al procesar el pedido');
   } finally {
-    loading.value = false;
+    placingOrder.value = false;
   }
 };
 
-// Fetch necessary data on component mount
+const loadAddresses = async () => {
+  try {
+    loadingAddresses.value = true;
+    addresses.value = await userService.getUserAddresses();
+    const defaultAddress = addresses.value.find(addr => addr.isDefault);
+    if (defaultAddress) {
+      await selectAddress(defaultAddress.id);
+    } else if (addresses.value.length > 0) {
+      await selectAddress(addresses.value[0].id);
+    }
+    if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
+      await loadAvailableTimeSlots();
+    }
+  } catch (error) {
+    console.error('Error loading addresses:', error);
+  } finally {
+    loadingAddresses.value = false;
+  }
+};
+
+const loadPaymentMethods = async () => {
+  loadingPaymentMethods.value = false;
+  paymentMethods.value = [
+    { id: 1, type: 'card', name: 'Tarjeta **** 1234', isDefault: true }
+  ];
+  const defaultPayment = paymentMethods.value.find(pm => pm.isDefault);
+  if (defaultPayment) {
+    selectedPaymentMethod.value = defaultPayment.id;
+  } else if (paymentMethods.value.length > 0) {
+     selectedPaymentMethod.value = paymentMethods.value[0].id;
+  }
+};
+
+const loadAvailableTimeSlots = async () => {
+  if (!restaurantId.value || !selectedAddress.value) return;
+  try {
+    const times = await orderService.getAvailableDeliveryTimes(restaurantId.value, selectedAddress.value);
+    availableTimeSlots.value = times;
+  } catch (error) {
+    const slots = [];
+    const now = new Date();
+    const currentHour = now.getHours();
+    for (let hour = Math.max(11, currentHour + 1); hour <= 22; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+    availableTimeSlots.value = slots;
+  }
+};
+
+const saveNewAddress = async () => {
+  if (!newAddress.value.name || !newAddress.value.street || !newAddress.value.city) {
+    alert('Por favor completa los campos obligatorios');
+    return;
+  }
+  savingAddress.value = true;
+  try {
+    const addressData = { ...newAddress.value };
+    const savedAddress = await userService.addAddress(addressData);
+    addresses.value.push(savedAddress);
+    if (newAddress.value.isDefault || addresses.value.length === 1) {
+      await selectAddress(savedAddress.id);
+    }
+    newAddress.value = { name: '', street: '', number: '', interior: '', neighborhood: '', city: '', state: '', zipCode: '', phone: '', isDefault: false };
+    showAddAddressModal.value = false;
+    alert('Dirección agregada exitosamente');
+  } catch (error) {
+    console.error('Error saving address:', error);
+    alert('Error al guardar la dirección');
+  } finally {
+    savingAddress.value = false;
+  }
+};
+
+const saveNewPayment = async () => {
+  if (!newPayment.value.cardNumber || !newPayment.value.expiryDate || !newPayment.value.cvv || !newPayment.value.cardholderName) {
+    alert('Por favor completa todos los campos');
+    return;
+  }
+  savingPayment.value = true;
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const newId = paymentMethods.value.length > 0 ? Math.max(...paymentMethods.value.map(pm => pm.id)) + 1 : 1;
+    const newMethodData = {
+      id: newId,
+      type: 'card',
+      name: `Tarjeta **** ${newPayment.value.cardNumber.slice(-4)}`,
+      isDefault: newPayment.value.isDefault
+    };
+    paymentMethods.value.push(newMethodData);
+    if (newPayment.value.isDefault || paymentMethods.value.length === 1) {
+      selectPaymentMethod(newId);
+    }
+    newPayment.value = { cardNumber: '', expiryDate: '', cvv: '', cardholderName: '', isDefault: false };
+    showAddPaymentModal.value = false;
+    alert('Método de pago agregado exitosamente');
+  } catch (error) {
+    console.error('Error saving payment method:', error);
+    alert('Error al guardar el método de pago');
+  } finally {
+    savingPayment.value = false;
+  }
+};
+
+const formatCardNumber = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  let value = input.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+  const formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+  if (formattedValue !== input.value) {
+    newPayment.value.cardNumber = formattedValue;
+  }
+};
+
+watch([deliveryType, scheduledDate, selectedAddress], () => {
+  if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
+    loadAvailableTimeSlots();
+  }
+});
+
 onMounted(async () => {
-  // Redirect to cart if cart is empty
   if (cartStore.isEmpty) {
     router.push('/cart');
     return;
   }
-  
-  // Fetch user addresses
-  // In a real app, this would be an API call
-  addresses.value = [
-    {
-      id: 1,
-      name: 'Casa',
-      street: 'Calle Mayor',
-      number: '123',
-      interior: '',
-      neighborhood: 'Centro',
-      city: 'Zaragoza',
-      state: 'Aragón',
-      zipCode: '50003',
-      phone: '976123456',
-      isDefault: true
-    },
-    {
-      id: 2,
-      name: 'Oficina',
-      street: 'Paseo Independencia',
-      number: '45',
-      interior: 'Piso 3, Oficina B',
-      neighborhood: 'Centro',
-      city: 'Zaragoza',
-      state: 'Aragón',
-      zipCode: '50001',
-      phone: '976654321',
-      isDefault: false
-    }
-  ];
-  
-  // Set default address if available
-  const defaultAddress = addresses.value.find(addr => addr.isDefault);
-  if (defaultAddress) {
-    selectedAddress.value = defaultAddress.id;
-  } else if (addresses.value.length > 0) {
-    selectedAddress.value = addresses.value[0].id;
+  if (!authStore.isAuthenticated()) {
+    router.push('/login?redirect=/checkout');
+    return;
   }
-  
-  // Fetch payment methods
-  // In a real app, this would be an API call
-  paymentMethods.value = [
-    {
-      id: 1,
-      type: 'card',
-      name: '**** 1234',
-      cardType: 'visa',
-      isDefault: true
-    },
-    {
-      id: 2,
-      type: 'card',
-      name: '**** 5678',
-      cardType: 'mastercard',
-      isDefault: false
-    }
-  ];
-  
-  // Set default payment method if available
-  const defaultPayment = paymentMethods.value.find(method => method.isDefault);
-  if (defaultPayment) {
-    selectedPaymentMethod.value = defaultPayment.id;
-  } else if (paymentMethods.value.length > 0) {
-    selectedPaymentMethod.value = paymentMethods.value[0].id;
-  }
+  await Promise.all([
+    loadAddresses(),
+    loadPaymentMethods()
+  ]);
 });
 </script>
 
 <style lang="scss" scoped>
 // Variables
-$primary-color: #06C167; // Color principal de Uber Eats
+$primary-color: #06C167;
 $black: #000000;
 $white: #FFFFFF;
 $light-gray: #F6F6F6;
@@ -635,7 +981,6 @@ $transition: all 0.2s ease;
   }
 }
 
-// Checkout page
 .checkout-page {
   background-color: $light-gray;
   min-height: 100vh;
@@ -649,7 +994,6 @@ $transition: all 0.2s ease;
   }
 }
 
-// Breadcrumb navigation
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -679,7 +1023,6 @@ $transition: all 0.2s ease;
   }
 }
 
-// Checkout content
 .checkout-content {
   display: grid;
   grid-template-columns: 1fr 350px;
@@ -690,7 +1033,335 @@ $transition: all 0.2s ease;
   }
 }
 
-// Step progress
+// Contenedor de animación de delivery con videos
+.delivery-animation-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background: linear-gradient(65deg, #e8fafd, #d7f8d1);
+  border-radius: 20px;
+  margin: 2rem 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.delivery-video {
+  width: 300px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  margin-bottom: 1.5rem;
+  background: #f0f0f0;
+
+  @media (max-width: 768px) {
+    width: 250px;
+    height: 167px;
+  }
+
+  @media (max-width: 480px) {
+    width: 200px;
+    height: 133px;
+  }
+}
+
+.delivery-text {
+  text-align: center;
+
+  .delivery-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a365d;
+    margin: 0 0 8px;
+    animation: titleGlow 3s ease-in-out infinite;
+  }
+
+  .delivery-subtitle {
+    font-size: 15px;
+    color: #4a5568;
+    margin: 0 0 20px;
+    font-weight: 500;
+  }
+}
+
+@keyframes titleGlow {
+  0%, 100% { color: #1a365d; transform: scale(1); }
+  50% { color: #2c5aa0; transform: scale(1.02); }
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+
+  span {
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(135deg, #3182ce, #2c5aa0);
+    border-radius: 50%;
+    animation: dotBounce 1.6s ease-in-out infinite;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+
+    &:nth-child(1) { animation-delay: 0s; }
+    &:nth-child(2) { animation-delay: 0.3s; }
+    &:nth-child(3) { animation-delay: 0.6s; }
+  }
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8) translateY(0px);
+    opacity: 0.7;
+  }
+  40% {
+    transform: scale(1.2) translateY(-10px);
+    opacity: 1;
+  }
+}
+
+// Estados vacíos mejorados
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: $text-secondary;
+
+  svg {
+    margin-bottom: 1rem;
+  }
+
+  p {
+    margin: 0.5rem 0;
+
+    &.empty-state__subtitle {
+      font-size: 0.9rem;
+      color: lighten($text-secondary, 10%);
+    }
+  }
+}
+
+// Botones para agregar elementos
+.add-item-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba($primary-color, 0.1);
+  border: 2px dashed $primary-color;
+  color: $primary-color;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 1rem;
+  text-align: center;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  font-size: 14px;
+  margin-top: 12px;
+
+  &:hover {
+    background: rgba($primary-color, 0.15);
+    border-color: darken($primary-color, 10%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
+  }
+}
+
+// Modales
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: $text-secondary;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: $transition;
+
+  &:hover {
+    background: rgba($text-secondary, 0.1);
+    color: $text-primary;
+  }
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 0 0 16px 16px;
+}
+
+// Formularios en modales
+.form-group {
+  margin-bottom: 1.25rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: $text-primary;
+    font-size: 0.9rem;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: $transition;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(6, 193, 103, 0.1);
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500 !important;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: auto !important;
+    margin: 0;
+    transform: scale(1.2);
+    accent-color: $primary-color;
+  }
+}
+
+// Botones de modales
+.btn-primary {
+  background: $primary-color;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+
+  &:hover:not(:disabled) {
+    background: darken($primary-color, 5%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(6, 193, 103, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: $text-primary;
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+
+  &:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+}
+
 .step-progress {
   display: flex;
   justify-content: space-between;
@@ -709,7 +1380,6 @@ $transition: all 0.2s ease;
   }
 }
 
-// Step item
 .step-item {
   display: flex;
   flex-direction: column;
@@ -779,7 +1449,6 @@ $transition: all 0.2s ease;
   }
 }
 
-// Step panels
 .step-panel {
   background-color: $white;
   border-radius: $border-radius;
@@ -805,7 +1474,234 @@ $transition: all 0.2s ease;
   }
 }
 
-// Navigation buttons
+.delivery-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.delivery-option {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: $primary-color;
+  }
+
+  &--active {
+    border-color: $primary-color;
+    background-color: rgba(6, 193, 103, 0.05);
+  }
+
+  input[type="radio"] {
+    display: none;
+  }
+
+  label {
+    cursor: pointer;
+    margin: 0;
+  }
+
+  &__main {
+    h4 {
+      margin: 0 0 0.25rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+.scheduled-delivery {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+
+  h4 {
+    margin: 0 0 1rem;
+    color: #1e293b;
+    font-weight: 600;
+  }
+
+  &__inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+
+    @media (max-width: 576px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .input-group {
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 0.9rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba(6, 193, 103, 0.1);
+      }
+    }
+
+    .time-selector {
+      background-color: white;
+      cursor: pointer;
+
+      option {
+        padding: 8px;
+      }
+    }
+  }
+}
+
+.address-section,
+.payment-methods {
+  margin-bottom: 2rem;
+
+  h4 {
+    margin: 0 0 1rem;
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+}
+
+.loading-addresses,
+.loading-payment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  justify-content: center;
+  color: #64748b;
+
+  .loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e2e8f0;
+    border-top-color: $primary-color;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+.address-list,
+.payment-method-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.address-item,
+.payment-method {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: $primary-color;
+  }
+
+  &--selected {
+    border-color: $primary-color;
+    background-color: rgba(6, 193, 103, 0.05);
+  }
+
+  .address-content,
+  .payment-method__details {
+    flex: 1;
+
+    h5 {
+      margin: 0 0 0.25rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+  }
+
+  .default-badge {
+    display: inline-block;
+    background: rgba(6, 193, 103, 0.1);
+    color: $primary-color;
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+
+  .radio-indicator input {
+    margin: 0;
+  }
+}
+
+.payment-method__icon {
+  margin-right: 1rem;
+  color: #64748b;
+}
+
+.delivery-instructions {
+  margin-bottom: 2rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #1e293b;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(6, 193, 103, 0.1);
+    }
+  }
+}
+
+// Buttons
 .btn-next {
   display: flex;
   align-items: center;
@@ -879,17 +1775,25 @@ $transition: all 0.2s ease;
   }
 }
 
-// Loading spinner
 .loading-spinner {
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: $white;
-  animation: spinner 1s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes spinner {
+.loading-spinner--small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
   to {
     transform: rotate(360deg);
   }
@@ -905,7 +1809,6 @@ $transition: all 0.2s ease;
   }
 }
 
-// Order summary
 .order-summary {
   background-color: $white;
   border-radius: $border-radius;
@@ -935,13 +1838,18 @@ $transition: all 0.2s ease;
     margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid $light-gray;
-  }
 
-  &__logo {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    object-fit: cover;
+    .restaurant-placeholder {
+      width: 40px;
+      height: 40px;
+      background: $primary-color;
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
   }
 
   &__restaurant-name {
@@ -989,6 +1897,11 @@ $transition: all 0.2s ease;
     }
   }
 
+  &__promocode {
+    display: flex;
+    margin-bottom: 16px;
+  }
+
   &__totals {
     padding: 16px 0;
     border-top: 1px solid $light-gray;
@@ -1005,6 +1918,10 @@ $transition: all 0.2s ease;
     &:last-child {
       margin-bottom: 0;
     }
+
+    &--discount {
+      color: #10b981;
+    }
   }
 
   &__total {
@@ -1015,20 +1932,13 @@ $transition: all 0.2s ease;
     font-weight: 600;
     color: $text-primary;
   }
-
-  &__promocode {
-    display: flex;
-    margin-bottom: 16px;
-  }
 }
 
-// Free delivery
 .free-delivery {
   color: $success-color;
   font-weight: 600;
 }
 
-// Promocode input
 .promocode-input {
   flex: 1;
   height: 40px;
@@ -1054,12 +1964,55 @@ $transition: all 0.2s ease;
   cursor: pointer;
   transition: $transition;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: darken($primary-color, 5%);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 }
 
-// Order success message
+.promo-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+
+  &__message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #10b981;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .remove-promo {
+    background: none;
+    border: none;
+    color: #10b981;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+
+    &:hover {
+      background-color: rgba(16, 185, 129, 0.1);
+    }
+  }
+}
+
 .order-success {
   padding: 24px 0;
 
@@ -1153,165 +2106,62 @@ $transition: all 0.2s ease;
   }
 }
 
-// Modal overlay and modal
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 24px;
-}
-
-.modal {
-  width: 100%;
-  max-width: 500px;
-  background-color: $white;
-  border-radius: $border-radius;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  max-height: 90vh;
+.order-review {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+}
 
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid $light-gray;
-  }
+.review-section {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
 
-  &__title {
-    font-size: 18px;
+  h4 {
+    margin: 0 0 1rem;
+    color: #1e293b;
     font-weight: 600;
-    margin: 0;
-    color: $text-primary;
   }
 
-  &__close {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $text-secondary;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: $transition;
+  .review-item {
+    margin-bottom: 0.5rem;
 
-    &:hover {
-      background-color: $light-gray;
-      color: $text-primary;
+    &:last-child {
+      margin-bottom: 0;
     }
-  }
 
-  &__content {
-    padding: 20px;
-    overflow-y: auto;
-  }
-}
-
-// Form styles
-.form-group {
-  margin-bottom: 16px;
-
-  label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    color: $text-primary;
-  }
-
-  input[type="text"],
-  input[type="tel"] {
-    width: 100%;
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid $medium-gray;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: $transition;
-
-    &:focus {
-      outline: none;
-      border-color: $primary-color;
+    strong {
+      color: #1e293b;
+      margin-right: 0.5rem;
     }
   }
 }
 
-.form-row {
+.review-items {
   display: flex;
-  gap: 16px;
-
-  .form-group {
-    flex: 1;
-  }
-
-  @media (max-width: 576px) {
-    flex-direction: column;
-    gap: 0;
-  }
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.form-checkbox {
+.review-product {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.75rem;
 
-  input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+  .quantity {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 30px;
   }
 
-  label {
-    margin-bottom: 0;
-    cursor: pointer;
+  .name {
+    flex: 1;
+    color: #1e293b;
   }
-}
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.btn-cancel {
-  padding: 10px 20px;
-  border: 1px solid $medium-gray;
-  background-color: transparent;
-  border-radius: 8px;
-  color: $text-secondary;
-  font-weight: 500;
-  cursor: pointer;
-  transition: $transition;
-
-  &:hover {
-    background-color: $light-gray;
-  }
-}
-
-.btn-save {
-  padding: 10px 20px;
-  border: none;
-  background-color: $primary-color;
-  border-radius: 8px;
-  color: $white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: $transition;
-
-  &:hover {
-    background-color: darken($primary-color, 5%);
+  .price {
+    font-weight: 500;
+    color: #1e293b;
   }
 }
 </style>

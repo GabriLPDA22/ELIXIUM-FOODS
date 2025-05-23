@@ -1,148 +1,315 @@
 // src/services/paymentService.ts
-import axios from 'axios';
+import { api } from '@/services/api'
 
-// Payment processing statuses
 export enum PaymentStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  REFUNDED = 'refunded',
-  CANCELLED = 'cancelled'
+  PENDING = 'Pending',
+  PROCESSING = 'Processing',
+  COMPLETED = 'Completed',
+  FAILED = 'Failed',
+  REFUNDED = 'Refunded',
+  CANCELLED = 'Cancelled'
 }
 
-// Payment method types
-export enum PaymentMethodType {
+export enum PaymentMethod {
   CARD = 'card',
   PAYPAL = 'paypal',
-  CASH = 'cash'
+  CASH = 'cash',
+  WALLET = 'wallet'
 }
 
-// Payment request interface
+export interface PaymentMethodInfo {
+  id: number
+  type: PaymentMethod
+  name: string
+  cardType?: 'visa' | 'mastercard' | 'amex' | 'generic'
+  last4?: string
+  expiryMonth?: number
+  expiryYear?: number
+  isDefault: boolean
+  createdAt: string
+}
+
 export interface PaymentRequest {
-  orderId: number;
-  amount: number;
-  currency?: string;
-  paymentMethod: string;
-  cardDetails?: {
-    cardNumber: string;
-    expiryDate: string;
-    cvv: string;
-    cardholderName: string;
-  };
+  orderId: number
+  paymentMethodId: number
+  amount: number
 }
 
-// Payment response interface
 export interface PaymentResponse {
-  success: boolean;
-  transactionId?: string;
-  status: PaymentStatus;
-  message?: string;
-  orderId: number;
+  id: number
+  orderId: number
+  amount: number
+  status: PaymentStatus
+  paymentMethod: PaymentMethod
+  transactionId?: string
+  createdAt: string
+  updatedAt: string
 }
 
-/**
- * Payment Service - Handles all payment processing functions
- */
-export const paymentService = {
+export interface RefundRequest {
+  paymentId: number
+  amount?: number // Si no se especifica, se reembolsa el total
+  reason: string
+}
+
+export interface RefundResponse {
+  id: number
+  paymentId: number
+  amount: number
+  status: PaymentStatus
+  reason: string
+  createdAt: string
+}
+
+class PaymentService {
   /**
-   * Process a payment
-   * In a real app, this would make an API call to a payment processor
+   * Obtener métodos de pago del usuario
+   */
+  async getUserPaymentMethods(): Promise<PaymentMethodInfo[]> {
+    try {
+      const response = await api.get('/api/PaymentMethods')
+      return response.data
+    } catch (error) {
+      console.error('Error fetching payment methods:', error)
+
+      // Datos simulados para desarrollo
+      return this.generateMockPaymentMethods()
+    }
+  }
+
+  /**
+   * Añadir nuevo método de pago
+   */
+  async addPaymentMethod(paymentMethodData: any): Promise<PaymentMethodInfo> {
+    try {
+      const response = await api.post('/api/PaymentMethods', paymentMethodData)
+      return response.data
+    } catch (error: any) {
+      console.error('Error adding payment method:', error)
+      throw new Error(error.response?.data?.message || 'Error al añadir método de pago')
+    }
+  }
+
+  /**
+   * Eliminar método de pago
+   */
+  async deletePaymentMethod(paymentMethodId: number): Promise<boolean> {
+    try {
+      await api.delete(`/api/PaymentMethods/${paymentMethodId}`)
+      return true
+    } catch (error) {
+      console.error('Error deleting payment method:', error)
+      return false
+    }
+  }
+
+  /**
+   * Establecer método de pago como predeterminado
+   */
+  async setDefaultPaymentMethod(paymentMethodId: number): Promise<boolean> {
+    try {
+      await api.put(`/api/PaymentMethods/${paymentMethodId}/default`)
+      return true
+    } catch (error) {
+      console.error('Error setting default payment method:', error)
+      return false
+    }
+  }
+
+  /**
+   * Procesar pago
    */
   async processPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, generate a random success/failure
-      // In a real app, this would be the result from a payment processor API
-      const isSuccess = Math.random() > 0.1; // 90% success rate for demo
-      
-      if (isSuccess) {
-        // Successful payment
-        return {
-          success: true,
-          transactionId: generateTransactionId(),
-          status: PaymentStatus.COMPLETED,
-          orderId: paymentRequest.orderId
-        };
-      } else {
-        // Failed payment
-        return {
-          success: false,
-          status: PaymentStatus.FAILED,
-          message: 'Payment processing failed. Please try again.',
-          orderId: paymentRequest.orderId
-        };
-      }
-    } catch (error) {
-      console.error('Payment processing error:', error);
-      
-      return {
-        success: false,
-        status: PaymentStatus.FAILED,
-        message: 'An unexpected error occurred during payment processing.',
-        orderId: paymentRequest.orderId
-      };
-    }
-  },
-  
-  /**
-   * Verify payment status
-   */
-  async verifyPaymentStatus(transactionId: string): Promise<PaymentStatus> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // In a real app, this would check the status with the payment processor
-      return PaymentStatus.COMPLETED;
-    } catch (error) {
-      console.error('Error verifying payment status:', error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Cancel a payment
-   */
-  async cancelPayment(transactionId: string): Promise<boolean> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real app, this would call the payment processor to cancel/void a transaction
-      return true;
-    } catch (error) {
-      console.error('Error cancelling payment:', error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Request a refund
-   */
-  async requestRefund(transactionId: string, amount: number): Promise<boolean> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      // In a real app, this would call the payment processor to process a refund
-      return true;
-    } catch (error) {
-      console.error('Error processing refund:', error);
-      throw error;
+      const response = await api.post('/api/Payments', paymentRequest)
+      return response.data
+    } catch (error: any) {
+      console.error('Error processing payment:', error)
+      throw new Error(error.response?.data?.message || 'Error al procesar el pago')
     }
   }
-};
 
-/**
- * Generate a mock transaction ID
- */
-function generateTransactionId(): string {
-  const timestamp = Date.now().toString(36);
-  const randomStr = Math.random().toString(36).substring(2, 10);
-  return `txn_${timestamp}${randomStr}`.toUpperCase();
+  /**
+   * Obtener información de un pago
+   */
+  async getPaymentById(paymentId: number): Promise<PaymentResponse> {
+    try {
+      const response = await api.get(`/api/Payments/${paymentId}`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching payment:', error)
+      throw new Error('Error al obtener información del pago')
+    }
+  }
+
+  /**
+   * Obtener pagos de un pedido
+   */
+  async getPaymentsByOrder(orderId: number): Promise<PaymentResponse[]> {
+    try {
+      const response = await api.get(`/api/Orders/${orderId}/payments`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching order payments:', error)
+      return []
+    }
+  }
+
+  /**
+   * Reembolsar pago
+   */
+  async refundPayment(refundRequest: RefundRequest): Promise<RefundResponse> {
+    try {
+      const response = await api.post('/api/Payments/refund', refundRequest)
+      return response.data
+    } catch (error: any) {
+      console.error('Error processing refund:', error)
+      throw new Error(error.response?.data?.message || 'Error al procesar el reembolso')
+    }
+  }
+
+  /**
+   * Obtener historial de pagos del usuario
+   */
+  async getUserPaymentHistory(): Promise<PaymentResponse[]> {
+    try {
+      const response = await api.get('/api/Payments/user')
+      return response.data
+    } catch (error) {
+      console.error('Error fetching payment history:', error)
+      return []
+    }
+  }
+
+  /**
+   * Validar método de pago
+   */
+  async validatePaymentMethod(paymentMethodId: number): Promise<boolean> {
+    try {
+      const response = await api.post(`/api/PaymentMethods/${paymentMethodId}/validate`)
+      return response.data.isValid
+    } catch (error) {
+      console.error('Error validating payment method:', error)
+      return false
+    }
+  }
+
+  /**
+   * Calcular fees de pago
+   */
+  async calculatePaymentFees(amount: number, paymentMethod: PaymentMethod): Promise<number> {
+    try {
+      const response = await api.get(`/api/Payments/fees?amount=${amount}&method=${paymentMethod}`)
+      return response.data.fees
+    } catch (error) {
+      console.error('Error calculating payment fees:', error)
+
+      // Fees simulados
+      switch (paymentMethod) {
+        case PaymentMethod.CARD:
+          return amount * 0.029 // 2.9%
+        case PaymentMethod.PAYPAL:
+          return amount * 0.034 // 3.4%
+        default:
+          return 0
+      }
+    }
+  }
+
+  /**
+   * Generar métodos de pago simulados para desarrollo
+   */
+  private generateMockPaymentMethods(): PaymentMethodInfo[] {
+    return [
+      {
+        id: 1,
+        type: PaymentMethod.CARD,
+        name: '**** 1234',
+        cardType: 'visa',
+        last4: '1234',
+        expiryMonth: 12,
+        expiryYear: 2028,
+        isDefault: true,
+        createdAt: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 2,
+        type: PaymentMethod.CARD,
+        name: '**** 5678',
+        cardType: 'mastercard',
+        last4: '5678',
+        expiryMonth: 8,
+        expiryYear: 2027,
+        isDefault: false,
+        createdAt: '2024-01-15T00:00:00Z'
+      },
+      {
+        id: 3,
+        type: PaymentMethod.PAYPAL,
+        name: 'PayPal (usuario@email.com)',
+        isDefault: false,
+        createdAt: '2024-02-01T00:00:00Z'
+      }
+    ]
+  }
+
+  /**
+   * Obtener el nombre amigable del tipo de tarjeta
+   */
+  getCardTypeName(cardType: string): string {
+    switch (cardType) {
+      case 'visa':
+        return 'Visa'
+      case 'mastercard':
+        return 'Mastercard'
+      case 'amex':
+        return 'American Express'
+      default:
+        return 'Tarjeta'
+    }
+  }
+
+  /**
+   * Obtener el texto del estado de pago
+   */
+  getPaymentStatusText(status: PaymentStatus): string {
+    switch (status) {
+      case PaymentStatus.PENDING:
+        return 'Pendiente'
+      case PaymentStatus.PROCESSING:
+        return 'Procesando'
+      case PaymentStatus.COMPLETED:
+        return 'Completado'
+      case PaymentStatus.FAILED:
+        return 'Fallido'
+      case PaymentStatus.REFUNDED:
+        return 'Reembolsado'
+      case PaymentStatus.CANCELLED:
+        return 'Cancelado'
+      default:
+        return status
+    }
+  }
+
+  /**
+   * Formatear número de tarjeta
+   */
+  formatCardNumber(cardNumber: string): string {
+    return cardNumber.replace(/(.{4})/g, '$1 ').trim()
+  }
+
+  /**
+   * Detectar tipo de tarjeta por número
+   */
+  detectCardType(cardNumber: string): 'visa' | 'mastercard' | 'amex' | 'generic' {
+    const number = cardNumber.replace(/\s/g, '')
+
+    if (number.startsWith('4')) return 'visa'
+    if (number.startsWith('5') || number.startsWith('2')) return 'mastercard'
+    if (number.startsWith('3')) return 'amex'
+
+    return 'generic'
+  }
 }
 
-export default paymentService;
+export const paymentService = new PaymentService()

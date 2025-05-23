@@ -13,26 +13,28 @@
         </div>
         <h2 class="empty-cart__title">Tu carrito está vacío</h2>
         <p class="empty-cart__text">Añade elementos de tus restaurantes favoritos para empezar tu pedido</p>
-        <router-link to="/restaurants" class="empty-cart__button">Explorar restaurantes</router-link>
+        <router-link to="/" class="empty-cart__button">Explorar restaurantes</router-link>
       </div>
 
       <!-- Cart with items -->
       <template v-else>
         <h1 class="cart-page__title">Mi carrito</h1>
-        
+
         <div class="cart-wrapper">
           <!-- Cart items section -->
           <div class="cart-items">
             <div class="cart-restaurant">
               <div class="cart-restaurant__header">
                 <div class="cart-restaurant__info">
-                  <img :src="restaurantLogo" alt="Logo restaurante" class="cart-restaurant__logo" />
+                  <div class="cart-restaurant__logo">
+                    <span>{{ restaurantInitials }}</span>
+                  </div>
                   <div>
                     <h3 class="cart-restaurant__name">{{ restaurantName }}</h3>
                     <p class="cart-restaurant__delivery">Tiempo estimado de entrega: {{ deliveryTime }} min</p>
                   </div>
                 </div>
-                <router-link :to="`/restaurant/${restaurantId}`" class="cart-restaurant__link">
+                <router-link v-if="restaurantId" :to="`/restaurant/${restaurantId}`" class="cart-restaurant__link">
                   <span>Añadir más productos</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 18 15 12 9 6"></polyline>
@@ -53,11 +55,11 @@
                       </svg>
                     </div>
                   </div>
-                  
+
                   <div class="cart-item__details">
-                    <div class="cart-item__name">{{ item.name }}</div>
-                    <div class="cart-item__price">${{ item.price.toFixed(2) }}</div>
-                    
+                    <div class="cart-item__name">{{ item.name || 'Producto' }}</div>
+                    <div class="cart-item__price">${{ getItemPrice(item).toFixed(2) }}</div>
+
                     <div class="cart-item__actions">
                       <div class="cart-item__quantity">
                         <button class="cart-item__quantity-btn" @click="decrementItem(item.id)">
@@ -65,7 +67,7 @@
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
                         </button>
-                        <span>{{ item.quantity }}</span>
+                        <span>{{ item.quantity || 0 }}</span>
                         <button class="cart-item__quantity-btn" @click="incrementItem(item.id)">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -73,7 +75,7 @@
                           </svg>
                         </button>
                       </div>
-                      
+
                       <button class="cart-item__remove" @click="removeItem(item.id)">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <polyline points="3 6 5 6 21 6"></polyline>
@@ -85,7 +87,7 @@
                   </div>
 
                   <div class="cart-item__subtotal">
-                    ${{ (item.price * item.quantity).toFixed(2) }}
+                    ${{ getItemSubtotal(item).toFixed(2) }}
                   </div>
                 </div>
               </div>
@@ -129,10 +131,17 @@
 
               <div class="promocode">
                 <input type="text" class="promocode__input" placeholder="Código promocional" v-model="promoCode" />
-                <button class="promocode__button">Aplicar</button>
+                <button class="promocode__button" @click="applyPromoCode" :disabled="applyingPromo">
+                  <span v-if="!applyingPromo">Aplicar</span>
+                  <span v-else>...</span>
+                </button>
               </div>
 
-              <button @click="proceedToCheckout" class="checkout-button">
+              <div v-if="promoMessage" class="promo-message" :class="{ 'promo-message--error': !promoSuccess }">
+                {{ promoMessage }}
+              </div>
+
+              <button @click="proceedToCheckout" class="checkout-button" :disabled="!canCheckout">
                 <span>Proceder al pago</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -151,41 +160,86 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
+import { useAuthStore } from '@/stores/auth';
 import type { CartItem } from '@/stores/cart';
 
 const router = useRouter();
 const cartStore = useCartStore();
+const authStore = useAuthStore();
+
+// Estado
 const promoCode = ref('');
+const applyingPromo = ref(false);
+const promoMessage = ref('');
+const promoSuccess = ref(false);
 
 // Computed properties
 const isEmpty = computed(() => cartStore.isEmpty);
 const cartItems = computed(() => cartStore.items);
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
-const restaurantLogo = ref('https://via.placeholder.com/50');
 const deliveryTime = ref(25);
 
-// Calculate order values
-const subtotal = computed(() => cartStore.totalAmount);
+// Calculate order values with safe number handling
+const subtotal = computed(() => {
+  return cartItems.value.reduce((sum, item) => {
+    return sum + getItemSubtotal(item);
+  }, 0);
+});
+
 const deliveryFee = ref(3.99);
 const taxRate = 0.16; // 16% IVA
 const tax = computed(() => subtotal.value * taxRate);
 const total = computed(() => subtotal.value + deliveryFee.value + tax.value);
 
+// Restaurant initials for logo placeholder
+const restaurantInitials = computed(() => {
+  const name = restaurantName.value;
+  if (!name || name === 'Restaurante') return 'R';
+
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+});
+
+// Validation
+const canCheckout = computed(() => {
+  return !isEmpty.value && authStore.isAuthenticated() && subtotal.value > 0;
+});
+
+// Helper functions para manejar valores seguros
+const getItemPrice = (item: CartItem): number => {
+  return typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+};
+
+const getItemQuantity = (item: CartItem): number => {
+  return typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
+};
+
+const getItemSubtotal = (item: CartItem): number => {
+  return getItemPrice(item) * getItemQuantity(item);
+};
+
 // Methods
-const incrementItem = (itemId: number) => {
+const incrementItem = async (itemId: number) => {
   const item = cartItems.value.find(item => item.id === itemId);
   if (item) {
-    cartStore.updateQuantity(itemId, item.quantity + 1);
+    await cartStore.updateQuantity(itemId, getItemQuantity(item) + 1);
   }
 };
 
-const decrementItem = (itemId: number) => {
+const decrementItem = async (itemId: number) => {
   const item = cartItems.value.find(item => item.id === itemId);
-  if (item && item.quantity > 1) {
-    cartStore.updateQuantity(itemId, item.quantity - 1);
-  } else if (item) {
-    removeItem(itemId);
+  if (item) {
+    const currentQuantity = getItemQuantity(item);
+    if (currentQuantity > 1) {
+      await cartStore.updateQuantity(itemId, currentQuantity - 1);
+    } else {
+      removeItem(itemId);
+    }
   }
 };
 
@@ -199,22 +253,53 @@ const clearCart = () => {
   }
 };
 
+const applyPromoCode = async () => {
+  const code = promoCode.value.trim();
+  if (!code) {
+    promoMessage.value = 'Ingresa un código promocional';
+    promoSuccess.value = false;
+    return;
+  }
+
+  applyingPromo.value = true;
+  promoMessage.value = '';
+
+  try {
+    // Simular validación de código promocional
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Por ahora solo simulamos que el código no es válido
+    promoMessage.value = 'Código promocional no válido';
+    promoSuccess.value = false;
+  } catch (error) {
+    promoMessage.value = 'Error al validar el código';
+    promoSuccess.value = false;
+  } finally {
+    applyingPromo.value = false;
+  }
+};
+
 const proceedToCheckout = () => {
+  if (!authStore.isAuthenticated()) {
+    router.push('/login');
+    return;
+  }
+
+  if (!canCheckout.value) {
+    return;
+  }
+
   router.push('/checkout');
 };
 
-// Fetch additional data when component mounts
+// Inicialización
 onMounted(async () => {
-  if (restaurantId.value) {
+  // Validar carrito si no está vacío
+  if (!isEmpty.value) {
     try {
-      // In a real app, we'd fetch restaurant details to get the logo and delivery time
-      // For now, we'll just use placeholder values
-      console.log(`Would fetch details for restaurant ${restaurantId.value}`);
-      
-      // If the restaurant has free delivery, we'd set deliveryFee to 0
-      // deliveryFee.value = 0;
+      await cartStore.validateCart();
     } catch (error) {
-      console.error('Error fetching restaurant details:', error);
+      console.error('Error validating cart:', error);
     }
   }
 });
@@ -222,7 +307,7 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 // Variables
-$primary-color: #06C167; // Color principal de Uber Eats
+$primary-color: #06C167;
 $black: #000000;
 $white: #FFFFFF;
 $light-gray: #F6F6F6;
@@ -361,7 +446,13 @@ $transition: all 0.2s ease;
     width: 48px;
     height: 48px;
     border-radius: 8px;
-    object-fit: cover;
+    background-color: $primary-color;
+    color: $white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
   }
 
   &__name {
@@ -610,7 +701,7 @@ $transition: all 0.2s ease;
 // Promocode
 .promocode {
   display: flex;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 
   &__input {
     flex: 1;
@@ -637,9 +728,28 @@ $transition: all 0.2s ease;
     cursor: pointer;
     transition: $transition;
 
-    &:hover {
-      background-color: darken($primary-color, 5%);
+    &:hover:not(:disabled) {
+      background-color: #059142;
     }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.promo-message {
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  background-color: rgba($success-color, 0.1);
+  color: $success-color;
+
+  &--error {
+    background-color: rgba($error-color, 0.1);
+    color: $error-color;
   }
 }
 
@@ -661,10 +771,16 @@ $transition: all 0.2s ease;
   transition: $transition;
   box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
 
-  &:hover {
-    background-color: darken($primary-color, 5%);
+  &:hover:not(:disabled) {
+    background-color: #059142;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 }
 </style>

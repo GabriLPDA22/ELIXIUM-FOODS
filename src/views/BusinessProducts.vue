@@ -807,10 +807,10 @@ const loadProducts = async () => {
   }
 
   loading.value = true;
-  
+
   try {
     const allProducts: Product[] = [];
-    
+
     for (const restaurant of restaurants.value) {
       try {
         console.log('Cargando productos del restaurante:', restaurant.id);
@@ -835,7 +835,7 @@ const loadProducts = async () => {
         console.error(`Error cargando productos del restaurante ${restaurant.id}:`, error);
       }
     }
-    
+
     products.value = allProducts;
     console.log('Total productos cargados:', products.value.length);
   } catch (error) {
@@ -855,7 +855,7 @@ const loadCategories = async () => {
 
   try {
     const allCategories: Category[] = [];
-    
+
     for (const restaurant of restaurants.value) {
       try {
         // Obtener el restaurante con detalles (menús y categorías)
@@ -871,12 +871,12 @@ const loadCategories = async () => {
         console.error(`Error cargando categorías del restaurante ${restaurant.id}:`, error);
       }
     }
-    
+
     // Eliminar duplicados por ID
-    const uniqueCategories = allCategories.filter((category, index, self) => 
+    const uniqueCategories = allCategories.filter((category, index, self) =>
       index === self.findIndex(c => c.id === category.id)
     );
-    
+
     categories.value = uniqueCategories;
     console.log('Categorías cargadas:', categories.value.length);
   } catch (error) {
@@ -950,7 +950,7 @@ const toggleProductAvailability = async (product: Product) => {
     const newAvailability = !product.isAvailable;
     // Aquí llamarías a tu API para actualizar la disponibilidad
     console.log(`Toggling availability for product ${product.id} to ${newAvailability}`);
-    
+
     // Actualizar localmente
     product.isAvailable = newAvailability;
     product.available = newAvailability;
@@ -995,7 +995,7 @@ const removeImage = () => {
 // Formulario
 const submitProductForm = async () => {
   formSubmitting.value = true;
-  
+
   try {
     const productData = {
       name: productForm.name,
@@ -1880,6 +1880,7 @@ onMounted(async () => {
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    z-index: 1000;
   }
 
   &__modal-backdrop {

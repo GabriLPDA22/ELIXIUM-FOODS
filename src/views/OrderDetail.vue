@@ -1,214 +1,269 @@
-<!-- src/views/OrderDetail.vue -->
 <template>
   <div class="order-detail-page">
     <div class="container">
-      <!-- Breadcrumb navigation -->
+      <!-- Breadcrumb -->
       <div class="breadcrumb">
         <router-link to="/" class="breadcrumb__link">Inicio</router-link>
         <span class="breadcrumb__separator">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </span>
         <router-link to="/orders" class="breadcrumb__link">Mis Pedidos</router-link>
         <span class="breadcrumb__separator">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </span>
         <span class="breadcrumb__current">Pedido #{{ orderId }}</span>
       </div>
 
-      <!-- Order detail content -->
+      <!-- Connectivity Issues Banner -->
+      <div v-if="orderStore.hasConnectivityIssues" class="connectivity-banner">
+        <div class="connectivity-banner__content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Problemas de conectividad detectados. Los cambios se guardarán localmente.</span>
+          <button @click="orderStore.retryLastOperation" class="retry-connectivity-btn">
+            Reintentar
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading state -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
         <p class="loading-text">Cargando detalles del pedido...</p>
       </div>
 
+      <!-- Error state -->
       <div v-else-if="error" class="error-container">
-        <div class="error-container__icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <div class="error-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
         </div>
-        <h2 class="error-container__title">Ups, algo salió mal</h2>
-        <p class="error-container__text">No pudimos cargar los detalles del pedido</p>
-        <p class="error-container__message">{{ error }}</p>
-        <router-link to="/orders" class="error-container__button">Volver a mis pedidos</router-link>
+        <h2 class="error-title">Error al cargar el pedido</h2>
+        <p class="error-text">{{ error }}</p>
+        <div class="error-actions">
+          <button @click="loadOrderDetails" class="retry-button">Intentar de nuevo</button>
+          <button @click="$router.push('/orders')" class="back-button">Volver a mis pedidos</button>
+        </div>
       </div>
 
-      <div v-else class="order-detail">
-        <!-- Order header section -->
+      <!-- Order details -->
+      <div v-else-if="order" class="order-detail">
+        <!-- Order header -->
         <div class="order-header">
-          <div class="order-header__left">
+          <div class="order-header__main">
             <h1 class="order-header__title">Pedido #{{ order.id }}</h1>
             <div class="order-header__status" :class="getStatusClass(order.status)">
               {{ getStatusText(order.status) }}
             </div>
           </div>
-          <div class="order-header__right">
-            <div class="order-header__date">
-              <div class="order-header__label">Fecha del pedido</div>
-              <div>{{ formatDate(order.createdAt) }}</div>
-            </div>
-            <div class="order-header__actions">
-              <button v-if="canCancel" @click="showCancelModal = true" class="order-header__cancel-btn">
-                Cancelar pedido
-              </button>
-              <button v-if="canReorder" @click="reorderItems" class="order-header__reorder-btn">
-                Pedir de nuevo
-              </button>
+          <div class="order-header__date">
+            <span class="order-header__label">Fecha del pedido</span>
+            <span class="order-header__value">{{ formatDate(order.createdAt) }}</span>
+          </div>
+          <div class="order-header__actions">
+            <button v-if="canCancel(order)" @click="showCancelModal" class="cancel-btn" :disabled="cancelling">
+              <span v-if="!cancelling">Cancelar pedido</span>
+              <span v-else class="loading-spinner loading-spinner--small"></span>
+            </button>
+            <button v-if="canReorder(order)" @click="reorderItems" class="reorder-btn">
+              Pedir de nuevo
+            </button>
+          </div>
+        </div>
+
+        <!-- Order progress -->
+        <div v-if="isActiveOrder(order)" class="order-progress">
+          <h3 class="order-progress__title">Estado del pedido</h3>
+          <div class="progress-steps">
+            <div v-for="(step, index) in orderSteps" :key="step.status" class="progress-step" :class="{
+              'progress-step--completed': isStepCompleted(step.status, order.status),
+              'progress-step--active': isStepActive(step.status, order.status)
+            }">
+              <div class="progress-step__indicator">
+                <svg v-if="isStepCompleted(step.status, order.status)" width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span v-else>{{ index + 1 }}</span>
+              </div>
+              <div class="progress-step__content">
+                <div class="progress-step__title">{{ step.title }}</div>
+                <div class="progress-step__description">{{ step.description }}</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="order-content">
+        <!-- Order info grid -->
+        <div class="order-info-grid">
           <!-- Restaurant info -->
-          <div class="restaurant-info">
-            <div class="restaurant-info__logo">
-              <!-- This would be a real logo in a full implementation -->
-              <div class="restaurant-info__logo-placeholder">
-                {{ getRestaurantInitials(order.restaurantName) }}
+          <div class="info-card">
+            <h3 class="info-card__title">Restaurante</h3>
+            <div class="restaurant-info">
+              <div class="restaurant-info__logo">{{ order.restaurantName?.[0] || 'R' }}</div>
+              <div class="restaurant-info__details">
+                <div class="restaurant-info__name">{{ order.restaurantName || 'Restaurante' }}</div>
+                <div class="restaurant-info__time">Tiempo estimado: {{ formatDeliveryTime(order.estimatedDeliveryTime) }}</div>
               </div>
             </div>
-            <div class="restaurant-info__details">
-              <h2 class="restaurant-info__name">{{ order.restaurantName }}</h2>
-              <router-link :to="'/restaurants/' + order.restaurantId" class="restaurant-info__link">
-                Ver restaurante
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
+          </div>
+
+          <!-- Delivery info -->
+          <div class="info-card">
+            <h3 class="info-card__title">Entrega</h3>
+            <div class="delivery-info">
+              <div class="delivery-info__address">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
                 </svg>
-              </router-link>
-            </div>
-          </div>
-
-          <!-- Items list -->
-          <div class="order-items">
-            <h3 class="section-title">Productos</h3>
-            
-            <div class="item-list">
-              <div v-for="(item, index) in order.items" :key="index" class="order-item">
-                <div class="order-item__quantity">{{ item.quantity }}×</div>
-                <div class="order-item__details">
-                  <div class="order-item__name">{{ item.name }}</div>
-                  <div class="order-item__price">${{ (item.price * item.quantity).toFixed(2) }}</div>
-                </div>
+                <span>{{ order.deliveryAddress || 'Dirección de entrega' }}</span>
               </div>
-            </div>
-
-            <div class="order-costs">
-              <div class="cost-row">
-                <span>Subtotal</span>
-                <span>${{ order.subtotal.toFixed(2) }}</span>
-              </div>
-              <div class="cost-row">
-                <span>Costo de envío</span>
-                <span>${{ order.deliveryFee.toFixed(2) }}</span>
-              </div>
-              <div class="cost-row">
-                <span>Impuestos</span>
-                <span>${{ order.tax.toFixed(2) }}</span>
-              </div>
-              <div class="cost-row cost-row--total">
-                <span>Total</span>
-                <span>${{ order.total.toFixed(2) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Order details -->
-          <div class="order-info">
-            <div class="info-column">
-              <h3 class="section-title">Detalles de entrega</h3>
-              <div class="info-card">
-                <div class="info-card__group">
-                  <div class="info-card__label">Entregado a</div>
-                  <div class="info-card__value">{{ getFullAddress() }}</div>
-                </div>
-                <div class="info-card__group">
-                  <div class="info-card__label">Estado</div>
-                  <div class="info-card__value status-value" :class="getStatusClass(order.status)">
-                    {{ getStatusText(order.status) }}
-                  </div>
-                </div>
-                <div class="info-card__group">
-                  <div class="info-card__label">Tiempo estimado de entrega</div>
-                  <div class="info-card__value">{{ formatDate(order.estimatedDeliveryTime) }}</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="info-column">
-              <h3 class="section-title">Detalles de pago</h3>
-              <div class="info-card">
-                <div class="info-card__group">
-                  <div class="info-card__label">Método de pago</div>
-                  <div class="info-card__value">{{ getPaymentMethodName(order.payment.method) }}</div>
-                </div>
-                <div class="info-card__group">
-                  <div class="info-card__label">Estado del pago</div>
-                  <div class="info-card__value payment-status" :class="getPaymentStatusClass(order.payment.status)">
-                    {{ getPaymentStatusText(order.payment.status) }}
-                  </div>
-                </div>
-                <div v-if="order.payment.transactionId" class="info-card__group">
-                  <div class="info-card__label">ID de transacción</div>
-                  <div class="info-card__value">{{ order.payment.transactionId }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Help and support -->
-          <div class="help-support">
-            <h3 class="section-title">¿Necesitas ayuda?</h3>
-            <div class="help-actions">
-              <button class="help-action">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                Contactar soporte
-              </button>
-
-              <button class="help-action">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <div class="delivery-info__time">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
-                Reportar un problema
+                <span>{{ formatDeliveryTime(order.estimatedDeliveryTime) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment info -->
+          <div class="info-card">
+            <h3 class="info-card__title">Pago</h3>
+            <div class="payment-info">
+              <div class="payment-info__method">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <span>{{ order.payment?.paymentMethod || 'Tarjeta' }}</span>
+              </div>
+              <div class="payment-info__status" :class="getPaymentStatusClass(order.payment?.status)">
+                {{ getPaymentStatusText(order.payment?.status) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order items -->
+        <div class="order-items">
+          <h3 class="order-items__title">Productos</h3>
+          <div class="items-list">
+            <div v-for="item in order.orderItems || order.items" :key="item.id" class="order-item">
+              <div class="order-item__image">
+                <img v-if="item.productImageUrl || item.imageUrl" :src="item.productImageUrl || item.imageUrl"
+                  :alt="item.productName || item.name" />
+                <div v-else class="order-item__placeholder">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <div class="order-item__details">
+                <div class="order-item__name">{{ item.productName || item.name || 'Producto' }}</div>
+                <div class="order-item__description">{{ item.productDescription || item.description || '' }}</div>
+                <div class="order-item__quantity">Cantidad: {{ item.quantity }}</div>
+              </div>
+              <div class="order-item__price">
+                <div class="order-item__unit-price">${{ (item.unitPrice || item.price || 0).toFixed(2) }} c/u</div>
+                <div class="order-item__total">${{ (item.subtotal || (item.unitPrice || item.price || 0) *
+                  item.quantity).toFixed(2) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order summary -->
+        <div class="order-summary">
+          <h3 class="order-summary__title">Resumen del pedido</h3>
+          <div class="summary-details">
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <span>${{ (order.subtotal || 0).toFixed(2) }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Costo de envío</span>
+              <span v-if="order.deliveryFee > 0">${{ order.deliveryFee.toFixed(2) }}</span>
+              <span v-else class="free-delivery">Gratis</span>
+            </div>
+            <div class="summary-row">
+              <span>Impuestos</span>
+              <span>${{ (order.tax || 0).toFixed(2) }}</span>
+            </div>
+            <div class="summary-row summary-row--total">
+              <span>Total</span>
+              <span>${{ (order.total || 0).toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cancel order modal -->
+      <div v-if="showCancelDialog" class="modal">
+        <div class="modal__backdrop" @click="closeCancelModal"></div>
+        <div class="modal__container">
+          <div class="modal__header">
+            <h3>Cancelar Pedido</h3>
+            <button class="modal__close" @click="closeCancelModal">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal__body">
+            <p>¿Estás seguro de que quieres cancelar el pedido #{{ order?.id }}?</p>
+            <p class="cancel-warning">Esta acción no se puede deshacer.</p>
+            <div class="modal__actions">
+              <button class="modal__btn modal__btn--cancel" @click="closeCancelModal">No, mantener</button>
+              <button class="modal__btn modal__btn--confirm" @click="cancelOrder" :disabled="cancelling">
+                <span v-if="!cancelling">Sí, cancelar</span>
+                <span v-else class="loading-spinner loading-spinner--small"></span>
               </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Cancel order modal -->
-    <div v-if="showCancelModal" class="modal-overlay">
-      <div class="modal">
-        <div class="modal__header">
-          <h3 class="modal__title">Cancelar pedido</h3>
-          <button class="modal__close" @click="showCancelModal = false">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Success toast -->
+      <div v-if="successMessage" class="toast toast--success">
+        <div class="toast__content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>{{ successMessage }}</span>
+        </div>
+      </div>
+
+      <!-- Error toast -->
+      <div v-if="errorMessage" class="toast toast--error">
+        <div class="toast__content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>{{ errorMessage }}</span>
+          <button @click="errorMessage = null" class="toast__close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
-        </div>
-        <div class="modal__content">
-          <p class="modal__message">¿Estás seguro de que deseas cancelar este pedido?</p>
-          <p class="modal__hint">Solo puedes cancelar un pedido si aún no ha sido aceptado por el restaurante.</p>
-          
-          <div class="modal__actions">
-            <button class="modal__button modal__button--cancel" @click="showCancelModal = false">No, mantener pedido</button>
-            <button class="modal__button modal__button--confirm" @click="cancelOrder" :disabled="cancellingOrder">
-              <span v-if="!cancellingOrder">Sí, cancelar pedido</span>
-              <span v-else class="loading-spinner loading-spinner--small"></span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -216,102 +271,108 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { orderService, OrderStatus } from '@/services/orderService';
-import { PaymentStatus } from '@/services/paymentService';
 import { useCartStore } from '@/stores/cart';
+import { useOrderStore } from '@/stores/orderStore';
+import { OrderStatus } from '@/services/orderService';
+import type { OrderResponse } from '@/services/orderService';
 
 const route = useRoute();
 const router = useRouter();
 const cartStore = useCartStore();
+const orderStore = useOrderStore();
 
 // State
-const orderId = ref<number | null>(null);
-const order = ref<any>(null);
+const order = ref<OrderResponse | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const showCancelModal = ref(false);
-const cancellingOrder = ref(false);
+const showCancelDialog = ref(false);
+const cancelling = ref(false);
+const successMessage = ref<string | null>(null);
+const errorMessage = ref<string | null>(null);
 
-// Computed properties
-const canCancel = computed(() => {
-  if (!order.value) return false;
-  
-  // Only allow cancellation for pending or accepted orders
-  return [OrderStatus.PENDING, OrderStatus.ACCEPTED].includes(order.value.status);
+// Get order ID from route
+const orderId = computed(() => {
+  const id = route.params.id;
+  return typeof id === 'string' ? parseInt(id) : null;
 });
 
-const canReorder = computed(() => {
-  if (!order.value) return false;
-  
-  // Allow reordering for any completed or cancelled order
-  return [OrderStatus.DELIVERED, OrderStatus.CANCELLED].includes(order.value.status);
-});
+// Order steps for progress tracking
+const orderSteps = [
+  { status: OrderStatus.PENDING, title: 'Pedido recibido', description: 'Tu pedido ha sido recibido' },
+  { status: OrderStatus.ACCEPTED, title: 'Confirmado', description: 'El restaurante confirmó tu pedido' },
+  { status: OrderStatus.PREPARING, title: 'Preparando', description: 'Tu pedido se está preparando' },
+  { status: OrderStatus.READY_FOR_PICKUP, title: 'Listo', description: 'Tu pedido está listo para entrega' },
+  { status: OrderStatus.ON_THE_WAY, title: 'En camino', description: 'Tu pedido está en camino' },
+  { status: OrderStatus.DELIVERED, title: 'Entregado', description: 'Tu pedido ha sido entregado' }
+];
 
-// Load order data
-onMounted(async () => {
+// Toast helpers
+const showSuccess = (message: string) => {
+  successMessage.value = message;
+  setTimeout(() => successMessage.value = null, 3000);
+};
+
+const showError = (message: string) => {
+  errorMessage.value = message;
+  // El error se cierra manualmente o después de 10 segundos
+  setTimeout(() => errorMessage.value = null, 10000);
+};
+
+// Methods
+const loadOrderDetails = async () => {
+  if (!orderId.value) {
+    error.value = 'ID de pedido inválido';
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
+  error.value = null;
+
   try {
-    // Get order ID from route params
-    const id = Number(route.params.id);
-    if (isNaN(id)) {
-      throw new Error('ID de pedido inválido');
-    }
-    
-    orderId.value = id;
-    loading.value = true;
-    
-    // Fetch order details
-    const orderData = await orderService.getOrderById(id);
-    
-    // Add restaurant name (would come from the API in a real implementation)
-    order.value = {
-      ...orderData,
-      restaurantName: getRestaurantName(orderData.restaurantId)
-    };
+    const orderData = await orderStore.fetchOrderById(orderId.value);
+    order.value = orderData;
   } catch (err: any) {
     console.error('Error loading order:', err);
-    error.value = err.message || 'Error al cargar los detalles del pedido';
+    error.value = err.message || 'Error al cargar el pedido';
   } finally {
     loading.value = false;
   }
-});
+};
 
-// Helper functions
-function getRestaurantName(restaurantId: number): string {
-  // This would be a real lookup in a full implementation
-  const restaurantNames: {[key: number]: string} = {
-    123: 'Burger Express',
-    124: 'Pizza Palace',
-    125: 'Healthy Greens'
-  };
-  
-  return restaurantNames[restaurantId] || 'Restaurant';
-}
-
-function getRestaurantInitials(name: string): string {
-  if (!name) return '';
-  
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase();
-}
-
-function formatDate(dateString: string): string {
+const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('es-ES', { 
-    year: 'numeric', 
-    month: 'short', 
+  return date.toLocaleString('es-ES', {
+    year: 'numeric',
+    month: 'long',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Europe/Madrid' // Zona horaria de España
   });
-}
+};
 
-function getStatusClass(status: OrderStatus): string {
+const formatDeliveryTime = (estimatedTime: string): string => {
+  if (!estimatedTime) return 'Sin estimar';
+
+  const deliveryDate = new Date(estimatedTime);
+  const now = new Date();
+
+  if (deliveryDate > now) {
+    const diffMinutes = Math.round((deliveryDate.getTime() - now.getTime()) / (1000 * 60));
+    return `En ${diffMinutes} minutos`;
+  } else {
+    return deliveryDate.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid'
+    });
+  }
+};
+
+const getStatusClass = (status: OrderStatus): string => {
   switch (status) {
     case OrderStatus.DELIVERED:
       return 'status--delivered';
@@ -326,9 +387,9 @@ function getStatusClass(status: OrderStatus): string {
     default:
       return 'status--pending';
   }
-}
+};
 
-function getStatusText(status: OrderStatus): string {
+const getStatusText = (status: OrderStatus): string => {
   switch (status) {
     case OrderStatus.PENDING:
       return 'Pendiente';
@@ -347,116 +408,173 @@ function getStatusText(status: OrderStatus): string {
     default:
       return status;
   }
-}
+};
 
-function getPaymentMethodName(method: string): string {
-  switch (method) {
-    case 'card':
-      return 'Tarjeta de crédito/débito';
-    case 'paypal':
-      return 'PayPal';
-    case 'cash':
-      return 'Efectivo';
-    default:
-      return method;
-  }
-}
-
-function getPaymentStatusClass(status: PaymentStatus): string {
+const getPaymentStatusClass = (status?: string): string => {
   switch (status) {
-    case PaymentStatus.COMPLETED:
-      return 'status--delivered';
-    case PaymentStatus.REFUNDED:
-      return 'status--cancelled';
-    case PaymentStatus.FAILED:
-      return 'status--cancelled';
-    case PaymentStatus.PROCESSING:
-      return 'status--preparing';
+    case 'completed':
+      return 'payment-status--completed';
+    case 'failed':
+      return 'payment-status--failed';
+    case 'refunded':
+      return 'payment-status--refunded';
     default:
-      return 'status--pending';
+      return 'payment-status--pending';
   }
-}
+};
 
-function getPaymentStatusText(status: PaymentStatus): string {
+const getPaymentStatusText = (status?: string): string => {
   switch (status) {
-    case PaymentStatus.PENDING:
-      return 'Pendiente';
-    case PaymentStatus.PROCESSING:
-      return 'Procesando';
-    case PaymentStatus.COMPLETED:
-      return 'Completado';
-    case PaymentStatus.FAILED:
-      return 'Fallido';
-    case PaymentStatus.REFUNDED:
+    case 'completed':
+      return 'Pagado';
+    case 'failed':
+      return 'Falló';
+    case 'refunded':
       return 'Reembolsado';
-    case PaymentStatus.CANCELLED:
-      return 'Cancelado';
+    case 'pending':
+      return 'Pendiente';
     default:
-      return status;
+      return 'Desconocido';
   }
-}
+};
 
-function getFullAddress(): string {
-  // In a real app, this would use actual address data
-  return 'Calle Mayor 123, Piso 4B, Centro, Zaragoza, Aragón, 50001';
-}
+const isActiveOrder = (order: OrderResponse): boolean => {
+  return [
+    OrderStatus.PENDING,
+    OrderStatus.ACCEPTED,
+    OrderStatus.PREPARING,
+    OrderStatus.READY_FOR_PICKUP,
+    OrderStatus.ON_THE_WAY
+  ].includes(order.status);
+};
 
-async function cancelOrder() {
+const canCancel = (order: OrderResponse): boolean => {
+  return [OrderStatus.PENDING, OrderStatus.ACCEPTED].includes(order.status);
+};
+
+const canReorder = (order: OrderResponse): boolean => {
+  return [OrderStatus.DELIVERED, OrderStatus.CANCELLED].includes(order.status);
+};
+
+const isStepCompleted = (stepStatus: OrderStatus, currentStatus: OrderStatus): boolean => {
+  const statusOrder = [
+    OrderStatus.PENDING,
+    OrderStatus.ACCEPTED,
+    OrderStatus.PREPARING,
+    OrderStatus.READY_FOR_PICKUP,
+    OrderStatus.ON_THE_WAY,
+    OrderStatus.DELIVERED
+  ];
+
+  const stepIndex = statusOrder.indexOf(stepStatus);
+  const currentIndex = statusOrder.indexOf(currentStatus);
+
+  return stepIndex < currentIndex;
+};
+
+const isStepActive = (stepStatus: OrderStatus, currentStatus: OrderStatus): boolean => {
+  return stepStatus === currentStatus;
+};
+
+const showCancelModal = (): void => {
+  showCancelDialog.value = true;
+};
+
+const closeCancelModal = (): void => {
+  showCancelDialog.value = false;
+  cancelling.value = false;
+};
+
+const cancelOrder = async (): Promise<void> => {
   if (!order.value) return;
-  
-  try {
-    cancellingOrder.value = true;
-    
-    const success = await orderService.cancelOrder(order.value.id);
-    
-    if (success) {
-      // Update local order status
-      order.value.status = OrderStatus.CANCELLED;
-      showCancelModal.value = false;
-      
-      // Show success message (this would use a proper toast notification in a real app)
-      alert('Pedido cancelado con éxito');
-    } else {
-      throw new Error('No se pudo cancelar el pedido');
-    }
-  } catch (err: any) {
-    console.error('Error cancelling order:', err);
-    alert(err.message || 'Error al cancelar el pedido');
-  } finally {
-    cancellingOrder.value = false;
-  }
-}
 
-function reorderItems() {
-  // Clear current cart
-  cartStore.clearCart();
-  
-  // Add items from this order to cart
-  if (order.value && order.value.items) {
-    for (const item of order.value.items) {
-      // In a real app, we'd have all the product details
-      cartStore.addToCart({
-        id: item.productId,
-        name: item.name,
-        price: item.price,
-        restaurantId: order.value.restaurantId,
-        categoryName: order.value.restaurantName,
-        description: '',
-        imageUrl: '',
-        isAvailable: true,
-        categoryId: 0
-      }, item.quantity);
+  try {
+    cancelling.value = true;
+    console.log(`🔄 Iniciando cancelación del pedido ${order.value.id}...`);
+
+    const success = await orderStore.cancelOrder(order.value.id);
+
+    if (success) {
+      // Actualizar el pedido localmente
+      order.value.status = OrderStatus.CANCELLED;
+      order.value.updatedAt = new Date().toISOString();
+
+      console.log(`✅ Pedido ${order.value.id} cancelado exitosamente`);
+
+      // Cerrar modal
+      closeCancelModal();
+
+      // Mostrar mensaje de éxito
+      showSuccess('Pedido cancelado exitosamente');
     }
+
+  } catch (err: any) {
+    console.error(`❌ Error al cancelar pedido ${order.value.id}:`, err);
+
+    // Mostrar error específico
+    let errorText = 'No se pudo cancelar el pedido';
+
+    if (err.message?.includes('404')) {
+      errorText = 'El pedido no fue encontrado o ya no existe';
+    } else if (err.message?.includes('400')) {
+      errorText = 'El pedido no se puede cancelar en su estado actual';
+    } else if (err.message?.includes('401')) {
+      errorText = 'No tienes permisos para cancelar este pedido';
+    } else if (err.message) {
+      errorText = err.message;
+    }
+
+    showError(errorText);
+    closeCancelModal();
+  } finally {
+    cancelling.value = false;
   }
-  
-  // Redirect to cart
-  router.push('/cart');
-}
+};
+
+const reorderItems = async (): Promise<void> => {
+  if (!order.value) return;
+
+  try {
+    cartStore.clearCart();
+
+    const items = order.value.orderItems || order.value.items || [];
+
+    if (items.length > 0) {
+      for (const item of items) {
+        try {
+          await cartStore.addToCart({
+            id: item.productId,
+            name: item.productName || item.name || 'Producto',
+            price: item.unitPrice || item.price || 0,
+            restaurantId: order.value.restaurantId,
+            categoryName: '',
+            description: item.productDescription || item.description || '',
+            imageUrl: item.productImageUrl || item.imageUrl || '',
+            isAvailable: true,
+            categoryId: 0
+          }, item.quantity);
+        } catch (error) {
+          console.error('Error adding item to cart:', error);
+        }
+      }
+    }
+
+    showSuccess('Productos agregados al carrito');
+    router.push('/cart');
+  } catch (error) {
+    showError('Error al agregar productos al carrito');
+  }
+};
+
+// Initialize
+onMounted(() => {
+  loadOrderDetails();
+});
 </script>
 
 <style lang="scss" scoped>
 // Variables
-$primary-color: #06C167; // Color principal de Uber Eats
+$primary-color: #06C167;
 $black: #000000;
 $white: #FFFFFF;
 $light-gray: #F6F6F6;
@@ -483,14 +601,46 @@ $transition: all 0.2s ease;
   }
 }
 
-// Order detail page
 .order-detail-page {
   background-color: $light-gray;
   min-height: 100vh;
   padding: 40px 0 60px;
 }
 
-// Breadcrumb navigation
+// Connectivity Banner
+.connectivity-banner {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: $border-radius-sm;
+  padding: 12px 20px;
+  margin-bottom: 24px;
+  color: white;
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+.retry-connectivity-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+// Breadcrumb
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -520,137 +670,172 @@ $transition: all 0.2s ease;
   }
 }
 
-// Loading container
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 0;
-
-  .loading-spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid $light-gray;
-    border-radius: 50%;
-    border-top-color: $primary-color;
-    animation: spinner 1s linear infinite;
-    margin-bottom: 16px;
-  }
-
-  .loading-text {
-    color: $text-secondary;
-    font-size: 16px;
-  }
-}
-
-.loading-spinner--small {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: $white;
-  animation: spinner 1s linear infinite;
-}
-
-@keyframes spinner {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// Error container
+// Loading & Error states
+.loading-container,
 .error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: 60px 0;
+  text-align: center;
+}
 
-  &__icon {
-    width: 120px;
-    height: 120px;
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid $medium-gray;
+  border-radius: 50%;
+  border-top-color: $primary-color;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+.error-icon {
+  color: $error-color;
+  margin-bottom: 1.5rem;
+}
+
+.error-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0 0 12px;
+}
+
+.error-text {
+  color: $text-secondary;
+  margin: 0 0 24px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.retry-button,
+.back-button {
+  padding: 12px 24px;
+  border-radius: $border-radius-sm;
+  border: none;
+  cursor: pointer;
+  transition: $transition;
+  font-weight: 600;
+}
+
+.retry-button {
+  background-color: $primary-color;
+  color: white;
+
+  &:hover {
+    background-color: darken($primary-color, 5%);
+    transform: translateY(-2px);
+  }
+}
+
+.back-button {
+  background-color: $medium-gray;
+  color: $text-primary;
+
+  &:hover {
+    background-color: darken($medium-gray, 5%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Toast notifications
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  max-width: 400px;
+  border-radius: $border-radius-sm;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
+
+  &--success {
+    background: linear-gradient(135deg, $success-color, darken($success-color, 10%));
+    color: white;
+  }
+
+  &--error {
+    background: linear-gradient(135deg, $error-color, darken($error-color, 10%));
+    color: white;
+  }
+
+  &__content {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background-color: $white;
-    border-radius: 50%;
-    color: $error-color;
-    margin-bottom: 32px;
-    box-shadow: $box-shadow;
-  }
-
-  &__title {
-    font-size: 24px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 12px;
-  }
-
-  &__text {
-    font-size: 16px;
-    color: $text-secondary;
-    margin: 0 0 16px;
-    max-width: 500px;
-  }
-
-  &__message {
+    gap: 12px;
+    padding: 16px 20px;
     font-size: 14px;
-    color: $error-color;
-    margin: 0 0 32px;
-    padding: 12px 16px;
-    background-color: rgba($error-color, 0.1);
-    border-radius: $border-radius-sm;
-    max-width: 500px;
+    font-weight: 500;
   }
 
-  &__button {
-    background-color: $primary-color;
-    color: $white;
-    font-weight: 600;
-    padding: 12px 24px;
-    border-radius: $border-radius-sm;
-    text-decoration: none;
-    box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
+  &__close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    margin-left: auto;
+    opacity: 0.8;
     transition: $transition;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
+      opacity: 1;
     }
   }
 }
 
-// Order detail
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+// Order Detail
 .order-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Order Header
+.order-header {
   background-color: $white;
   border-radius: $border-radius;
   box-shadow: $box-shadow;
-  overflow: hidden;
-}
-
-// Order header
-.order-header {
   padding: 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 1px solid $light-gray;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 24px;
+  align-items: center;
 
   @media (max-width: 768px) {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 16px;
+    text-align: center;
   }
 
-  &__left {
+  &__main {
     display: flex;
     align-items: center;
     gap: 16px;
 
-    @media (max-width: 576px) {
+    @media (max-width: 768px) {
       flex-direction: column;
-      align-items: flex-start;
       gap: 8px;
     }
   }
@@ -663,489 +848,566 @@ $transition: all 0.2s ease;
   }
 
   &__status {
-    font-size: 14px;
-    font-weight: 500;
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 100px;
-    
+    font-size: 14px;
+    font-weight: 600;
+
     &.status--delivered {
       background-color: rgba($success-color, 0.1);
       color: $success-color;
     }
-    
+
     &.status--cancelled {
       background-color: rgba($error-color, 0.1);
       color: $error-color;
     }
-    
+
     &.status--on-the-way {
       background-color: rgba($warning-color, 0.1);
       color: $warning-color;
     }
-    
+
     &.status--preparing {
       background-color: rgba(#3b82f6, 0.1);
       color: #3b82f6;
     }
-    
+
     &.status--pending {
       background-color: rgba($text-secondary, 0.1);
       color: $text-secondary;
     }
   }
 
-  &__right {
-    text-align: right;
+  &__date {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
 
     @media (max-width: 768px) {
-      text-align: left;
-      width: 100%;
+      align-items: center;
     }
   }
 
-  &__date {
-    margin-bottom: 16px;
-    font-size: 14px;
+  &__label {
+    font-size: 12px;
     color: $text-secondary;
+    margin-bottom: 4px;
   }
 
-  &__label {
-    font-weight: 500;
+  &__value {
+    font-weight: 600;
     color: $text-primary;
-    margin-bottom: 4px;
   }
 
   &__actions {
     display: flex;
-    gap: 16px;
-    justify-content: flex-end;
+    gap: 12px;
 
     @media (max-width: 768px) {
-      justify-content: flex-start;
-    }
-
-    @media (max-width: 576px) {
-      flex-direction: column;
-      gap: 8px;
-    }
-  }
-
-  &__cancel-btn {
-    background-color: rgba($error-color, 0.1);
-    color: $error-color;
-    border: none;
-    padding: 8px 16px;
-    border-radius: $border-radius-sm;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 14px;
-    transition: $transition;
-
-    &:hover {
-      background-color: rgba($error-color, 0.2);
-    }
-  }
-
-  &__reorder-btn {
-    background-color: $primary-color;
-    color: $white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: $border-radius-sm;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 14px;
-    transition: $transition;
-
-    &:hover {
-      background-color: darken($primary-color, 5%);
+      justify-content: center;
     }
   }
 }
 
-// Order content
-.order-content {
-  padding: 24px;
-}
-
-// Restaurant info
-.restaurant-info {
+// Action buttons
+.cancel-btn,
+.reorder-btn {
+  padding: 8px 16px;
+  border-radius: $border-radius-sm;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+  border: none;
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid $light-gray;
+  justify-content: center;
 
-  &__logo {
-    width: 64px;
-    height: 64px;
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.cancel-btn {
+  background: rgba($error-color, 0.1);
+  color: $error-color;
+
+  &:hover:not(:disabled) {
+    background: rgba($error-color, 0.2);
+  }
+}
+
+.reorder-btn {
+  background: rgba($primary-color, 0.1);
+  color: $primary-color;
+
+  &:hover {
+    background: rgba($primary-color, 0.2);
+  }
+}
+
+// Order Progress
+.order-progress {
+  background-color: $white;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  padding: 24px;
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 24px;
+    color: $text-primary;
+  }
+}
+
+.progress-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.progress-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 24px;
+    top: 48px;
+    width: 2px;
+    height: calc(100% + 16px);
+    background-color: $medium-gray;
+  }
+
+  &--completed {
+    .progress-step__indicator {
+      background-color: $success-color;
+      color: $white;
+      border-color: $success-color;
+    }
+
+    &::after {
+      background-color: $success-color;
+    }
+  }
+
+  &--active {
+    .progress-step__indicator {
+      background-color: $primary-color;
+      color: $white;
+      border-color: $primary-color;
+    }
+
+    .progress-step__title {
+      color: $text-primary;
+      font-weight: 600;
+    }
+  }
+
+  &__indicator {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $white;
+    border: 2px solid $medium-gray;
+    font-weight: 600;
+    font-size: 16px;
     flex-shrink: 0;
   }
 
-  &__logo-placeholder {
-    width: 100%;
-    height: 100%;
+  &__content {
+    flex: 1;
+    padding-top: 8px;
+  }
+
+  &__title {
+    font-weight: 500;
+    margin: 0 0 4px;
+    color: $text-secondary;
+  }
+
+  &__description {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0;
+  }
+}
+
+// Info Cards Grid
+.order-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.info-card {
+  background-color: $white;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  padding: 20px;
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: $text-primary;
+  }
+}
+
+// Restaurant Info
+.restaurant-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  &__logo {
+    width: 48px;
+    height: 48px;
+    border-radius: $border-radius-sm;
     background-color: $primary-color;
     color: $white;
-    border-radius: $border-radius-sm;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 24px;
-  }
-
-  &__details {
-    flex: 1;
+    font-size: 18px;
   }
 
   &__name {
-    font-size: 18px;
     font-weight: 600;
-    margin: 0 0 8px;
+    margin: 0 0 4px;
     color: $text-primary;
   }
 
-  &__link {
-    color: $primary-color;
-    text-decoration: none;
-    font-weight: 500;
+  &__time {
     font-size: 14px;
+    color: $text-secondary;
+    margin: 0;
+  }
+}
+
+// Delivery Info
+.delivery-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__address,
+  &__time {
     display: flex;
     align-items: center;
-    gap: 4px;
-    width: fit-content;
+    gap: 8px;
+    font-size: 14px;
+    color: $text-primary;
 
-    &:hover {
-      text-decoration: underline;
+    svg {
+      color: $text-secondary;
     }
   }
 }
 
-// Section title
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px;
-  color: $text-primary;
+// Payment Info
+.payment-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  &__method {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: $text-primary;
+
+    svg {
+      color: $text-secondary;
+    }
+  }
+
+  &__status {
+    padding: 4px 8px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+
+    &.payment-status--completed {
+      background-color: rgba($success-color, 0.1);
+      color: $success-color;
+    }
+
+    &.payment-status--failed {
+      background-color: rgba($error-color, 0.1);
+      color: $error-color;
+    }
+
+    &.payment-status--pending {
+      background-color: rgba($warning-color, 0.1);
+      color: $warning-color;
+    }
+
+    &.payment-status--refunded {
+      background-color: rgba($text-secondary, 0.1);
+      color: $text-secondary;
+    }
+  }
 }
 
-// Order items
+// Order Items
 .order-items {
-  margin-bottom: 32px;
+  background-color: $white;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  padding: 24px;
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 20px;
+    color: $text-primary;
+  }
 }
 
-// Item list
-.item-list {
-  background-color: $light-gray;
-  border-radius: $border-radius-sm;
-  overflow: hidden;
-  margin-bottom: 16px;
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-// Order item
 .order-item {
   display: flex;
-  padding: 16px;
-  border-bottom: 1px solid $white;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid $light-gray;
 
   &:last-child {
     border-bottom: none;
   }
 
-  &__quantity {
-    font-weight: 600;
-    margin-right: 16px;
-    min-width: 24px;
-    color: $text-primary;
+  &__image {
+    width: 64px;
+    height: 64px;
+    border-radius: $border-radius-sm;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: $light-gray;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $text-secondary;
   }
 
   &__details {
     flex: 1;
-    display: flex;
-    justify-content: space-between;
   }
 
   &__name {
-    font-weight: 500;
+    font-weight: 600;
+    margin: 0 0 4px;
     color: $text-primary;
+  }
+
+  &__description {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0 0 8px;
+  }
+
+  &__quantity {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0;
   }
 
   &__price {
-    font-weight: 500;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  &__unit-price {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0 0 4px;
+  }
+
+  &__total {
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0;
+  }
+}
+
+// Order Summary
+.order-summary {
+  background-color: $white;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  padding: 24px;
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 20px;
     color: $text-primary;
   }
 }
 
-// Order costs
-.order-costs {
-  background-color: $light-gray;
-  border-radius: $border-radius-sm;
-  padding: 16px;
+.summary-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-// Cost row
-.cost-row {
+.summary-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
+  align-items: center;
   font-size: 14px;
   color: $text-secondary;
 
-  &:last-child {
-    margin-bottom: 0;
-  }
-
   &--total {
-    margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px solid $white;
-    font-size: 16px;
+    margin-top: 12px;
+    border-top: 1px solid $light-gray;
+    font-size: 18px;
     font-weight: 600;
     color: $text-primary;
   }
-}
 
-// Order info
-.order-info {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-// Info column
-.info-column {
-  flex: 1;
-}
-
-// Info card
-.info-card {
-  background-color: $light-gray;
-  border-radius: $border-radius-sm;
-  padding: 16px;
-}
-
-// Info card group
-.info-card__group {
-  margin-bottom: 16px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-// Info card label
-.info-card__label {
-  font-weight: 500;
-  color: $text-primary;
-  margin-bottom: 4px;
-  font-size: 14px;
-}
-
-// Info card value
-.info-card__value {
-  color: $text-secondary;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-// Status value
-.status-value {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 100px;
-  font-weight: 500;
-  font-size: 12px;
-  
-  &.status--delivered {
-    background-color: rgba($success-color, 0.1);
+  .free-delivery {
     color: $success-color;
-  }
-  
-  &.status--cancelled {
-    background-color: rgba($error-color, 0.1);
-    color: $error-color;
-  }
-  
-  &.status--on-the-way {
-    background-color: rgba($warning-color, 0.1);
-    color: $warning-color;
-  }
-  
-  &.status--preparing {
-    background-color: rgba(#3b82f6, 0.1);
-    color: #3b82f6;
-  }
-  
-  &.status--pending {
-    background-color: rgba($text-secondary, 0.1);
-    color: $text-secondary;
+    font-weight: 600;
   }
 }
 
-// Payment status
-.payment-status {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 100px;
-  font-weight: 500;
-  font-size: 12px;
-}
-
-// Help and support
-.help-support {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid $light-gray;
-}
-
-// Help actions
-.help-actions {
-  display: flex;
-  gap: 16px;
-
-  @media (max-width: 576px) {
-    flex-direction: column;
-  }
-}
-
-// Help action
-.help-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: $light-gray;
-  border: none;
-  padding: 12px 20px;
-  border-radius: $border-radius-sm;
-  color: $text-primary;
-  font-weight: 500;
-  cursor: pointer;
-  transition: $transition;
-
-  &:hover {
-    background-color: darken($light-gray, 5%);
-  }
-}
-
-// Modal overlay and modal
-.modal-overlay {
+// Modal
+.modal {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 24px;
-}
+  padding: 1rem;
 
-.modal {
-  width: 100%;
-  max-width: 500px;
-  background-color: $white;
-  border-radius: $border-radius;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
+  &__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  &__container {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: 1.25rem 1.5rem;
     border-bottom: 1px solid $light-gray;
-  }
 
-  &__title {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: $text-primary;
-  }
-
-  &__close {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $text-secondary;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: $transition;
-
-    &:hover {
-      background-color: $light-gray;
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
       color: $text-primary;
     }
   }
 
-  &__content {
-    padding: 20px;
-  }
-
-  &__message {
-    font-size: 16px;
-    margin: 0 0 12px;
-    color: $text-primary;
-  }
-
-  &__hint {
-    font-size: 14px;
-    margin: 0 0 24px;
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
     color: $text-secondary;
+    transition: $transition;
+
+    &:hover {
+      color: $text-primary;
+    }
+  }
+
+  &__body {
+    padding: 1.5rem;
+
+    p {
+      margin: 0 0 1rem;
+      color: $text-primary;
+    }
+
+    .cancel-warning {
+      color: $text-secondary;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
   }
 
   &__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 16px;
-
-    @media (max-width: 576px) {
-      flex-direction: column-reverse;
-    }
+    gap: 1rem;
   }
 
-  &__button {
-    padding: 12px 20px;
-    border-radius: $border-radius-sm;
-    font-weight: 500;
+  &__btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
     cursor: pointer;
     transition: $transition;
-    font-size: 14px;
+    font-size: 0.95rem;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &--cancel {
-      background-color: transparent;
-      border: 1px solid $medium-gray;
+      background: $light-gray;
       color: $text-primary;
 
       &:hover {
-        background-color: $light-gray;
+        background: #e2e8f0;
       }
     }
 
     &--confirm {
-      background-color: $error-color;
-      border: none;
-      color: $white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
+      background: $error-color;
+      color: white;
 
       &:hover:not(:disabled) {
-        background-color: darken($error-color, 5%);
+        background: #dc2626;
+        transform: translateY(-2px);
       }
 
       &:disabled {
@@ -1154,5 +1416,14 @@ $transition: all 0.2s ease;
       }
     }
   }
+}
+
+.loading-spinner--small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 </style>

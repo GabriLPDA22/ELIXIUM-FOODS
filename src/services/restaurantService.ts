@@ -85,8 +85,13 @@ export const restaurantService = {
    * Obtener todos los restaurantes
    */
   async getAllRestaurants(): Promise<RestaurantCard[]> {
-    const response = await api.get('/api/Restaurants')
-    return response.data
+    try {
+      const response = await api.get('/api/Restaurants')
+      return response.data
+    } catch (error) {
+      console.error('Error fetching restaurants:', error)
+      return []
+    }
   },
 
   /**
@@ -94,8 +99,15 @@ export const restaurantService = {
    * @param limit Número máximo de restaurantes a devolver
    */
   async getPopularRestaurants(limit: number = 8): Promise<RestaurantCard[]> {
-    const response = await api.get(`/api/Restaurants/popular?limit=${limit}`)
-    return response.data
+    try {
+      const response = await api.get(`/api/Restaurants/popular?limit=${limit}`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching popular restaurants:', error)
+      // Fallback: obtener todos y limitar
+      const allRestaurants = await this.getAllRestaurants()
+      return allRestaurants.slice(0, limit)
+    }
   },
 
   /**
@@ -104,12 +116,17 @@ export const restaurantService = {
    * @param cuisine Tipo de cocina
    */
   async searchRestaurants(query?: string, cuisine?: string): Promise<RestaurantCard[]> {
-    const params = new URLSearchParams()
-    if (query) params.append('query', query)
-    if (cuisine) params.append('cuisine', cuisine)
-    
-    const response = await api.get(`/api/Restaurants/search?${params.toString()}`)
-    return response.data
+    try {
+      const params = new URLSearchParams()
+      if (query) params.append('query', query)
+      if (cuisine) params.append('cuisine', cuisine)
+
+      const response = await api.get(`/api/Restaurants/search?${params.toString()}`)
+      return response.data
+    } catch (error) {
+      console.error('Error searching restaurants:', error)
+      return []
+    }
   },
 
   /**
@@ -117,8 +134,13 @@ export const restaurantService = {
    * @param tipo ID del tipo de restaurante (1-8)
    */
   async getRestaurantsByTipo(tipo: number): Promise<RestaurantCard[]> {
-    const response = await api.get(`/api/Restaurants/tipo/${tipo}`)
-    return response.data
+    try {
+      const response = await api.get(`/api/Restaurants/tipo/${tipo}`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching restaurants by tipo:', error)
+      return []
+    }
   },
 
   /**
@@ -126,8 +148,13 @@ export const restaurantService = {
    * @param id ID del restaurante
    */
   async getRestaurantById(id: number): Promise<RestaurantDetail> {
-    const response = await api.get(`/api/Restaurants/${id}`)
-    return response.data
+    try {
+      const response = await api.get(`/api/Restaurants/${id}`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching restaurant:', error)
+      throw new Error('No se pudo cargar la información del restaurante')
+    }
   },
 
   /**
@@ -135,8 +162,16 @@ export const restaurantService = {
    * @param restaurantId ID del restaurante
    */
   async getProductsByRestaurant(restaurantId: number): Promise<MenuItem[]> {
-    const response = await api.get(`/api/Products/Restaurant/${restaurantId}`)
-    return response.data
+    try {
+      const response = await api.get(`/api/Products/Restaurant/${restaurantId}`)
+      return response.data.map((item: any) => ({
+        ...item,
+        popular: item.id % 3 === 0 // Simulación: marcar algunos productos como populares
+      }))
+    } catch (error) {
+      console.error('Error fetching restaurant products:', error)
+      return []
+    }
   },
 
   /**
@@ -144,8 +179,13 @@ export const restaurantService = {
    * @param categoryId ID de la categoría
    */
   async getProductsByCategory(categoryId: number): Promise<MenuItem[]> {
-    const response = await api.get(`/api/Products/Category/${categoryId}`)
-    return response.data
+    try {
+      const response = await api.get(`/api/Products/Category/${categoryId}`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching products by category:', error)
+      return []
+    }
   },
 
   /**
@@ -153,29 +193,40 @@ export const restaurantService = {
    * @param products Lista de productos
    */
   organizeProductsByCategory(products: MenuItem[]): MenuCategory[] {
+    if (!products || products.length === 0) {
+      return []
+    }
+
     // Agrupar productos por categoría
     const categoryMap = new Map<number, MenuCategory>()
-    
+
     products.forEach(product => {
-      if (!categoryMap.has(product.categoryId)) {
-        categoryMap.set(product.categoryId, {
-          id: product.categoryId,
-          name: product.categoryName,
+      const categoryId = product.categoryId || 0
+      const categoryName = product.categoryName || 'Sin categoría'
+
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          id: categoryId,
+          name: categoryName,
           items: []
         })
       }
-      
+
       // Añadir el producto a su categoría
-      // Marcar como popular los productos con ids bajos (simulación)
-      const enrichedProduct = {
-        ...product,
-        popular: product.id % 3 === 0 // Simulación: marcar algunos productos como populares
-      }
-      
-      categoryMap.get(product.categoryId)?.items.push(enrichedProduct)
+      categoryMap.get(categoryId)?.items.push(product)
     })
-    
-    // Convertir el mapa a un array
-    return Array.from(categoryMap.values())
+
+    // Convertir el mapa a un array y ordenar
+    const categories = Array.from(categoryMap.values())
+
+    // Ordenar categorías por nombre
+    categories.sort((a, b) => a.name.localeCompare(b.name))
+
+    // Ordenar productos dentro de cada categoría
+    categories.forEach(category => {
+      category.items.sort((a, b) => a.name.localeCompare(b.name))
+    })
+
+    return categories
   }
 }

@@ -12,7 +12,7 @@
     <div class="profile-content">
       <div class="container">
         <div class="profile-tabs">
-          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
+          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id; handleTabChange(tab.id)"
             :class="['profile-tab', { 'profile-tab--active': activeTab === tab.id }]">
             <span class="profile-tab__icon" v-html="tab.icon"></span>
             <span class="profile-tab__text">{{ tab.label }}</span>
@@ -32,12 +32,66 @@
 
           <!-- Historial de pedidos -->
           <div v-if="activeTab === 'orders'" class="profile-panel">
-            <div class="coming-soon">
-              <div class="coming-soon__icon">🚧</div>
-              <h3 class="coming-soon__title">Próximamente</h3>
-              <p class="coming-soon__message">
-                El historial de pedidos estará disponible muy pronto.
-              </p>
+            <div v-if="loadingOrders" class="loading-orders">
+              <div class="loading-spinner"></div>
+              <span>Cargando pedidos...</span>
+            </div>
+
+            <div v-else-if="ordersError" class="orders-error">
+              <div class="orders-error__icon">⚠️</div>
+              <h3>Error al cargar pedidos</h3>
+              <p>{{ ordersError }}</p>
+              <button @click="loadUserOrders" class="retry-button">Intentar de nuevo</button>
+            </div>
+
+            <div v-else-if="userOrders.length === 0" class="no-orders">
+              <div class="no-orders__icon">📦</div>
+              <h3>No tienes pedidos aún</h3>
+              <p>Cuando hagas tu primer pedido, aparecerá aquí.</p>
+              <router-link to="/" class="browse-button">Explorar restaurantes</router-link>
+            </div>
+
+            <div v-else class="orders-list">
+              <h3 class="orders-section-title">Tus pedidos recientes</h3>
+              <div class="orders-grid">
+                <div
+                  v-for="order in userOrders.slice(0, 5)"
+                  :key="order.id"
+                  class="order-card"
+                  @click="$router.push(`/orders/${order.id}`)"
+                >
+                  <div class="order-card__header">
+                    <div class="order-card__restaurant">{{ order.restaurantName }}</div>
+                    <div class="order-card__status" :class="getOrderStatusClass(order.status)">
+                      {{ getOrderStatusText(order.status) }}
+                    </div>
+                  </div>
+
+                  <div class="order-card__items">
+                    <div class="order-card__items-count">
+                      {{ order.orderItems?.length || 0 }} productos
+                    </div>
+                    <div class="order-card__date">
+                      {{ formatOrderDate(order.createdAt) }}
+                    </div>
+                  </div>
+
+                  <div class="order-card__footer">
+                    <div class="order-card__total">${{ order.total.toFixed(2) }}</div>
+                    <div class="order-card__arrow">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="userOrders.length > 5" class="view-all-orders">
+                <router-link to="/orders" class="view-all-button">
+                  Ver todos los pedidos ({{ userOrders.length }})
+                </router-link>
+              </div>
             </div>
           </div>
 
@@ -139,12 +193,16 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useOrderStore } from '@/stores/orderStore';
 import ProfileHeader from '@/components/feature/profile/ProfileHeader.vue';
 import UserInfo from '@/components/feature/profile/UserInfo.vue';
 import AddressList from '@/components/feature/profile/AddressList.vue';
 import userService, { type UserProfile } from '@/services/userService';
+import { OrderStatus } from '@/services/orderService';
+import type { OrderResponse } from '@/services/orderService';
 
 const authStore = useAuthStore();
+const orderStore = useOrderStore();
 
 // Estado
 const activeTab = ref('info');
@@ -152,6 +210,11 @@ const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const passwordError = ref('');
 const passwordSuccess = ref('');
+
+// Estados de pedidos
+const userOrders = ref<OrderResponse[]>([]);
+const loadingOrders = ref(false);
+const ordersError = ref('');
 
 // Formulario de contraseña
 const passwordForm = reactive({
@@ -175,7 +238,7 @@ const tabs = [
   {
     id: 'orders',
     label: 'Pedidos',
-    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>'
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10 5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>'
   },
   {
     id: 'settings',
@@ -207,9 +270,90 @@ const loadUserData = () => {
   }
 };
 
+const handleTabChange = async (tabId: string) => {
+  if (tabId === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
+    await loadUserOrders();
+  }
+};
+
+const loadUserOrders = async () => {
+  if (!authStore.isAuthenticated()) return;
+
+  try {
+    loadingOrders.value = true;
+    ordersError.value = '';
+
+    await orderStore.fetchOrders();
+    userOrders.value = orderStore.orderHistory;
+  } catch (error: any) {
+    console.error('Error loading user orders:', error);
+    ordersError.value = error.message || 'Error al cargar los pedidos';
+  } finally {
+    loadingOrders.value = false;
+  }
+};
+
+const getOrderStatusClass = (status: OrderStatus): string => {
+  switch (status) {
+    case OrderStatus.DELIVERED:
+      return 'order-status--delivered';
+    case OrderStatus.CANCELLED:
+      return 'order-status--cancelled';
+    case OrderStatus.ON_THE_WAY:
+      return 'order-status--on-the-way';
+    case OrderStatus.ACCEPTED:
+    case OrderStatus.PREPARING:
+    case OrderStatus.READY_FOR_PICKUP:
+      return 'order-status--preparing';
+    default:
+      return 'order-status--pending';
+  }
+};
+
+const getOrderStatusText = (status: OrderStatus): string => {
+  switch (status) {
+    case OrderStatus.PENDING:
+      return 'Pendiente';
+    case OrderStatus.ACCEPTED:
+      return 'Aceptado';
+    case OrderStatus.PREPARING:
+      return 'Preparando';
+    case OrderStatus.READY_FOR_PICKUP:
+      return 'Listo';
+    case OrderStatus.ON_THE_WAY:
+      return 'En camino';
+    case OrderStatus.DELIVERED:
+      return 'Entregado';
+    case OrderStatus.CANCELLED:
+      return 'Cancelado';
+    default:
+      return status;
+  }
+};
+
+const formatOrderDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (diffDays === 1) {
+    return `Ayer, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (diffDays < 7) {
+    return `Hace ${diffDays} días`;
+  } else {
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: diffDays > 365 ? 'numeric' : undefined
+    });
+  }
+};
+
 const openEditProfileModal = () => {
-  activeTab.value = 'info'; // Cambiar a la pestaña de información personal
-  // Scroll hasta la sección de información si es necesario
+  activeTab.value = 'info';
   setTimeout(() => {
     document.querySelector('.profile-panel')?.scrollIntoView({ behavior: 'smooth' });
   }, 100);
@@ -220,7 +364,6 @@ const handleUserInfoUpdate = (updatedInfo: UserProfile) => {
 };
 
 const handleAddressesUpdate = () => {
-  // Esta función se puede usar para actualizar algún estado global si es necesario
   console.log('Direcciones actualizadas');
 };
 
@@ -228,7 +371,6 @@ const changePassword = async () => {
   passwordError.value = '';
   passwordSuccess.value = '';
 
-  // Validar que las contraseñas coincidan
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
     passwordError.value = 'Las contraseñas no coinciden';
     return;
@@ -245,12 +387,10 @@ const changePassword = async () => {
     if (success) {
       passwordSuccess.value = 'Contraseña actualizada correctamente';
 
-      // Resetear formulario
       passwordForm.currentPassword = '';
       passwordForm.newPassword = '';
       passwordForm.confirmPassword = '';
 
-      // Cerrar modal después de un breve momento
       setTimeout(() => {
         showPasswordModal.value = false;
         passwordSuccess.value = '';
@@ -267,7 +407,7 @@ const changePassword = async () => {
 };
 
 // Inicialización
-onMounted(() => {
+onMounted(async () => {
   loadUserData();
 });
 </script>
@@ -414,12 +554,50 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-.coming-soon {
+// Loading orders
+.loading-orders,
+.orders-error {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 5rem 2rem;
+  padding: 3rem 2rem;
+  text-align: center;
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid $border;
+    border-radius: 50%;
+    border-top-color: $primary;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+}
+
+.orders-error {
+  &__icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    color: $dark;
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    color: $text-light;
+    margin: 0 0 1.5rem;
+  }
+}
+
+.no-orders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
   text-align: center;
 
   &__icon {
@@ -427,17 +605,163 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
     margin-bottom: 1.5rem;
   }
 
-  &__title {
+  h3 {
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0 0 0.5rem;
     color: $dark;
   }
 
-  &__message {
+  p {
     color: $text-light;
-    max-width: 500px;
-    margin: 0;
+    margin: 0 0 2rem;
+  }
+}
+
+.browse-button,
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: $primary-gradient;
+  color: white;
+  text-decoration: none;
+  border: none;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba($primary, 0.3);
+  }
+}
+
+// Orders section
+.orders-section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem;
+  color: $dark;
+}
+
+.orders-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.order-card {
+  background: white;
+  border: 1px solid $border;
+  border-radius: $border-radius;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: $transition;
+
+  &:hover {
+    border-color: $primary;
+    box-shadow: 0 4px 12px rgba($primary, 0.15);
+    transform: translateY(-1px);
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  &__restaurant {
+    font-weight: 600;
+    color: $dark;
+    font-size: 1.1rem;
+  }
+
+  &__status {
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+
+    &.order-status--delivered {
+      background-color: rgba(#10b981, 0.1);
+      color: #10b981;
+    }
+
+    &.order-status--cancelled {
+      background-color: rgba(#ef4444, 0.1);
+      color: #ef4444;
+    }
+
+    &.order-status--on-the-way {
+      background-color: rgba(#f59e0b, 0.1);
+      color: #f59e0b;
+    }
+
+    &.order-status--preparing {
+      background-color: rgba(#3b82f6, 0.1);
+      color: #3b82f6;
+    }
+
+    &.order-status--pending {
+      background-color: rgba($text-light, 0.1);
+      color: $text-light;
+    }
+  }
+
+  &__items {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: $text-light;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__total {
+    font-weight: 600;
+    color: $dark;
+    font-size: 1.1rem;
+  }
+
+  &__arrow {
+    color: $primary;
+    display: flex;
+    align-items: center;
+  }
+}
+
+.view-all-orders {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid $border;
+}
+
+.view-all-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: white;
+  color: $primary;
+  text-decoration: none;
+  border: 1px solid $primary;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: $transition;
+
+  &:hover {
+    background-color: rgba($primary, 0.05);
+    transform: translateY(-1px);
   }
 }
 
