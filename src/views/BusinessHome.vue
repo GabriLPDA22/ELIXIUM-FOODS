@@ -6,7 +6,7 @@
         <p class="business-home__welcome">Aquí tienes un resumen de tu actividad.</p>
       </div>
       <div class="business-home__header-right">
-        <div class="business-home__restaurant-selector" v-if="restaurants.length > 1">
+        <div class="business-home__restaurant-selector" v-if="restaurants.length > 0">
           <label for="restaurantSelect" class="business-home__selector-label">Restaurante:</label>
           <select 
             id="restaurantSelect" 
@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <div v-if="!isRestaurantOpen" class="business-home__alert">
+    <div v-if="selectedRestaurant && !selectedRestaurant.isOpen" class="business-home__alert">
       <div class="business-home__alert-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
@@ -168,8 +168,8 @@
       </div>
     </div>
 
-    <!-- Nueva sección de restaurantes -->
-    <div v-if="restaurants.length > 1" class="business-home__restaurants-overview">
+    <!-- Sección de restaurantes -->
+    <div v-if="restaurants.length > 0" class="business-home__restaurants-overview">
       <div class="business-home__section-header">
         <h2 class="business-home__section-title">Tus Restaurantes</h2>
         <router-link :to="{ name: 'business-settings' }" class="business-home__section-link">
@@ -405,8 +405,8 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
@@ -421,55 +421,61 @@ const selectedRestaurantId = ref('all')
 const isRefreshing = ref(false)
 const popularProducts = ref([])
 const allProducts = ref([])
+const restaurantProductsMap = ref({}) // Mapa de productos por restaurante
 
-// Nombre del negocio REAL desde el business cargado
+// Nombre del negocio desde el business cargado
 const businessName = computed(() => {
   return business.value?.name || authStore.user?.businessName || 'Mi Negocio'
+})
+
+// Restaurante seleccionado
+const selectedRestaurant = computed(() => {
+  if (selectedRestaurantId.value === 'all') return null
+  return restaurants.value.find(r => r.id === selectedRestaurantId.value)
 })
 
 const selectedRestaurantName = computed(() => {
   if (selectedRestaurantId.value === 'all') {
     return 'Tu negocio'
   }
-  const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
-  return restaurant?.name || 'Restaurante'
+  return selectedRestaurant.value?.name || 'Restaurante'
 })
 
-// Stats hardcodeadas que cambian según el restaurante seleccionado
-const allStats = ref({
-  all: {
-    todayOrders: 25,
-    todayRevenue: 680.50,
-    orderChange: 12,
-    revenueChange: 18,
-    averageRating: 4.5,
-    totalProducts: 0
-  }
-})
+// Stats hardcodeadas base que cambian según el restaurante seleccionado
+const baseStats = {
+  todayOrders: 25,
+  todayRevenue: 680.50,
+  orderChange: 12,
+  revenueChange: 18,
+  averageRating: 4.5,
+  totalProducts: 0
+}
 
 // Stats actuales basadas en el restaurante seleccionado
 const currentStats = computed(() => {
   if (selectedRestaurantId.value === 'all') {
+    // Para todos los restaurantes, mostrar el total de productos
     return {
-      ...allStats.value.all,
+      ...baseStats,
       totalProducts: allProducts.value.length
     }
   }
   
-  // Stats para restaurante específico (simuladas pero basadas en productos reales)
-  const restaurantProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value)
+  // Para un restaurante específico
+  const restaurantId = selectedRestaurantId.value
+  const restaurantProducts = restaurantProductsMap.value[restaurantId] || []
+  const restaurant = selectedRestaurant.value
+  
+  // Stats para restaurante específico
   return {
-    todayOrders: Math.floor(allStats.value.all.todayOrders * 0.6), // Simulado como 60% del total
-    todayRevenue: allStats.value.all.todayRevenue * 0.6,
-    orderChange: allStats.value.all.orderChange - 3,
-    revenueChange: allStats.value.all.revenueChange - 5,
-    averageRating: 4.3, // Hardcodeado pero diferente
+    todayOrders: Math.floor(baseStats.todayOrders * 0.6), // Simulado como 60% del total
+    todayRevenue: baseStats.todayRevenue * 0.6,
+    orderChange: baseStats.orderChange - 3,
+    revenueChange: baseStats.revenueChange - 5,
+    averageRating: restaurant?.averageRating || 4.3,
     totalProducts: restaurantProducts.length
   }
 })
-
-// Estados existentes
-const isRestaurantOpen = ref(true)
 
 // Pedidos hardcodeados por ahora
 const pendingOrders = ref([
@@ -498,17 +504,18 @@ const pendingOrdersCount = computed(() => {
 })
 
 // Funciones
-const formatCurrency = (value: number): string => {
+const formatCurrency = (value) => {
   if (typeof value !== 'number' || isNaN(value)) return '0,00 €'
   return value.toFixed(2).replace('.', ',') + ' €'
 }
 
-const formatTime = (date: Date): string => {
+const formatTime = (date) => {
+  if (!(date instanceof Date)) return '00:00'
   return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
 }
 
-const getStatusLabel = (status: string): string => {
-  const labels: Record<string, string> = {
+const getStatusLabel = (status) => {
+  const labels = {
     pending: 'Pendiente',
     preparing: 'En preparación', 
     ready: 'Listo',
@@ -519,113 +526,214 @@ const getStatusLabel = (status: string): string => {
   return labels[status] || status
 }
 
-const getRestaurantAddress = (restaurant: any): string => {
+const getRestaurantAddress = (restaurant) => {
   if (!restaurant.address) return 'Dirección no disponible'
-  return `${restaurant.address.street}, ${restaurant.address.city}`
+  return `${restaurant.address.street || ''}, ${restaurant.address.city || ''}`
 }
 
-const getRestaurantProductCount = (restaurantId: number): number => {
-  return allProducts.value.filter(p => p.restaurantId === restaurantId).length
+const getRestaurantProductCount = (restaurantId) => {
+  return restaurantProductsMap.value[restaurantId]?.length || 0
 }
 
-// Cargar business REAL usando tu endpoint
+// Cargar business usando endpoint real
 const loadBusiness = async () => {
   try {
     const userId = authStore.user?.id
-    if (!userId) return
+    if (!userId) {
+      console.error('No user ID found')
+      return false
+    }
 
+    console.log('Loading business for user ID:', userId)
     const response = await api.get(`/api/Business/user/${userId}`)
+    
     if (response.data) {
       business.value = response.data
+      console.log('Business loaded:', business.value)
+      return true
+    } else {
+      console.error('No business data returned')
+      return false
     }
   } catch (error) {
-    console.error('Error cargando business:', error)
+    console.error('Error loading business:', error)
     business.value = null
+    return false
   }
 }
 
-// Cargar restaurantes REALES del business
+// Cargar restaurantes del business usando endpoint real
 const loadRestaurants = async () => {
   try {
-    if (!business.value?.id) return
+    if (!business.value?.id) {
+      console.error('No business ID found')
+      return false
+    }
 
+    console.log('Loading restaurants for business ID:', business.value.id)
     const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
-    if (response.data) {
+    
+    if (response.data && Array.isArray(response.data)) {
       restaurants.value = response.data
-      console.log('Restaurantes cargados:', restaurants.value)
+      console.log('Restaurants loaded:', restaurants.value.length, 'restaurants')
+      return true
+    } else {
+      console.error('No restaurant data returned or invalid format')
+      return false
     }
   } catch (error) {
-    console.error('Error cargando restaurantes:', error)
+    console.error('Error loading restaurants:', error)
     restaurants.value = []
+    return false
   }
 }
 
-// Cargar productos REALES usando tus endpoints
+// Cargar productos de cada restaurante
 const loadProducts = async () => {
   try {
-    if (!business.value?.id) return
+    if (restaurants.value.length === 0) {
+      console.error('No restaurants found')
+      return false
+    }
 
+    console.log('Loading products for restaurants...')
     const allProductsData = []
+    const productsMap = {}
     
     for (const restaurant of restaurants.value) {
       try {
+        console.log(`Loading products for restaurant ID: ${restaurant.id}`)
         const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
-        if (productsResponse.data) {
-          const restaurantProducts = productsResponse.data.map((product: any) => ({
+        
+        if (productsResponse.data && Array.isArray(productsResponse.data)) {
+          const restaurantProducts = productsResponse.data.map((product) => ({
             ...product,
             restaurantId: restaurant.id,
             restaurantName: restaurant.name,
-            image: product.imageUrl
+            image: product.imageUrl || product.productImageUrl
           }))
+          
+          // Guardar productos en el mapa
+          productsMap[restaurant.id] = restaurantProducts
+          
+          // Añadir al array total
           allProductsData.push(...restaurantProducts)
+          console.log(`Loaded ${restaurantProducts.length} products for restaurant ${restaurant.name}`)
         }
       } catch (error) {
-        console.error(`Error productos restaurante ${restaurant.id}:`, error)
+        console.error(`Error loading products for restaurant ${restaurant.id}:`, error)
+        productsMap[restaurant.id] = []
       }
     }
     
+    // Actualizar los datos
     allProducts.value = allProductsData
+    restaurantProductsMap.value = productsMap
+    console.log('Total products loaded:', allProducts.value.length)
     
-    // Filtrar productos populares (simulado por ahora)
-    popularProducts.value = allProductsData.slice(0, 8).map(product => ({
-      ...product,
-      ordersCount: Math.floor(Math.random() * 50) + 5,
-      revenue: product.price * (Math.floor(Math.random() * 50) + 5)
-    }))
+    // Simular productos populares (por ahora)
+    if (allProductsData.length > 0) {
+      popularProducts.value = allProductsData.slice(0, 8).map(product => ({
+        ...product,
+        ordersCount: Math.floor(Math.random() * 50) + 5,
+        revenue: product.price * (Math.floor(Math.random() * 50) + 5)
+      }))
+    } else {
+      popularProducts.value = []
+    }
     
-    console.log('Productos cargados:', allProducts.value.length)
+    return allProductsData.length > 0
   } catch (error) {
-    console.error('Error cargando productos:', error)
+    console.error('Error loading products:', error)
     allProducts.value = []
     popularProducts.value = []
+    restaurantProductsMap.value = {}
+    return false
   }
 }
 
-const selectRestaurant = (restaurantId: number | string) => {
+const selectRestaurant = (restaurantId) => {
   selectedRestaurantId.value = restaurantId
-  console.log('Restaurante seleccionado:', restaurantId)
+  console.log('Restaurant selected:', restaurantId)
 }
 
 const onRestaurantChange = () => {
-  console.log('Cambio de restaurante:', selectedRestaurantId.value)
+  console.log('Restaurant changed to:', selectedRestaurantId.value)
+  // Actualizar los productos populares según el restaurante seleccionado
+  if (selectedRestaurantId.value !== 'all') {
+    const restaurantProducts = restaurantProductsMap.value[selectedRestaurantId.value] || []
+    if (restaurantProducts.length > 0) {
+      popularProducts.value = restaurantProducts.slice(0, 8).map(product => ({
+        ...product,
+        ordersCount: Math.floor(Math.random() * 50) + 5,
+        revenue: product.price * (Math.floor(Math.random() * 50) + 5)
+      }))
+    } else {
+      popularProducts.value = []
+    }
+  } else {
+    // Para "Todos los restaurantes", mostrar productos de todos
+    const allProductsArray = allProducts.value
+    if (allProductsArray.length > 0) {
+      popularProducts.value = allProductsArray.slice(0, 8).map(product => ({
+        ...product,
+        ordersCount: Math.floor(Math.random() * 50) + 5,
+        revenue: product.price * (Math.floor(Math.random() * 50) + 5)
+      }))
+    } else {
+      popularProducts.value = []
+    }
+  }
 }
 
 const refreshData = async () => {
   isRefreshing.value = true
   try {
-    await loadBusiness()
-    await loadRestaurants()
+    console.log('Starting data refresh...')
+    
+    const businessLoaded = await loadBusiness()
+    if (!businessLoaded) {
+      console.error('Failed to load business, aborting refresh')
+      return
+    }
+    
+    const restaurantsLoaded = await loadRestaurants()
+    if (!restaurantsLoaded) {
+      console.warn('Failed to load restaurants, but continuing...')
+    }
+    
     await loadProducts()
+    
+    console.log('Data refresh completed')
+  } catch (error) {
+    console.error('Error during data refresh:', error)
   } finally {
     isRefreshing.value = false
   }
 }
 
-const toggleRestaurantOpen = () => {
-  isRestaurantOpen.value = !isRestaurantOpen.value
+const toggleRestaurantOpen = async () => {
+  if (!selectedRestaurant.value) return
+  
+  try {
+    // Actualizar el estado en el modelo local primero
+    const restaurant = selectedRestaurant.value
+    restaurant.isOpen = !restaurant.isOpen
+    
+    // Aquí podrías actualizar el estado en el backend
+    // Ejemplo: await api.put(`/api/Restaurants/${restaurant.id}/toggle-status`, { isOpen: restaurant.isOpen })
+    
+    console.log(`Restaurant ${restaurant.id} status changed to: ${restaurant.isOpen ? 'Open' : 'Closed'}`)
+  } catch (error) {
+    console.error('Error toggling restaurant status:', error)
+    // Revertir en caso de error
+    if (selectedRestaurant.value) {
+      selectedRestaurant.value.isOpen = !selectedRestaurant.value.isOpen
+    }
+  }
 }
 
-const viewOrderDetails = (order: any) => {
+const viewOrderDetails = (order) => {
   selectedOrder.value = order
   selectedOrderStatus.value = order.status
   orderItems.value = [
@@ -639,9 +747,13 @@ const closeOrderDetails = () => {
 }
 
 const updateOrderStatus = () => {
+  if (selectedOrder.value) {
+    selectedOrder.value.status = selectedOrderStatus.value
+  }
   closeOrderDetails()
 }
 
+// Inicializar datos
 onMounted(async () => {
   if (!authStore.isAuthenticated()) {
     const isAuth = await authStore.checkAuth()
@@ -651,11 +763,17 @@ onMounted(async () => {
     }
   }
 
-  // Cargar todo en secuencia
-  await loadBusiness()
-  await loadRestaurants()
-  await loadProducts()
+  // Cargar datos en secuencia
+  await refreshData()
 })
+
+// Vigilar cambios en los restaurantes para actualizar el restaurante seleccionado si es necesario
+watch(restaurants, (newRestaurants) => {
+  if (newRestaurants.length > 0 && selectedRestaurantId.value === 'all') {
+    // Si se cargan restaurantes y no hay ninguno seleccionado, seleccionar el primero
+    console.log('Auto-selecting first restaurant')
+  }
+}, { deep: true })
 </script>
 
 <style lang="scss" scoped>
