@@ -145,7 +145,7 @@
               <!-- Restaurant Card Component -->
               <div class="restaurant-card" @click="goToRestaurant(restaurant.id)">
                 <div class="restaurant-card__image-wrapper">
-                  <img :src="restaurant.coverImage" :alt="restaurant.name" class="restaurant-card__image">
+                  <img :src="restaurant.coverImageUrl" :alt="restaurant.name" class="restaurant-card__image">
 
                   <div class="restaurant-card__badges">
                     <span v-if="isNew(restaurant)"
@@ -166,7 +166,7 @@
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                       </svg>
-                      {{ restaurant.deliveryTime }} min
+                      {{ restaurant.estimatedDeliveryTime }} min
                     </div>
                   </div>
                 </div>
@@ -181,17 +181,17 @@
                           points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                         </polygon>
                       </svg>
-                      <span>{{ restaurant.rating }}</span>
-                      <span class="restaurant-card__reviews">({{ restaurant.reviewCount }})</span>
+                      <span>{{ restaurant.averageRating }}</span>
+                      <span class="restaurant-card__reviews">({{ restaurant.reviewCount || 0 }})</span>
                     </div>
                   </div>
 
                   <div class="restaurant-card__info">
-                    <span>{{ restaurant.cuisine }}</span>
+                    <span>{{ getTipoName(restaurant.tipo) }}</span>
                     <span class="dot-separator"></span>
-                    <span>{{ restaurant.priceRange }}</span>
+                    <span>{{ getPriceRangeFromDeliveryFee(restaurant.deliveryFee) }}</span>
                     <span class="dot-separator"></span>
-                    <span>{{ restaurant.distance }} km</span>
+                    <span>{{ restaurant.distance || '1.0' }} km</span>
                   </div>
 
                   <div class="restaurant-card__delivery-info">
@@ -229,12 +229,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { restaurantService } from '@/services/restaurantService';
 
-import SearchBar from '@/components/ui/SearchBar.vue';
-import SearchFilters from '@/components/ui/SearchFilters.vue';
-import FilterChips from '@/components/ui/FilterChips.vue';
-import RestaurantCard from '@/components/feature/restaurant/RestaurantCard.vue';
-
+// Router
 const router = useRouter();
 
 // Estado
@@ -249,211 +246,106 @@ const hasMoreRestaurants = ref(false);
 // Categorías
 const categories = [
   { id: 'all', name: 'Todos' },
-  { id: 'american', name: 'Americana' },
-  { id: 'italian', name: 'Italiana' },
-  { id: 'mexican', name: 'Mexicana' },
-  { id: 'asian', name: 'Asiática' },
-  { id: 'fastfood', name: 'Fast Food' },
-  { id: 'healthy', name: 'Saludable' },
-  { id: 'dessert', name: 'Postres' },
-  { id: 'vegan', name: 'Vegana' }
+  { id: 1, name: 'Americana' },
+  { id: 2, name: 'Italiana' },
+  { id: 3, name: 'Mexicana' },
+  { id: 4, name: 'Asiática' },
+  { id: 5, name: 'Fast Food' },
+  { id: 6, name: 'Saludable' },
+  { id: 7, name: 'Postres' },
+  { id: 8, name: 'Vegana' }
 ];
 
 // Iconos para categorías
 const getCategoryIcon = (categoryId) => {
   const icons = {
-    'american': '🍔',
-    'italian': '🍕',
-    'mexican': '🌮',
-    'asian': '🍜',
-    'fastfood': '🍟',
-    'healthy': '🥗',
-    'dessert': '🍦',
-    'vegan': '🥑'
+    1: '🍔',
+    2: '🍕',
+    3: '🌮',
+    4: '🍜',
+    5: '🍟',
+    6: '🥗',
+    7: '🍦',
+    8: '🥑'
   };
   return icons[categoryId] || '';
 };
 
-// Obtener restaurantes (simulado)
-const fetchRestaurants = async () => {
-  loading.value = true;
-
-  // Simulación de API
-  setTimeout(() => {
-    restaurants.value = [
-      {
-        id: 1,
-        name: 'Burger Kingdom',
-        cuisine: 'Americana',
-        priceRange: '$$',
-        rating: 4.8,
-        reviewCount: 324,
-        deliveryTime: 25,
-        deliveryFee: 2.99,
-        distance: 1.2,
-        coverImage: 'https://images.unsplash.com/photo-1542574271-7f3b92e6c821?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'american',
-        createdAt: new Date('2023-05-15')
-      },
-      {
-        id: 2,
-        name: 'Pizza Paradise',
-        cuisine: 'Italiana',
-        priceRange: '$$',
-        rating: 4.6,
-        reviewCount: 258,
-        deliveryTime: 35,
-        deliveryFee: 3.99,
-        distance: 2.5,
-        coverImage: 'https://images.unsplash.com/photo-1590947132387-155cc02f3212?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'italian',
-        createdAt: new Date('2023-08-01')
-      },
-      {
-        id: 3,
-        name: 'Taco Town',
-        cuisine: 'Mexicana',
-        priceRange: '$',
-        rating: 4.4,
-        reviewCount: 187,
-        deliveryTime: 20,
-        deliveryFee: 1.99,
-        distance: 0.8,
-        coverImage: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'mexican',
-        createdAt: new Date('2023-03-27')
-      },
-      {
-        id: 4,
-        name: 'Sushi Supreme',
-        cuisine: 'Japonesa',
-        priceRange: '$$$',
-        rating: 4.9,
-        reviewCount: 412,
-        deliveryTime: 40,
-        deliveryFee: 4.99,
-        distance: 3.2,
-        coverImage: 'https://images.unsplash.com/photo-1553621042-f6e147245754?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'asian',
-        createdAt: new Date('2022-12-15')
-      },
-      {
-        id: 5,
-        name: 'Green Leaf',
-        cuisine: 'Vegetariana',
-        priceRange: '$$',
-        rating: 4.7,
-        reviewCount: 156,
-        deliveryTime: 30,
-        deliveryFee: 2.49,
-        distance: 1.8,
-        coverImage: 'https://images.unsplash.com/photo-1505576399279-565b52d4ac71?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'healthy',
-        createdAt: new Date('2023-07-10')
-      },
-      {
-        id: 6,
-        name: 'Chicken Shack',
-        cuisine: 'Fast Food',
-        priceRange: '$',
-        rating: 4.3,
-        reviewCount: 289,
-        deliveryTime: 15,
-        deliveryFee: 0,
-        distance: 0.5,
-        coverImage: 'https://images.unsplash.com/photo-1559847844-5315695dadae?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1547716752-9e0568b8f169?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'fastfood',
-        createdAt: new Date('2023-09-25')
-      },
-      {
-        id: 7,
-        name: 'Pasta Palace',
-        cuisine: 'Italiana',
-        priceRange: '$$',
-        rating: 4.5,
-        reviewCount: 201,
-        deliveryTime: 35,
-        deliveryFee: 3.49,
-        distance: 2.7,
-        coverImage: 'https://images.unsplash.com/photo-1481931098730-318b6f776db0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1473093226795-af9932fe5856?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'italian',
-        createdAt: new Date('2023-01-18')
-      },
-      {
-        id: 8,
-        name: 'Breakfast Bliss',
-        cuisine: 'Americana',
-        priceRange: '$$',
-        rating: 4.7,
-        reviewCount: 178,
-        deliveryTime: 25,
-        deliveryFee: 0,
-        distance: 1.6,
-        coverImage: 'https://images.unsplash.com/photo-1496412705862-e0088f16f791?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-        logo: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        category: 'american',
-        createdAt: new Date('2023-11-05')
-      }
-    ];
-
-    // Simulando que hay más restaurantes
-    hasMoreRestaurants.value = true;
-
-    loading.value = false;
-  }, 1500);
+// Obtener nombre del tipo de restaurante
+const getTipoName = (tipo) => {
+  const category = categories.find(c => c.id === tipo);
+  return category ? category.name : 'Variado';
 };
 
-// Filtrar restaurantes
-const filteredRestaurants = computed(() => {
-  let result = [...restaurants.value];
+// Calcular rango de precios basado en costo de envío
+const getPriceRangeFromDeliveryFee = (fee) => {
+  if (fee === 0) return '$';
+  if (fee < 2) return '$$';
+  if (fee < 4) return '$$$';
+  return '$$$$';
+};
 
-  // Filtrar por búsqueda
+// Obtener restaurantes - usando el servicio existente
+const fetchRestaurants = async () => {
+  loading.value = true;
+  
+  try {
+    let data;
+    
+    // Si hay una categoría seleccionada
+    if (selectedCategory.value !== 'all') {
+      data = await restaurantService.getRestaurantsByTipo(selectedCategory.value);
+    } else {
+      // Si no hay filtros, obtener todos los restaurantes
+      data = await restaurantService.getAllRestaurants();
+    }
+    
+    restaurants.value = data;
+    console.log('Restaurantes cargados correctamente:', data.length);
+  } catch (error) {
+    console.error('Error al cargar restaurantes:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Filtrar restaurantes (solo por precio, ya que el filtrado por categoría se hace en el backend)
+const filteredRestaurants = computed(() => {
+  let result = restaurants.value;
+  
+  // Filtrar por búsqueda localmente
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    result = result.filter(restaurant =>
-      restaurant.name.toLowerCase().includes(query) ||
-      restaurant.cuisine.toLowerCase().includes(query)
+    result = result.filter(restaurant => 
+      restaurant.name.toLowerCase().includes(query) || 
+      (restaurant.description && restaurant.description.toLowerCase().includes(query))
     );
   }
-
-  // Filtrar por categoría
-  if (selectedCategory.value && selectedCategory.value !== 'all') {
-    result = result.filter(restaurant => restaurant.category === selectedCategory.value);
-  }
-
+  
   // Filtrar por precio
   if (priceFilter.value.length > 0) {
-    result = result.filter(restaurant => priceFilter.value.includes(restaurant.priceRange));
+    result = result.filter(restaurant => {
+      const priceRange = getPriceRangeFromDeliveryFee(restaurant.deliveryFee);
+      return priceFilter.value.includes(priceRange);
+    });
   }
-
-  // Ordenar restaurantes
-  switch (sortBy.value) {
-    case 'rating':
-      result.sort((a, b) => b.rating - a.rating);
-      break;
-    case 'delivery':
-      result.sort((a, b) => a.deliveryTime - b.deliveryTime);
-      break;
-    case 'price':
-      result.sort((a, b) => a.priceRange.length - b.priceRange.length);
-      break;
-    default: // popularity
-      result.sort((a, b) => b.reviewCount - a.reviewCount);
+  
+  // Ordenar
+  if (sortBy.value === 'rating') {
+    result = [...result].sort((a, b) => b.averageRating - a.averageRating);
+  } else if (sortBy.value === 'delivery') {
+    result = [...result].sort((a, b) => a.estimatedDeliveryTime - b.estimatedDeliveryTime);
+  } else if (sortBy.value === 'price') {
+    result = [...result].sort((a, b) => a.deliveryFee - b.deliveryFee);
   }
-
+  
   return result;
 });
 
 // Métodos
 const selectCategory = (categoryId) => {
   selectedCategory.value = categoryId;
+  fetchRestaurants();
 };
 
 const togglePriceFilter = (price) => {
@@ -469,6 +361,7 @@ const resetFilters = () => {
   selectedCategory.value = 'all';
   sortBy.value = 'popularity';
   priceFilter.value = [];
+  fetchRestaurants();
 };
 
 const goToRestaurant = (restaurantId) => {
@@ -489,14 +382,14 @@ const getResultsTitle = () => {
 
 // Helpers para badges
 const isNew = (restaurant) => {
-  // Considera nuevo si tiene menos de 2 meses
+  if (!restaurant.createdAt) return false;
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-  return restaurant.createdAt > twoMonthsAgo;
+  return new Date(restaurant.createdAt) > twoMonthsAgo;
 };
 
 const isFastDelivery = (restaurant) => {
-  return restaurant.deliveryTime <= 20;
+  return restaurant.estimatedDeliveryTime <= 20;
 };
 
 // Navegación en carrusel
@@ -528,21 +421,8 @@ const scrollCategories = (direction) => {
   setTimeout(checkScrollPosition, 300);
 };
 
-// Observar cambios en los filtros para recargar
-watch([searchQuery, selectedCategory, sortBy, priceFilter], () => {
-  if (!loading.value) {
-    // En una aplicación real, esto cargaría desde el backend
-    // El timeout simula una carga de datos
-    loading.value = true;
-    setTimeout(() => {
-      loading.value = false;
-    }, 500);
-  }
-}, { deep: true });
-
 // Inicialización al montar
 onMounted(() => {
-  selectCategory('all'); // Categoría por defecto
   fetchRestaurants();
 
   // Verificar indicadores de scroll
@@ -946,7 +826,7 @@ $transition: all 0.2s ease;
     color: $white;
 
     &:hover {
-      background-color: darken($primary-color, 5%);
+      background-color: $primary-color;
     }
   }
 }
@@ -1225,7 +1105,7 @@ $transition: all 0.2s ease;
     transition: $transition;
 
     &:hover {
-      background-color: darken($primary-color, 5%);
+      background-color: $primary-color;
     }
   }
 }

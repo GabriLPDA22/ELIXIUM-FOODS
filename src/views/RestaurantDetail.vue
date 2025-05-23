@@ -1,7 +1,7 @@
 <!-- views/RestaurantDetail.vue -->
 <template>
     <div class="restaurant-detail-page">
-        <!-- Debug info (solo para desarrollo) -->
+        <!-- Error message -->
         <div v-if="error" class="error-container">
             <div class="error-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -25,21 +25,21 @@
 
         <template v-else-if="restaurant">
             <!-- Hero section with restaurant cover and basic info -->
-            <section class="restaurant-hero" :style="{ backgroundImage: `url(${restaurant.coverImage})` }">
+            <section class="restaurant-hero" :style="{ backgroundImage: `url(${restaurant.coverImageUrl})` }">
                 <div class="restaurant-hero__overlay"></div>
                 <div class="container">
                     <div class="restaurant-hero__content">
                         <div class="restaurant-hero__logo">
-                            <img :src="restaurant.logo" :alt="restaurant.name" />
+                            <img :src="restaurant.logoUrl" :alt="restaurant.name" />
                         </div>
                         <div class="restaurant-hero__info">
                             <h1 class="restaurant-hero__name">{{ restaurant.name }}</h1>
                             <div class="restaurant-hero__tags">
-                                <span>{{ restaurant.cuisine }}</span>
+                                <span>{{ restaurant.cuisines || 'Variada' }}</span>
                                 <span class="dot-separator"></span>
-                                <span>{{ restaurant.priceRange }}</span>
+                                <span>{{ restaurant.priceRange || '$$' }}</span>
                                 <span class="dot-separator"></span>
-                                <span>{{ restaurant.distance }} km</span>
+                                <span>{{ restaurant.distance || '1.2' }} km</span>
                             </div>
                             <div class="restaurant-hero__rating">
                                 <span class="restaurant-hero__rating-score">
@@ -49,9 +49,9 @@
                                             points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                                         </polygon>
                                     </svg>
-                                    {{ restaurant.rating }}
+                                    {{ restaurant.averageRating }}
                                 </span>
-                                <span class="restaurant-hero__rating-count">({{ restaurant.reviewCount }}
+                                <span class="restaurant-hero__rating-count">({{ restaurant.reviewCount || 0 }}
                                     opiniones)</span>
                                 <button class="rating-button">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -70,7 +70,7 @@
                                         <circle cx="12" cy="12" r="10"></circle>
                                         <polyline points="12 6 12 12 16 14"></polyline>
                                     </svg>
-                                    <span>{{ restaurant.deliveryTime }} min</span>
+                                    <span>{{ restaurant.estimatedDeliveryTime }} min</span>
                                 </div>
                                 <div class="delivery-info">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -108,7 +108,7 @@
                                     </svg>
                                     Compartir
                                 </button>
-                                <a :href="`https://maps.google.com/?q=${restaurant.address}`" target="_blank"
+                                <a :href="`https://maps.google.com/?q=${getAddressString()}`" target="_blank"
                                     class="action-button">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -198,7 +198,7 @@
                             </div>
 
                             <!-- Menu sections -->
-                            <div v-for="category in menuCategories" :key="category.id" :id="category.id"
+                            <div v-for="category in menuCategories" :key="category.id" :id="category.id.toString()"
                                 class="menu-section" ref="menuSections">
                                 <h2 class="menu-section__title">{{ category.name }}</h2>
 
@@ -211,7 +211,7 @@
                                             <div v-if="item.popular" class="menu-item__badge">Popular</div>
                                         </div>
                                         <div class="menu-item__image">
-                                            <img v-if="item.image" :src="item.image" :alt="item.name">
+                                            <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name">
                                             <div v-else class="menu-item__no-image"></div>
                                             <button class="menu-item__add" @click="addToCart(item)">
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -303,9 +303,10 @@
                                         </div>
                                     </div>
 
-                                    <button class="cart__checkout-btn">
-                                        Realizar pedido
-                                    </button>
+                                    <CartCheckoutButton 
+                                        :disabled="cart.items.length === 0" 
+                                        :button-text="cart.items.length > 0 ? 'Realizar pedido' : 'Agrega productos'"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -331,345 +332,303 @@
     </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import PopularTag from '@/components/ui/PopularTag.vue';
+<!-- Script completo actualizado para RestaurantDetail.vue -->
 
-const route = useRoute();
-const router = useRouter();
+<script setup lang="ts">
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuItem } from '@/services/restaurantService'
+import { useCartStore } from '@/stores/cart'
+import CartCheckoutButton from '@/components/feature/cart/CartCheckoutButton.vue'
+
+// Router y route
+const route = useRoute()
+const router = useRouter()
+
+// Store del carrito
+const cartStore = useCartStore()
 
 // Estado
-const loading = ref(true);
-const restaurant = ref(null);
-const error = ref(null);
-const restaurantId = ref('');
-const activeCategory = ref('');
-const menuCategories = ref([]);
+const loading = ref(true)
+const error = ref<string | null>(null)
+const restaurantId = ref<number | null>(null)
+const restaurant = ref<RestaurantDetail | null>(null)
+const menuItems = ref<MenuItem[]>([])
+const menuCategories = ref<MenuCategory[]>([])
+const activeCategory = ref('')
 const cart = ref({
-    items: []
-});
+    items: [] as Array<{id: number, name: string, price: number, quantity: number}>
+})
 
 // Referencias para el scroll
-const categoriesContainer = ref(null);
-const menuSections = ref([]);
-const showLeftScroll = ref(false);
-const showRightScroll = ref(true);
+const categoriesContainer = ref<HTMLElement | null>(null)
+const menuSections = ref<HTMLElement[]>([])
+const showLeftScroll = ref(false)
+const showRightScroll = ref(true)
 
 // Calcular subtotal y total del carrito
 const subtotal = computed(() => {
-    return cart.value.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-});
+    return cart.value.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+})
 
 const total = computed(() => {
-    const deliveryFee = restaurant.value ? restaurant.value.deliveryFee : 0;
-    return subtotal.value + deliveryFee;
-});
+    const deliveryFee = restaurant.value ? restaurant.value.deliveryFee : 0
+    return subtotal.value + deliveryFee
+})
 
-// Cargar datos del restaurante (simulado)
+// Cargar datos del restaurante desde el backend
 const fetchRestaurantData = async () => {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
     try {
         // Obtener el ID del restaurante de los parámetros de ruta
-        restaurantId.value = route.params.id;
-
-        // Validar que el ID sea válido
-        if (!restaurantId.value) {
-            throw new Error('ID de restaurante no encontrado en la URL');
+        const routeId = route.params.id
+        if (!routeId) {
+            throw new Error('ID de restaurante no encontrado en la URL')
         }
 
-        // ID convertido a número para validación
-        const id = parseInt(restaurantId.value);
+        // Convertir el ID a número
+        const id = parseInt(routeId as string)
+        restaurantId.value = id
 
         if (isNaN(id)) {
-            throw new Error('ID de restaurante inválido');
+            throw new Error('ID de restaurante inválido')
         }
 
-        // Simulación de API con timeout para demostrar carga
-        const data = await new Promise((resolve, reject) => {
-            setTimeout(() => {
-                // Validar si el restaurante existe en nuestros datos (simulado)
-                // Aquí podemos añadir una condición para simular restaurantes no encontrados
-                if (id === 999) {
-                    reject(new Error('Restaurante no encontrado en la base de datos'));
-                    return;
-                }
+        // Obtener datos del restaurante desde la API
+        const restaurantData = await restaurantService.getRestaurantById(id)
+        restaurant.value = restaurantData
 
-                // Datos simulados del restaurante
-                resolve({
-                    restaurant: {
-                        id: id,
-                        name: 'Burger Kingdom',
-                        cuisine: 'Americana',
-                        priceRange: '$$',
-                        rating: 4.8,
-                        reviewCount: 324,
-                        deliveryTime: 25,
-                        deliveryFee: 2.99,
-                        distance: 1.2,
-                        address: "Calle Principal 123, Ciudad",
-                        coverImage: 'https://images.unsplash.com/photo-1542574271-7f3b92e6c821?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-                        logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                    },
-                    menuCategories: [
-                        {
-                            id: 'burgers',
-                            name: 'Hamburguesas',
-                            items: [
-                                {
-                                    id: 1,
-                                    name: 'Clásica Burger',
-                                    description: 'Hamburguesa de carne con queso, lechuga, tomate y nuestra salsa especial',
-                                    price: 89.99,
-                                    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                                    popular: true
-                                },
-                                {
-                                    id: 2,
-                                    name: 'Doble Cheese Burger',
-                                    description: 'Doble carne, triple queso, tocino y cebolla caramelizada',
-                                    price: 119.99,
-                                    image: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                                    popular: true
-                                },
-                                {
-                                    id: 3,
-                                    name: 'Burger Vegetariana',
-                                    description: 'Hamburguesa a base de plantas con queso, lechuga y tomate',
-                                    price: 99.99,
-                                    image: 'https://images.unsplash.com/photo-1550317138-10000687a72b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-                                }
-                            ]
-                        },
-                        {
-                            id: 'sides',
-                            name: 'Acompañamientos',
-                            items: [
-                                {
-                                    id: 4,
-                                    name: 'Papas Fritas',
-                                    description: 'Papas fritas crujientes con sal marina',
-                                    price: 39.99,
-                                    image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                                    popular: true
-                                },
-                                {
-                                    id: 5,
-                                    name: 'Aros de Cebolla',
-                                    description: 'Aros de cebolla fritos con nuestra mezcla especial de especias',
-                                    price: 49.99,
-                                    image: 'https://images.unsplash.com/photo-1639024471283-03518883512d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-                                }
-                            ]
-                        },
-                        {
-                            id: 'drinks',
-                            name: 'Bebidas',
-                            items: [
-                                {
-                                    id: 6,
-                                    name: 'Refresco',
-                                    description: 'Coca-Cola, Sprite, Fanta o agua mineral',
-                                    price: 29.99,
-                                    image: 'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-                                },
-                                {
-                                    id: 7,
-                                    name: 'Malteada',
-                                    description: 'Malteada cremosa de chocolate, vainilla o fresa',
-                                    price: 49.99,
-                                    image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                                    popular: true
-                                }
-                            ]
-                        },
-                        {
-                            id: 'desserts',
-                            name: 'Postres',
-                            items: [
-                                {
-                                    id: 8,
-                                    name: 'Brownie con Helado',
-                                    description: 'Brownie caliente con helado de vainilla y salsa de chocolate',
-                                    price: 59.99,
-                                    image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-                                },
-                                {
-                                    id: 9,
-                                    name: 'Pastel de Queso',
-                                    description: 'Clásico pastel de queso con salsa de frutos rojos',
-                                    price: 69.99,
-                                    image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-                                }
-                            ]
-                        }
-                    ]
-                });
-            }, 1500);
-        });
+        // Obtener productos del restaurante
+        const products = await restaurantService.getProductsByRestaurant(id)
+        menuItems.value = products
 
-        // Asignar datos
-        restaurant.value = data.restaurant;
-        menuCategories.value = data.menuCategories;
+        // Organizar productos por categorías
+        menuCategories.value = restaurantService.organizeProductsByCategory(products)
 
-        // Establecer la primera categoría como activa
+        // Establecer la primera categoría como activa si hay categorías
         if (menuCategories.value.length > 0) {
-            activeCategory.value = menuCategories.value[0].id;
+            activeCategory.value = menuCategories.value[0].id.toString()
         }
 
-    } catch (err) {
-        console.error('Error al cargar el restaurante:', err);
-        error.value = err.message || 'Error al cargar los datos del restaurante';
-        restaurant.value = null;
+    } catch (err: any) {
+        console.error('Error al cargar el restaurante:', err)
+        error.value = err.message || 'Error al cargar los datos del restaurante'
+        restaurant.value = null
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
 // Funciones de interacción con el carrito
-const addToCart = (item) => {
-    const existingItemIndex = cart.value.items.findIndex(cartItem => cartItem.id === item.id);
+const addToCart = (item: MenuItem) => {
+    // Si el carrito tiene elementos de otro restaurante, preguntar si quiere vaciarlo
+    if (cartStore.restaurantId !== null && 
+        cartStore.restaurantId !== restaurantId.value) {
+        if (confirm(
+            `Tu carrito contiene elementos de otro restaurante. ¿Deseas vaciarlo para pedir de ${restaurant.value?.name}?`
+        )) {
+            // Vaciar carrito
+            cartStore.clearCart();
+            cart.value.items = [];
+        } else {
+            return; // Usuario canceló
+        }
+    }
+
+    // Buscar si el ítem ya está en el carrito local
+    const existingItemIndex = cart.value.items.findIndex(cartItem => cartItem.id === item.id)
 
     if (existingItemIndex >= 0) {
-        // Si el item ya está en el carrito, incrementar cantidad
-        cart.value.items[existingItemIndex].quantity += 1;
+        // Si ya existe, incrementar cantidad
+        cart.value.items[existingItemIndex].quantity += 1
     } else {
         // Si no, añadirlo con cantidad 1
         cart.value.items.push({
-            ...item,
+            id: item.id,
+            name: item.name,
+            price: item.price,
             quantity: 1
-        });
+        })
     }
-};
+    
+    // Actualizar el store global del carrito
+    cartStore.addToCart({
+        id: item.id,
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        imageUrl: item.imageUrl || '',
+        restaurantId: restaurantId.value || 0,
+        restaurantName: restaurant.value?.name || '',
+        categoryId: 0,
+        isAvailable: true,
+        description: item.description || ''
+    }, 1)
+}
 
-const incrementItem = (index) => {
-    cart.value.items[index].quantity += 1;
-};
+const incrementItem = (index: number) => {
+    const item = cart.value.items[index]
+    item.quantity += 1
+    
+    // Actualizar el store del carrito real
+    cartStore.updateQuantity(item.id, item.quantity)
+}
 
-const decrementItem = (index) => {
+const decrementItem = (index: number) => {
     if (cart.value.items[index].quantity > 1) {
-        cart.value.items[index].quantity -= 1;
+        cart.value.items[index].quantity -= 1
+        
+        // Actualizar el store del carrito real
+        cartStore.updateQuantity(cart.value.items[index].id, cart.value.items[index].quantity)
     } else {
-        removeItem(index);
+        removeItem(index)
     }
-};
+}
 
-const removeItem = (index) => {
-    cart.value.items.splice(index, 1);
-};
+const removeItem = (index: number) => {
+    const itemId = cart.value.items[index].id
+    cart.value.items.splice(index, 1)
+    
+    // Eliminar del store del carrito real
+    cartStore.removeItem(itemId)
+}
 
 const clearCart = () => {
-    cart.value.items = [];
-};
+    if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
+        cart.value.items = []
+        
+        // Limpiar el store del carrito real
+        cartStore.clearCart()
+    }
+}
 
 // Navegación de categorías
 const checkScrollPosition = () => {
-    if (!categoriesContainer.value) return;
+    if (!categoriesContainer.value) return
 
-    const container = categoriesContainer.value;
-    showLeftScroll.value = container.scrollLeft > 10;
-    showRightScroll.value = container.scrollLeft < (container.scrollWidth - container.clientWidth - 10);
-};
+    const container = categoriesContainer.value
+    showLeftScroll.value = container.scrollLeft > 10
+    showRightScroll.value = container.scrollLeft < (container.scrollWidth - container.clientWidth - 10)
+}
 
-const scrollCategories = (direction) => {
-    if (!categoriesContainer.value) return;
+const scrollCategories = (direction: 'left' | 'right') => {
+    if (!categoriesContainer.value) return
 
-    const container = categoriesContainer.value;
-    const scrollAmount = container.offsetWidth * 0.75;
+    const container = categoriesContainer.value
+    const scrollAmount = container.offsetWidth * 0.75
 
     if (direction === 'left') {
-        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
     } else {
-        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
     }
 
     // Actualizar indicadores de scroll
-    setTimeout(checkScrollPosition, 300);
-};
+    setTimeout(checkScrollPosition, 300)
+}
 
 // Scroll a la categoría seleccionada en el menú
-const scrollToCategory = (categoryId) => {
-    activeCategory.value = categoryId;
+const scrollToCategory = (categoryId: string | number) => {
+    activeCategory.value = categoryId.toString()
 
     nextTick(() => {
-        const section = document.getElementById(categoryId);
+        const section = document.getElementById(categoryId.toString())
         if (section) {
             // Calcular offset para el header
-            const navHeight = document.querySelector('.category-nav')?.offsetHeight || 0;
-            const topOffset = section.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
+            const navHeight = document.querySelector('.category-nav')?.clientHeight || 0
+            const topOffset = section.getBoundingClientRect().top + window.pageYOffset - navHeight - 20
 
             window.scrollTo({
                 top: topOffset,
                 behavior: 'smooth'
-            });
+            })
         }
-    });
-};
+    })
+}
 
 // Observer para detectar qué sección es visible
 const setupIntersectionObserver = () => {
     // Asegurarse de que el navegador soporte IntersectionObserver
     if (!('IntersectionObserver' in window)) {
-        console.warn('IntersectionObserver no es soportado en este navegador');
-        return;
+        console.warn('IntersectionObserver no es soportado en este navegador')
+        return
     }
 
     // Asegurarse de que el elemento exista antes de obtener su altura
-    const navElement = document.querySelector('.category-nav');
-    const navHeight = navElement ? navElement.offsetHeight : 0;
+    const navElement = document.querySelector('.category-nav')
+    const navHeight = navElement ? navElement.clientHeight : 0
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                activeCategory.value = entry.target.id;
+                activeCategory.value = entry.target.id
 
                 // Scroll a la categoría activa en el menú de navegación
-                const activeButton = categoriesContainer.value?.querySelector(`.category-nav__item--active`);
+                const activeButton = categoriesContainer.value?.querySelector(`.category-nav__item--active`) as HTMLElement
                 if (activeButton) {
-                    activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
                 }
             }
-        });
+        })
     }, {
         rootMargin: `-${navHeight + 10}px 0px -${window.innerHeight - navHeight - 200}px 0px`,
         threshold: 0
-    });
+    })
 
     // Observar todas las secciones del menú
-    if (menuSections.value && menuSections.value.length > 0) {
-        menuSections.value.forEach(section => {
-            if (section) observer.observe(section);
-        });
+    const sections = document.querySelectorAll('.menu-section')
+    if (sections.length > 0) {
+        sections.forEach(section => {
+            observer.observe(section)
+        })
     }
-};
+}
+
+// Obtener la dirección completa como string para Google Maps
+const getAddressString = () => {
+    if (!restaurant.value || !restaurant.value.address) return ''
+    
+    const address = restaurant.value.address
+    return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`
+}
 
 // Handler para cambio de ruta
 watch(() => route.params.id, (newId, oldId) => {
     if (newId !== oldId) {
-        fetchRestaurantData();
+        fetchRestaurantData()
     }
-}, { immediate: false });
+}, { immediate: false })
 
 // Inicialización
 onMounted(async () => {
-    await fetchRestaurantData();
+    await fetchRestaurantData()
+
+    // Sincroniza el carrito local con el store global
+    if (cartStore.items.length > 0 && cartStore.restaurantId === restaurantId.value) {
+        cart.value.items = cartStore.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+        }))
+    }
 
     nextTick(() => {
         // Configurar observer después de que el DOM se haya actualizado
-        if (menuSections.value && menuSections.value.length > 0) {
-            setupIntersectionObserver();
+        if (document.querySelectorAll('.menu-section').length > 0) {
+            setupIntersectionObserver()
         }
 
         // Comprobar los indicadores de scroll
         setTimeout(() => {
             if (categoriesContainer.value) {
-                checkScrollPosition();
-                categoriesContainer.value.addEventListener('scroll', checkScrollPosition);
+                checkScrollPosition()
+                categoriesContainer.value.addEventListener('scroll', checkScrollPosition)
             }
-        }, 300);
-    });
+        }, 300)
+    })
 })
 </script>
 
@@ -1189,7 +1148,7 @@ $transition: all 0.2s ease;
         transition: $transition;
 
         &:hover {
-            background-color: darken($primary-color, 5%);
+            background-color: $primary-color;
             transform: scale(1.1);
         }
     }
@@ -1312,7 +1271,7 @@ $transition: all 0.2s ease;
         transition: $transition;
 
         &:hover {
-            background-color: darken($primary-color, 5%);
+            background-color:$primary-color;
         }
     }
 }
@@ -1388,8 +1347,8 @@ $transition: all 0.2s ease;
     }
 }
 
-// Not found state
-.not-found {
+// Not found and Error states
+.not-found, .error-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1397,7 +1356,7 @@ $transition: all 0.2s ease;
     padding: 100px 0;
     text-align: center;
 
-    &__icon {
+    .not-found__icon, .error-icon {
         width: 80px;
         height: 80px;
         background-color: $light-gray;
@@ -1409,66 +1368,16 @@ $transition: all 0.2s ease;
         margin-bottom: 24px;
     }
 
-    &__title {
+    .not-found__title, .error-title {
         font-size: 24px;
         font-weight: 700;
         color: $text-primary;
         margin: 0 0 12px;
     }
 
-    &__text {
+    .not-found__text, .error-message {
         color: $text-secondary;
         margin: 0 0 24px;
-        max-width: 500px;
-    }
-
-    &__button {
-        background-color: $primary-color;
-        color: $white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: $border-radius-sm;
-        font-weight: 600;
-        text-decoration: none;
-        transition: $transition;
-
-        &:hover {
-            background-color: darken($primary-color, 5%);
-        }
-    }
-
-    /* Estilos para el contenedor de error */
-    .error-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 100px 24px;
-        text-align: center;
-    }
-
-    .error-icon {
-        width: 80px;
-        height: 80px;
-        background-color: #FEE2E2;
-        color: #DC2626;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 24px;
-    }
-
-    .error-title {
-        font-size: 24px;
-        font-weight: 700;
-        color: #111827;
-        margin: 0 0 12px;
-    }
-
-    .error-message {
-        color: #4B5563;
-        margin: 0 0 8px;
         max-width: 500px;
     }
 
@@ -1482,20 +1391,19 @@ $transition: all 0.2s ease;
         color: #374151;
     }
 
-    .error-button {
-        background-color: #06C167;
-        color: white;
+    .not-found__button, .error-button {
+        background-color: $primary-color;
+        color: $white;
         border: none;
         padding: 12px 24px;
-        border-radius: 8px;
+        border-radius: $border-radius-sm;
         font-weight: 600;
         text-decoration: none;
-        transition: all 0.2s ease;
+        transition: $transition;
 
         &:hover {
-            background-color: #059655;
+            background-color: $primary-color;
         }
     }
-
 }
 </style>

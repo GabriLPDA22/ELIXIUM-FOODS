@@ -23,6 +23,30 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/cart',
+    name: 'cart',
+    component: () => import('@/views/Cart.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/checkout',
+    name: 'checkout',
+    component: () => import('@/views/Checkout.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/orders',
+    name: 'orders',
+    component: () => import('@/views/Orders.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/orders/:id',
+    name: 'order-detail',
+    component: () => import('@/views/OrderDetail.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import('@/views/AboutUs.vue'),
@@ -71,12 +95,6 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiresRole: ['Admin']
     }
-  },
-  {
-    path: '/business/forgot-password',
-    name: 'business-forgot-password',
-    component: () => import('@/views/BusinessForgotPassword.vue'),
-    meta: { businessGuest: true }
   },
   {
     path: '/business/dashboard',
