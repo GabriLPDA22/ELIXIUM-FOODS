@@ -10,12 +10,30 @@
             </router-view>
         </main>
         <UFooter />
+
+        <!-- ✅ NUEVO: Modal del sistema de tutorial -->
+        <TutorialModal />
     </div>
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import UHeader from '@/components/layout/UHeader.vue'
 import UFooter from '@/components/layout/UFooter.vue'
+// ✅ NUEVO: Importar componente y store del tutorial
+import TutorialModal from '@/components/TutorialModal.vue'
+import { useTutorialStore } from '@/stores/tutorial'
+
+// ✅ NUEVO: Inicializar el sistema de tutorial
+const tutorialStore = useTutorialStore()
+
+onMounted(() => {
+    // Esperar un poco para que la página cargue completamente
+    setTimeout(() => {
+        // Verificar si debe mostrar el prompt de tutorial
+        tutorialStore.checkAndShowIntroPrompt()
+    }, 2000) // 2 segundos después de que la app carga
+})
 </script>
 
 <style lang="scss">
@@ -254,10 +272,46 @@ img {
     border: 0;
 }
 
+/* ✅ NUEVO: Estilos personalizados para el tutorial */
+.driver-popover {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-xl);
+    font-family: inherit;
+}
+
+.driver-popover-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.driver-popover-description {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.driver-popover-next-btn,
+.driver-popover-prev-btn,
+.driver-popover-close-btn {
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.driver-popover-next-btn {
+    background: var(--primary-gradient) !important;
+    border: none !important;
+}
+
+.driver-popover-next-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
 // Estilos para dark mode (podría implementarse después)
 @media (prefers-color-scheme: dark) {
     :root {
     }
-
 }
+
+
 </style>

@@ -78,7 +78,13 @@
                 @click="closeMobileMenu"></div>
 
             <div class="u-header__actions">
-                <button class="u-header__action-btn u-header__search-btn">
+                <!-- ✅ NUEVO: Botón de búsqueda con data-tour -->
+                <button
+                    class="u-header__action-btn u-header__search-btn"
+                    data-tour="search-bar"
+                    @click="handleSearch"
+                    title="Buscar restaurantes y comida"
+                >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
@@ -86,7 +92,13 @@
                     </svg>
                 </button>
 
-                <router-link to="/cart" class="u-header__action-btn u-header__cart-btn">
+                <!-- ✅ NUEVO: Botón de carrito con data-tour -->
+                <router-link
+                    to="/cart"
+                    class="u-header__action-btn u-header__cart-btn"
+                    data-tour="cart-button"
+                    title="Ver carrito de compras"
+                >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M9 20a1 1 0 1 0 0 2 1 1 0 1 0 0-2z"></path>
@@ -96,7 +108,12 @@
                     <span class="u-header__cart-count">{{ cartItemCount }}</span>
                 </router-link>
 
-                <div v-if="isAuthenticated" class="u-header__user-menu">
+                <!-- ✅ NUEVO: Menú de usuario con data-tour -->
+                <div
+                    v-if="isAuthenticated"
+                    class="u-header__user-menu"
+                    data-tour="user-menu"
+                >
                     <button class="u-header__action-btn u-header__profile-btn" @click="toggleUserMenu">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                             stroke-linecap="round" stroke-linejoin="round">
@@ -154,6 +171,17 @@
                                     <span>Configuración</span>
                                 </router-link>
                             </li>
+                            <!-- ✅ NUEVO: Opción para mostrar tutorial -->
+                            <li>
+                                <button class="u-header__user-dropdown-item" @click="showTutorial">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <path d="M12 6v6l4 2"></path>
+                                    </svg>
+                                    <span>🎯 Ver Tutorial</span>
+                                </button>
+                            </li>
                         </ul>
                         <div class="u-header__user-dropdown-divider"></div>
                         <button class="u-header__user-dropdown-logout" @click="handleLogout">
@@ -185,10 +213,14 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useCartStore } from '@/stores/cart';
+// ✅ NUEVO: Importar store del tutorial
+import { useTutorialStore } from '@/stores/tutorial';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+// ✅ NUEVO: Inicializar store del tutorial
+const tutorialStore = useTutorialStore();
 
 const mobileMenuOpen = ref(false);
 const scrolled = ref(false);
@@ -230,6 +262,19 @@ const handleLogout = () => {
     userMenuOpen.value = false;
     closeMobileMenu();
     router.push('/');
+};
+
+// ✅ NUEVO: Función para manejar búsqueda
+const handleSearch = () => {
+    // Por ahora solo navegamos a la página de restaurantes
+    // En el futuro podrías abrir un modal de búsqueda
+    router.push('/restaurants');
+};
+
+// ✅ NUEVO: Función para mostrar tutorial
+const showTutorial = () => {
+    closeUserMenu();
+    tutorialStore.startTutorial('mainApp');
 };
 
 const handleScroll = () => {
@@ -309,7 +354,9 @@ onUnmounted(() => {
         @media (max-width: 992px) {
             display: flex;
         }
-    }&__logo {
+    }
+
+    &__logo {
         flex: 0 0 auto;
 
         @media (max-width: 992px) {
@@ -665,6 +712,12 @@ onUnmounted(() => {
             color: #1e293b;
             text-decoration: none;
             transition: background-color 0.3s ease;
+            background: none;
+            border: none;
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
 
             &:hover {
                 background-color: #f8fafc;
