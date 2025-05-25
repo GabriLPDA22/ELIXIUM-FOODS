@@ -1,11 +1,29 @@
 <template>
   <div class="business-settings">
     <div class="business-settings__header">
-      <h1 class="business-settings__title">Configuración del Restaurante</h1>
+      <h1 class="business-settings__title">Configuración</h1>
+      <div class="business-settings__entity-selector">
+        <label for="entitySelect" class="business-settings__selector-label">Configurar:</label>
+        <select 
+          id="entitySelect" 
+          v-model="selectedEntity" 
+          @change="onEntityChange"
+          class="business-settings__selector"
+        >
+          <option value="business">Mi Negocio</option>
+          <option 
+            v-for="restaurant in restaurants" 
+            :key="`restaurant-${restaurant.id}`" 
+            :value="`restaurant-${restaurant.id}`"
+          >
+            Restaurante: {{ restaurant.name }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <div class="business-settings__tabs">
-      <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
+      <button v-for="tab in currentTabs" :key="tab.id" @click="activeTab = tab.id"
         :class="['business-settings__tab', { 'business-settings__tab--active': activeTab === tab.id }]">
         <span class="business-settings__tab-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -26,35 +44,82 @@
     </div>
 
     <div class="business-settings__content">
-      <div v-if="activeTab === 'profile'" class="business-settings__section">
+      <!-- Configuración del BUSINESS -->
+      <div v-if="selectedEntity === 'business' && activeTab === 'profile'" class="business-settings__section">
+        <div class="business-settings__section-header">
+          <h2 class="business-settings__section-title">Información del Negocio</h2>
+          <p class="business-settings__section-description">
+            Actualiza la información básica de tu negocio
+          </p>
+        </div>
+        <form @submit.prevent="saveBusinessProfile" class="business-settings__form">
+          <div class="business-settings__form-group">
+            <label for="businessName" class="business-settings__label">Nombre del negocio*</label>
+            <input type="text" id="businessName" v-model="businessProfile.name" class="business-settings__input" required />
+          </div>
+          <div class="business-settings__form-row">
+            <div class="business-settings__form-group">
+              <label for="contactPhone" class="business-settings__label">Teléfono de contacto*</label>
+              <input type="tel" id="contactPhone" v-model="businessProfile.contactPhone" class="business-settings__input" required />
+            </div>
+            <div class="business-settings__form-group">
+              <label for="contactEmail" class="business-settings__label">Email de contacto*</label>
+              <input type="email" id="contactEmail" v-model="businessProfile.contactEmail" class="business-settings__input" required />
+            </div>
+          </div>
+          <div class="business-settings__form-group">
+            <label for="businessDescription" class="business-settings__label">Descripción del negocio</label>
+            <textarea id="businessDescription" v-model="businessProfile.description" class="business-settings__textarea" rows="4"></textarea>
+          </div>
+          <div class="business-settings__form-row">
+            <div class="business-settings__form-group">
+              <label for="taxId" class="business-settings__label">NIF/CIF</label>
+              <input type="text" id="taxId" v-model="businessProfile.taxId" class="business-settings__input" />
+            </div>
+            <div class="business-settings__form-group">
+              <label for="businessType" class="business-settings__label">Tipo de negocio</label>
+              <select id="businessType" v-model="businessProfile.businessType" class="business-settings__select">
+                <option value="Restaurant">Restaurante</option>
+                <option value="FastFood">Comida Rápida</option>
+                <option value="Cafe">Cafetería</option>
+                <option value="Bakery">Panadería</option>
+                <option value="Other">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="business-settings__form-group">
+            <label class="business-settings__label business-settings__checkbox-label">
+              <input type="checkbox" id="isActive" v-model="businessProfile.isActive" class="business-settings__checkbox" />
+              <span>Negocio activo</span>
+            </label>
+          </div>
+          <div class="business-settings__form-actions">
+            <button type="button" @click="resetBusinessForm" class="business-settings__button business-settings__button--secondary">
+              Cancelar
+            </button>
+            <button type="submit" class="business-settings__button business-settings__button--primary" :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Configuración del RESTAURANTE -->
+      <div v-if="selectedEntity.startsWith('restaurant-') && activeTab === 'profile'" class="business-settings__section">
         <div class="business-settings__section-header">
           <h2 class="business-settings__section-title">Información del Restaurante</h2>
           <p class="business-settings__section-description">
-            Actualiza la información básica de tu restaurante visible para los clientes
+            Actualiza la información de {{ currentRestaurant?.name || 'este restaurante' }}
           </p>
         </div>
         <form @submit.prevent="saveRestaurantProfile" class="business-settings__form">
           <div class="business-settings__form-group">
             <label for="restaurantName" class="business-settings__label">Nombre del restaurante*</label>
-            <input type="text" id="restaurantName" v-model="restaurantProfile.name" class="business-settings__input"
-              required />
-          </div>
-          <div class="business-settings__form-row">
-            <div class="business-settings__form-group">
-              <label for="phone" class="business-settings__label">Teléfono*</label>
-              <input type="tel" id="phone" v-model="restaurantProfile.phone" class="business-settings__input"
-                required />
-            </div>
-            <div class="business-settings__form-group">
-              <label for="email" class="business-settings__label">Email*</label>
-              <input type="email" id="email" v-model="restaurantProfile.email" class="business-settings__input"
-                required />
-            </div>
+            <input type="text" id="restaurantName" v-model="restaurantProfile.name" class="business-settings__input" required />
           </div>
           <div class="business-settings__form-group">
-            <label for="description" class="business-settings__label">Descripción</label>
-            <textarea id="description" v-model="restaurantProfile.description" class="business-settings__textarea"
-              rows="4"></textarea>
+            <label for="restaurantDescription" class="business-settings__label">Descripción</label>
+            <textarea id="restaurantDescription" v-model="restaurantProfile.description" class="business-settings__textarea" rows="4"></textarea>
           </div>
           <div class="business-settings__form-row">
             <div class="business-settings__form-group">
@@ -80,35 +145,33 @@
           </div>
           <div class="business-settings__form-group">
             <label class="business-settings__label business-settings__checkbox-label">
-              <input type="checkbox" id="isOpen" v-model="restaurantProfile.isOpen"
-                class="business-settings__checkbox" />
+              <input type="checkbox" id="restaurantIsOpen" v-model="restaurantProfile.isOpen" class="business-settings__checkbox" />
               <span>Restaurante abierto</span>
             </label>
           </div>
           <div class="business-settings__form-actions">
-            <button type="button" @click="resetForm"
-              class="business-settings__button business-settings__button--secondary">
+            <button type="button" @click="resetRestaurantForm" class="business-settings__button business-settings__button--secondary">
               Cancelar
             </button>
-            <button type="submit" class="business-settings__button business-settings__button--primary">
-              Guardar Cambios
+            <button type="submit" class="business-settings__button business-settings__button--primary" :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
           </div>
         </form>
       </div>
 
-      <div v-if="activeTab === 'address'" class="business-settings__section">
+      <!-- Dirección (solo para restaurantes) -->
+      <div v-if="selectedEntity.startsWith('restaurant-') && activeTab === 'address'" class="business-settings__section">
         <div class="business-settings__section-header">
           <h2 class="business-settings__section-title">Dirección del Restaurante</h2>
           <p class="business-settings__section-description">
-            Actualiza la dirección de tu restaurante para que los clientes puedan encontrarte
+            Actualiza la dirección de {{ currentRestaurant?.name || 'este restaurante' }}
           </p>
         </div>
         <form @submit.prevent="saveRestaurantAddress" class="business-settings__form">
           <div class="business-settings__form-group">
             <label for="street" class="business-settings__label">Calle y número*</label>
-            <input type="text" id="street" v-model="restaurantAddress.street" class="business-settings__input"
-              required />
+            <input type="text" id="street" v-model="restaurantAddress.street" class="business-settings__input" required />
           </div>
           <div class="business-settings__form-row">
             <div class="business-settings__form-group">
@@ -117,38 +180,17 @@
             </div>
             <div class="business-settings__form-group">
               <label for="state" class="business-settings__label">Provincia*</label>
-              <input type="text" id="state" v-model="restaurantAddress.state" class="business-settings__input"
-                required />
+              <input type="text" id="state" v-model="restaurantAddress.state" class="business-settings__input" required />
             </div>
           </div>
           <div class="business-settings__form-row">
             <div class="business-settings__form-group">
               <label for="zipCode" class="business-settings__label">Código Postal*</label>
-              <input type="text" id="zipCode" v-model="restaurantAddress.zipCode" class="business-settings__input"
-                required />
+              <input type="text" id="zipCode" v-model="restaurantAddress.zipCode" class="business-settings__input" required />
             </div>
             <div class="business-settings__form-group">
-              <label for="country" class="business-settings__label">País*</label>
-              <select id="country" v-model="restaurantAddress.country" class="business-settings__select" required>
-                <option value="ES">España</option>
-                <option value="PT">Portugal</option>
-                <option value="FR">Francia</option>
-                <option value="IT">Italia</option>
-              </select>
-            </div>
-          </div>
-          <div class="business-settings__form-group">
-            <label class="business-settings__label">Ubicación en el mapa</label>
-            <div class="business-settings__map-container">
-              <div class="business-settings__map-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
-                <span>Vista previa del mapa no disponible</span>
-              </div>
+              <label for="phone" class="business-settings__label">Teléfono</label>
+              <input type="tel" id="phone" v-model="restaurantAddress.phone" class="business-settings__input" />
             </div>
           </div>
           <div class="business-settings__form-row">
@@ -164,33 +206,35 @@
             </div>
           </div>
           <div class="business-settings__form-actions">
-            <button type="button" @click="resetAddressForm"
-              class="business-settings__button business-settings__button--secondary">
+            <button type="button" @click="resetAddressForm" class="business-settings__button business-settings__button--secondary">
               Cancelar
             </button>
-            <button type="submit" class="business-settings__button business-settings__button--primary">
-              Guardar Cambios
+            <button type="submit" class="business-settings__button business-settings__button--primary" :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
           </div>
         </form>
       </div>
 
+      <!-- Imágenes -->
       <div v-if="activeTab === 'images'" class="business-settings__section">
         <div class="business-settings__section-header">
-          <h2 class="business-settings__section-title">Imágenes del Restaurante</h2>
+          <h2 class="business-settings__section-title">
+            Imágenes {{ selectedEntity === 'business' ? 'del Negocio' : 'del Restaurante' }}
+          </h2>
           <p class="business-settings__section-description">
-            Sube y gestiona las imágenes de tu restaurante para mostrar a los clientes
+            Sube y gestiona las imágenes {{ selectedEntity === 'business' ? 'de tu negocio' : 'de este restaurante' }}
           </p>
         </div>
         <div class="business-settings__images-container">
           <div class="business-settings__image-section">
-            <h3 class="business-settings__image-title">Logo del Restaurante</h3>
+            <h3 class="business-settings__image-title">Logo</h3>
             <p class="business-settings__image-description">
-              Este logo aparecerá en tu perfil y en los resultados de búsqueda
+              Este logo aparecerá en el perfil y en los resultados de búsqueda
             </p>
             <div class="business-settings__logo-uploader">
               <div class="business-settings__logo-preview">
-                <img v-if="restaurantProfile.logoUrl" :src="restaurantProfile.logoUrl" alt="Logo" />
+                <img v-if="currentImages.logoUrl" :src="currentImages.logoUrl" alt="Logo" />
                 <div v-else class="business-settings__logo-placeholder">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -203,11 +247,9 @@
               <div class="business-settings__logo-actions">
                 <label class="business-settings__upload-btn">
                   Subir Logo
-                  <input type="file" accept="image/*" @change="handleLogoUpload"
-                    class="business-settings__file-input" />
+                  <input type="file" accept="image/*" @change="handleLogoUpload" class="business-settings__file-input" />
                 </label>
-                <button v-if="restaurantProfile.logoUrl" @click="removeRestaurantLogo"
-                  class="business-settings__remove-btn">
+                <button v-if="currentImages.logoUrl" @click="removeLogo" class="business-settings__remove-btn">
                   Eliminar
                 </button>
               </div>
@@ -216,11 +258,11 @@
           <div class="business-settings__image-section">
             <h3 class="business-settings__image-title">Imagen de Portada</h3>
             <p class="business-settings__image-description">
-              Esta imagen aparecerá en la parte superior de tu perfil de restaurante
+              Esta imagen aparecerá en la parte superior del perfil
             </p>
             <div class="business-settings__cover-uploader">
               <div class="business-settings__cover-preview">
-                <img v-if="restaurantProfile.coverImageUrl" :src="restaurantProfile.coverImageUrl" alt="Portada" />
+                <img v-if="currentImages.coverImageUrl" :src="currentImages.coverImageUrl" alt="Portada" />
                 <div v-else class="business-settings__cover-placeholder">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -234,11 +276,9 @@
               <div class="business-settings__cover-actions">
                 <label class="business-settings__upload-btn">
                   Subir Portada
-                  <input type="file" accept="image/*" @change="handleCoverUpload"
-                    class="business-settings__file-input" />
+                  <input type="file" accept="image/*" @change="handleCoverUpload" class="business-settings__file-input" />
                 </label>
-                <button v-if="restaurantProfile.coverImageUrl" @click="removeRestaurantCover"
-                  class="business-settings__remove-btn">
+                <button v-if="currentImages.coverImageUrl" @click="removeCover" class="business-settings__remove-btn">
                   Eliminar
                 </button>
               </div>
@@ -247,11 +287,12 @@
         </div>
       </div>
 
-      <div v-if="activeTab === 'hours'" class="business-settings__section">
+      <!-- Horarios (solo para Business) -->
+      <div v-if="selectedEntity === 'business' && activeTab === 'hours'" class="business-settings__section">
         <div class="business-settings__section-header">
-          <h2 class="business-settings__section-title">Horarios del Restaurante</h2>
+          <h2 class="business-settings__section-title">Horarios del Negocio</h2>
           <p class="business-settings__section-description">
-            Configura los horarios de apertura y cierre de tu restaurante
+            Configura los horarios generales de tu negocio
           </p>
         </div>
         <div class="business-settings__hours-container">
@@ -262,18 +303,15 @@
                 <span>{{ day.label }}</span>
               </label>
             </div>
-            <div class="business-settings__hours-inputs"
-              :class="{ 'business-settings__hours-inputs--disabled': !day.isOpen }">
+            <div class="business-settings__hours-inputs" :class="{ 'business-settings__hours-inputs--disabled': !day.isOpen }">
               <div class="business-settings__hours-input-group">
                 <label :for="`open-${index}`" class="business-settings__hours-label">Apertura</label>
-                <input type="time" :id="`open-${index}`" v-model="day.openTime" class="business-settings__hours-input"
-                  :disabled="!day.isOpen" />
+                <input type="time" :id="`open-${index}`" v-model="day.openTime" class="business-settings__hours-input" :disabled="!day.isOpen" />
               </div>
               <span class="business-settings__hours-separator">a</span>
               <div class="business-settings__hours-input-group">
                 <label :for="`close-${index}`" class="business-settings__hours-label">Cierre</label>
-                <input type="time" :id="`close-${index}`" v-model="day.closeTime" class="business-settings__hours-input"
-                  :disabled="!day.isOpen" />
+                <input type="time" :id="`close-${index}`" v-model="day.closeTime" class="business-settings__hours-input" :disabled="!day.isOpen" />
               </div>
             </div>
           </div>
@@ -281,13 +319,14 @@
             <button @click="applyToAllDays" class="business-settings__button business-settings__button--secondary">
               Aplicar Lunes a todos los días
             </button>
-            <button @click="saveBusinessHours" class="business-settings__button business-settings__button--primary">
-              Guardar Horarios
+            <button @click="saveBusinessHours" class="business-settings__button business-settings__button--primary" :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar Horarios' }}
             </button>
           </div>
         </div>
       </div>
 
+      <!-- Cuenta -->
       <div v-if="activeTab === 'account'" class="business-settings__section">
         <div class="business-settings__section-header">
           <h2 class="business-settings__section-title">Cuenta y Seguridad</h2>
@@ -321,52 +360,11 @@
                 {{ passwordError }}
               </div>
               <div class="business-settings__form-actions">
-                <button type="submit" class="business-settings__button business-settings__button--primary">
-                  Cambiar Contraseña
+                <button type="submit" class="business-settings__button business-settings__button--primary" :disabled="saving">
+                  {{ saving ? 'Cambiando...' : 'Cambiar Contraseña' }}
                 </button>
               </div>
             </form>
-          </div>
-          <div class="business-settings__account-section">
-            <h3 class="business-settings__account-title">Notificaciones</h3>
-            <div class="business-settings__notification-options">
-              <div class="business-settings__notification-option">
-                <label for="emailNotifications" class="business-settings__checkbox-label">
-                  <input type="checkbox" id="emailNotifications" v-model="notifications.email"
-                    class="business-settings__checkbox" />
-                  <span>Recibir notificaciones por email</span>
-                </label>
-                <p class="business-settings__notification-description">
-                  Te enviaremos emails sobre nuevos pedidos y actualizaciones importantes
-                </p>
-              </div>
-              <div class="business-settings__notification-option">
-                <label for="smsNotifications" class="business-settings__checkbox-label">
-                  <input type="checkbox" id="smsNotifications" v-model="notifications.sms"
-                    class="business-settings__checkbox" />
-                  <span>Recibir notificaciones por SMS</span>
-                </label>
-                <p class="business-settings__notification-description">
-                  Te enviaremos SMS sobre nuevos pedidos y actualizaciones importantes
-                </p>
-              </div>
-              <div class="business-settings__notification-option">
-                <label for="pushNotifications" class="business-settings__checkbox-label">
-                  <input type="checkbox" id="pushNotifications" v-model="notifications.push"
-                    class="business-settings__checkbox" />
-                  <span>Recibir notificaciones push</span>
-                </label>
-                <p class="business-settings__notification-description">
-                  Te enviaremos notificaciones push en tu navegador o aplicación
-                </p>
-              </div>
-              <div class="business-settings__notification-actions">
-                <button @click="saveNotificationPreferences"
-                  class="business-settings__button business-settings__button--primary">
-                  Guardar Preferencias
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -375,27 +373,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue' // Añadido computed
-import { useBusinessAuthStore } from '@/stores/businessAuth'
+import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { api } from '@/services/api'
 
 // Tipos para los elementos SVG
 interface SvgElement {
   type: 'path' | 'circle' | 'rect' | 'polyline' | 'line';
-  d?: string; // para path
-  cx?: string | number; // para circle
-  cy?: string | number; // para circle
-  r?: string | number;  // para circle
-  x?: string | number; // para rect
-  y?: string | number; // para rect
-  width?: string | number; // para rect
-  height?: string | number; // para rect
-  rx?: string | number; // para rect
-  ry?: string | number; // para rect
-  points?: string; // para polyline
-  x1?: string | number; // para line
-  y1?: string | number; // para line
-  x2?: string | number; // para line
-  y2?: string | number; // para line
+  d?: string;
+  cx?: string | number;
+  cy?: string | number;
+  r?: string | number;
+  x?: string | number;
+  y?: string | number;
+  width?: string | number;
+  height?: string | number;
+  rx?: string | number;
+  ry?: string | number;
+  points?: string;
+  x1?: string | number;
+  y1?: string | number;
+  x2?: string | number;
+  y2?: string | number;
 }
 
 interface Tab {
@@ -405,13 +404,19 @@ interface Tab {
 }
 
 // Store
-const businessAuthStore = useBusinessAuthStore();
+const authStore = useAuthStore();
 
 // Estado
 const activeTab = ref('profile');
+const selectedEntity = ref('business'); // 'business' o 'restaurant-{id}'
+const saving = ref(false);
 
-// Pestañas de configuración con estructura de icono corregida
-const tabs: Tab[] = [
+// Datos
+const business = ref(null);
+const restaurants = ref([]);
+
+// Pestañas completas
+const allTabs: Tab[] = [
   { id: 'profile', label: 'Perfil', iconElements: [{ type: 'path', d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }, { type: 'circle', cx: "12", cy: "7", r: "4" }] },
   { id: 'address', label: 'Dirección', iconElements: [{ type: 'path', d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }, { type: 'circle', cx: "12", cy: "10", r: "3" }] },
   { id: 'images', label: 'Imágenes', iconElements: [{ type: 'rect', x: "3", y: "3", width: "18", height: "18", rx: "2", ry: "2" }, { type: 'circle', cx: "8.5", cy: "8.5", r: "1.5" }, { type: 'polyline', points: "21 15 16 10 5 21" }] },
@@ -419,83 +424,61 @@ const tabs: Tab[] = [
   { id: 'account', label: 'Cuenta', iconElements: [{ type: 'path', d: "M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" }, { type: 'circle', cx: "8.5", cy: "7", r: "4" }, { type: 'polyline', points: "20 8 20 14" }, { type: 'line', x1: "23", y1: "11", x2: "17", y2: "11" }] }
 ];
 
-// Definición de tipos para los datos del restaurante
-interface RestaurantProfile {
-  name: string;
-  phone: string;
-  email: string;
-  description: string;
-  estimatedDeliveryTime: number;
-  deliveryFee: number;
-  tipo: number; // Asumiendo que es un ID numérico
-  isOpen: boolean;
-  logoUrl: string | null;
-  coverImageUrl: string | null;
-}
+// Pestañas según la entidad seleccionada
+const currentTabs = computed(() => {
+  if (selectedEntity.value === 'business') {
+    // Business: Perfil, Imágenes, Horarios, Cuenta (SIN Dirección)
+    return allTabs.filter(tab => tab.id !== 'address');
+  } else {
+    // Restaurant: Perfil, Dirección, Imágenes, Cuenta (SIN Horarios)
+    return allTabs.filter(tab => tab.id !== 'hours');
+  }
+});
 
-interface RestaurantAddress {
-  street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  latitude: number | null;
-  longitude: number | null;
-}
-
-interface BusinessHour {
-  day: string;
-  label: string;
-  isOpen: boolean;
-  openTime: string;
-  closeTime: string;
-}
-
-interface PasswordForm {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-interface Notifications {
-  email: boolean;
-  sms: boolean;
-  push: boolean;
-}
-
-
-// Datos del restaurante
-const restaurantProfile = ref<RestaurantProfile>({
+// Datos del BUSINESS
+const businessProfile = ref({
   name: '',
-  phone: '',
-  email: '',
+  description: '',
+  contactPhone: '',
+  contactEmail: '',
+  taxId: '',
+  businessType: 'Restaurant',
+  isActive: true,
+  logoUrl: '',
+  coverImageUrl: ''
+});
+
+// Datos del RESTAURANT
+const restaurantProfile = ref({
+  name: '',
   description: '',
   estimatedDeliveryTime: 30,
   deliveryFee: 2.99,
   tipo: 1,
   isOpen: true,
-  logoUrl: null,
-  coverImageUrl: null
+  logoUrl: '',
+  coverImageUrl: ''
 });
 
-// Dirección del restaurante
-const restaurantAddress = ref<RestaurantAddress>({
+// Dirección del restaurant
+const restaurantAddress = ref({
   street: '',
   city: '',
   state: '',
   zipCode: '',
-  country: 'ES',
+  phone: '',
   latitude: null,
   longitude: null
 });
 
+// Otros datos
 const restaurantTypes = [
   { id: 1, name: 'Italiano' }, { id: 2, name: 'Asiático' }, { id: 3, name: 'Mexicano' },
   { id: 4, name: 'Hamburguesas' }, { id: 5, name: 'Pizzas' }, { id: 6, name: 'Vegano' },
   { id: 7, name: 'Saludable' }, { id: 8, name: 'Postres' }
 ];
 
-const businessHours = ref<BusinessHour[]>([
+const businessHours = ref([
   { day: 'monday', label: 'Lunes', isOpen: true, openTime: '10:00', closeTime: '22:00' },
   { day: 'tuesday', label: 'Martes', isOpen: true, openTime: '10:00', closeTime: '22:00' },
   { day: 'wednesday', label: 'Miércoles', isOpen: true, openTime: '10:00', closeTime: '22:00' },
@@ -505,100 +488,379 @@ const businessHours = ref<BusinessHour[]>([
   { day: 'sunday', label: 'Domingo', isOpen: true, openTime: '11:00', closeTime: '22:00' }
 ]);
 
-const passwordForm = ref<PasswordForm>({
+const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
 });
 const passwordError = ref('');
 
-const notifications = ref<Notifications>({
-  email: true,
-  sms: false,
-  push: true
+// Computed
+const currentRestaurant = computed(() => {
+  if (!selectedEntity.value.startsWith('restaurant-')) return null;
+  const restaurantId = parseInt(selectedEntity.value.replace('restaurant-', ''));
+  return restaurants.value.find(r => r.id === restaurantId);
 });
 
-// Métodos
-const loadRestaurantData = () => {
-  if (businessAuthStore.business) {
-    restaurantProfile.value = {
-      name: businessAuthStore.business.name || 'Mi Restaurante Ejemplo',
-      phone: businessAuthStore.business.phone || '',
-      email: businessAuthStore.business.email || '',
-      description: businessAuthStore.business.description || '',
-      estimatedDeliveryTime: businessAuthStore.business.estimatedDeliveryTime || 30,
-      deliveryFee: businessAuthStore.business.deliveryFee || 2.99,
-      tipo: businessAuthStore.business.typeId || 1,
-      isOpen: businessAuthStore.business.isOpen !== undefined ? businessAuthStore.business.isOpen : true,
-      logoUrl: businessAuthStore.business.logoUrl || null,
-      coverImageUrl: businessAuthStore.business.coverImageUrl || null,
+const currentImages = computed(() => {
+  if (selectedEntity.value === 'business') {
+    return {
+      logoUrl: businessProfile.value.logoUrl,
+      coverImageUrl: businessProfile.value.coverImageUrl
     };
-    // Cargar también restaurantAddress y businessHours si vienen del store
+  } else {
+    return {
+      logoUrl: restaurantProfile.value.logoUrl,
+      coverImageUrl: restaurantProfile.value.coverImageUrl
+    };
+  }
+});
+
+// Métodos de carga
+const loadBusiness = async () => {
+  try {
+    const userId = authStore.user?.id;
+    if (!userId) return;
+
+    const response = await api.get(`/api/Business/user/${userId}`);
+    if (response.data) {
+      business.value = response.data;
+      
+      // Cargar datos en el formulario
+      businessProfile.value = {
+        name: business.value.name || '',
+        description: business.value.description || '',
+        contactPhone: business.value.contactPhone || '',
+        contactEmail: business.value.contactEmail || '',
+        taxId: business.value.taxId || '',
+        businessType: business.value.businessType || 'Restaurant',
+        isActive: business.value.isActive ?? true,
+        logoUrl: business.value.logoUrl || '',
+        coverImageUrl: business.value.coverImageUrl || ''
+      };
+    }
+  } catch (error) {
+    console.error('Error cargando business:', error);
+  }
+};
+
+const loadRestaurants = async () => {
+  try {
+    if (!business.value?.id) return;
+
+    const response = await api.get(`/api/Restaurants/business/${business.value.id}`);
+    if (response.data) {
+      restaurants.value = response.data;
+    }
+  } catch (error) {
+    console.error('Error cargando restaurantes:', error);
+  }
+};
+
+const loadRestaurantDetails = async (restaurantId: number) => {
+  try {
+    // Cargar detalles del restaurante
+    const response = await api.get(`/api/Restaurants/${restaurantId}`);
+    if (response.data) {
+      const restaurant = response.data;
+      
+      restaurantProfile.value = {
+        name: restaurant.name || '',
+        description: restaurant.description || '',
+        estimatedDeliveryTime: restaurant.estimatedDeliveryTime || 30,
+        deliveryFee: restaurant.deliveryFee || 2.99,
+        tipo: restaurant.tipo || 1,
+        isOpen: restaurant.isOpen ?? true,
+        logoUrl: restaurant.logoUrl || '',
+        coverImageUrl: restaurant.coverImageUrl || ''
+      };
+
+      // Cargar dirección si existe
+      if (restaurant.address) {
+        restaurantAddress.value = {
+          street: restaurant.address.street || '',
+          city: restaurant.address.city || '',
+          state: restaurant.address.state || '',
+          zipCode: restaurant.address.zipCode || '',
+          phone: restaurant.address.phone || '',
+          latitude: restaurant.address.latitude,
+          longitude: restaurant.address.longitude
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error cargando detalles del restaurante:', error);
+  }
+};
+
+// Métodos de guardado
+// IMPORTANTE: Estos métodos preservan TODOS los campos originales del objeto
+// para evitar que se pierdan campos críticos como userId, businessId, etc.
+// cuando se hace el PUT al backend
+
+// ALTERNATIVA: Si tu backend soporta PATCH, puedes usar esta versión más limpia:
+// const saveBusinessProfilePatch = async () => {
+//   if (!business.value?.id || saving.value) return;
+//   saving.value = true;
+//   try {
+//     const updateData = {
+//       name: businessProfile.value.name,
+//       description: businessProfile.value.description,
+//       contactPhone: businessProfile.value.contactPhone,
+//       contactEmail: businessProfile.value.contactEmail,
+//       taxId: businessProfile.value.taxId,
+//       businessType: businessProfile.value.businessType,
+//       isActive: businessProfile.value.isActive
+//     };
+//     await api.patch(`/api/Business/${business.value.id}`, updateData);
+//     alert('Perfil del negocio actualizado correctamente');
+//   } catch (error) {
+//     console.error('Error guardando perfil del negocio:', error);
+//     alert('Error al guardar los cambios');
+//   } finally {
+//     saving.value = false;
+//   }
+// };
+
+const saveBusinessProfile = async () => {
+  if (!business.value?.id || saving.value) return;
+  
+  saving.value = true;
+  try {
+    // IMPORTANTE: Preservar TODOS los campos del business original
+    // Solo actualizar los campos que el usuario puede modificar
+    const updateData = {
+      ...business.value, // Mantener todos los campos originales
+      // Solo sobrescribir los campos editables
+      name: businessProfile.value.name,
+      description: businessProfile.value.description,
+      contactPhone: businessProfile.value.contactPhone,
+      contactEmail: businessProfile.value.contactEmail,
+      taxId: businessProfile.value.taxId,
+      businessType: businessProfile.value.businessType,
+      isActive: businessProfile.value.isActive,
+      // Preservar campos críticos explícitamente
+      userId: business.value.userId,
+      id: business.value.id,
+      createdAt: business.value.createdAt,
+      updatedAt: new Date().toISOString()
+    };
+
+    await api.put(`/api/Business/${business.value.id}`, updateData);
+    
+    // Actualizar el business local con los nuevos datos
+    business.value = { ...business.value, ...updateData };
+    
+    alert('Perfil del negocio actualizado correctamente');
+  } catch (error) {
+    console.error('Error guardando perfil del negocio:', error);
+    alert('Error al guardar los cambios');
+  } finally {
+    saving.value = false;
   }
 };
 
 const saveRestaurantProfile = async () => {
+  const restaurantId = currentRestaurant.value?.id;
+  if (!restaurantId || saving.value) return;
+  
+  saving.value = true;
   try {
-    // await businessAuthStore.updateBusinessProfile(restaurantProfile.value); // Envía el objeto completo
-    console.log("Guardando perfil:", restaurantProfile.value);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulación
-    alert('Perfil actualizado correctamente');
-  } catch (err) {
+    // Cargar el restaurant actual completo para preservar todos sus campos
+    const currentRestaurantResponse = await api.get(`/api/Restaurants/${restaurantId}`);
+    const currentRestaurantData = currentRestaurantResponse.data;
+    
+    // Preservar todos los campos originales, solo modificar los editables
+    const updateData = {
+      ...currentRestaurantData, // Mantener todos los campos originales
+      // Solo sobrescribir los campos editables
+      name: restaurantProfile.value.name,
+      description: restaurantProfile.value.description,
+      estimatedDeliveryTime: restaurantProfile.value.estimatedDeliveryTime,
+      deliveryFee: restaurantProfile.value.deliveryFee,
+      tipo: restaurantProfile.value.tipo,
+      isOpen: restaurantProfile.value.isOpen,
+      // Preservar campos críticos explícitamente
+      businessId: currentRestaurantData.businessId,
+      addressId: currentRestaurantData.addressId,
+      id: restaurantId,
+      createdAt: currentRestaurantData.createdAt,
+      updatedAt: new Date().toISOString()
+    };
+
+    await api.put(`/api/Restaurants/${restaurantId}`, updateData);
+    
+    // Actualizar el restaurant local en la lista
+    const restaurantIndex = restaurants.value.findIndex(r => r.id === restaurantId);
+    if (restaurantIndex !== -1) {
+      restaurants.value[restaurantIndex] = { ...restaurants.value[restaurantIndex], ...updateData };
+    }
+    
+    alert('Perfil del restaurante actualizado correctamente');
+  } catch (error) {
+    console.error('Error guardando perfil del restaurante:', error);
     alert('Error al guardar los cambios');
-    console.error(err);
+  } finally {
+    saving.value = false;
   }
 };
 
-const resetForm = () => {
-  loadRestaurantData();
+const saveRestaurantAddress = async () => {
+  const restaurantId = currentRestaurant.value?.id;
+  if (!restaurantId || saving.value) return;
+  
+  saving.value = true;
+  try {
+    // Primero obtener el restaurant completo para tener el addressId
+    const restaurantResponse = await api.get(`/api/Restaurants/${restaurantId}`);
+    const restaurant = restaurantResponse.data;
+    const addressId = restaurant?.addressId;
+    
+    if (addressId) {
+      // Cargar la dirección actual completa
+      const currentAddressResponse = await api.get(`/api/Addresses/${addressId}`);
+      const currentAddressData = currentAddressResponse.data;
+      
+      // Preservar todos los campos originales de la dirección
+      const updateData = {
+        ...currentAddressData, // Mantener todos los campos originales
+        // Solo sobrescribir los campos editables
+        street: restaurantAddress.value.street,
+        city: restaurantAddress.value.city,
+        state: restaurantAddress.value.state,
+        zipCode: restaurantAddress.value.zipCode,
+        phone: restaurantAddress.value.phone,
+        latitude: restaurantAddress.value.latitude,
+        longitude: restaurantAddress.value.longitude,
+        // Preservar campos críticos explícitamente
+        id: addressId,
+        userId: currentAddressData.userId // Importante para no perder la relación
+      };
+
+      await api.put(`/api/Addresses/${addressId}`, updateData);
+      alert('Dirección actualizada correctamente');
+    } else {
+      alert('No se encontró la dirección del restaurante');
+    }
+  } catch (error) {
+    console.error('Error guardando dirección:', error);
+    alert('Error al guardar la dirección');
+  } finally {
+    saving.value = false;
+  }
 };
 
-const saveRestaurantAddress = async () => {
-  try {
-    console.log("Guardando dirección:", restaurantAddress.value);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    alert('Dirección actualizada correctamente');
-  } catch (err) {
-    alert('Error al guardar la dirección');
-    console.error(err);
+// Métodos de manejo de eventos
+const onEntityChange = () => {
+  activeTab.value = 'profile'; // Resetear a la primera pestaña
+  
+  if (selectedEntity.value.startsWith('restaurant-')) {
+    const restaurantId = parseInt(selectedEntity.value.replace('restaurant-', ''));
+    loadRestaurantDetails(restaurantId);
+  }
+};
+
+const resetBusinessForm = () => {
+  loadBusiness();
+};
+
+const resetRestaurantForm = () => {
+  if (currentRestaurant.value) {
+    loadRestaurantDetails(currentRestaurant.value.id);
   }
 };
 
 const resetAddressForm = () => {
   restaurantAddress.value = {
-    street: '', city: '', state: '', zipCode: '', country: 'ES', latitude: null, longitude: null
+    street: '', city: '', state: '', zipCode: '', phone: '', latitude: null, longitude: null
   };
 };
 
-const handleLogoUpload = (event: Event) => {
+// Métodos de imágenes
+const handleLogoUpload = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) {
+  if (!file) return;
+
+  try {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       if (e.target?.result) {
-        restaurantProfile.value.logoUrl = e.target.result as string;
+        const base64 = e.target.result as string;
+        
+        if (selectedEntity.value === 'business' && business.value?.id) {
+          // Usar tu servicio de storage para subir la imagen
+          const imageUrl = await uploadImage(base64, file.name);
+          businessProfile.value.logoUrl = imageUrl;
+          await api.post(`/api/Business/${business.value.id}/logo`, { logoUrl: imageUrl });
+        } else if (currentRestaurant.value?.id) {
+          const imageUrl = await uploadImage(base64, file.name);
+          restaurantProfile.value.logoUrl = imageUrl;
+          await api.put(`/api/Restaurants/${currentRestaurant.value.id}`, { 
+            logoUrl: imageUrl 
+          });
+        }
       }
     };
     reader.readAsDataURL(file);
+  } catch (error) {
+    console.error('Error subiendo logo:', error);
+    alert('Error al subir la imagen');
   }
 };
 
-const handleCoverUpload = (event: Event) => {
+const handleCoverUpload = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) {
+  if (!file) return;
+
+  try {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       if (e.target?.result) {
-        restaurantProfile.value.coverImageUrl = e.target.result as string;
+        const base64 = e.target.result as string;
+        
+        if (selectedEntity.value === 'business' && business.value?.id) {
+          const imageUrl = await uploadImage(base64, file.name);
+          businessProfile.value.coverImageUrl = imageUrl;
+          await api.post(`/api/Business/${business.value.id}/cover`, { coverImageUrl: imageUrl });
+        } else if (currentRestaurant.value?.id) {
+          const imageUrl = await uploadImage(base64, file.name);
+          restaurantProfile.value.coverImageUrl = imageUrl;
+          await api.put(`/api/Restaurants/${currentRestaurant.value.id}`, { 
+            coverImageUrl: imageUrl 
+          });
+        }
       }
     };
     reader.readAsDataURL(file);
+  } catch (error) {
+    console.error('Error subiendo portada:', error);
+    alert('Error al subir la imagen');
   }
 };
 
-const removeRestaurantLogo = () => { restaurantProfile.value.logoUrl = null; };
-const removeRestaurantCover = () => { restaurantProfile.value.coverImageUrl = null; };
+const uploadImage = async (base64: string, fileName: string): Promise<string> => {
+  // Implementar usando tu IStorageService
+  // Por ahora retorno el base64 directamente
+  return base64;
+};
 
+const removeLogo = () => {
+  if (selectedEntity.value === 'business') {
+    businessProfile.value.logoUrl = '';
+  } else {
+    restaurantProfile.value.logoUrl = '';
+  }
+};
+
+const removeCover = () => {
+  if (selectedEntity.value === 'business') {
+    businessProfile.value.coverImageUrl = '';
+  } else {
+    restaurantProfile.value.coverImageUrl = '';
+  }
+};
+
+// Métodos de horarios
 const applyToAllDays = () => {
   const monday = businessHours.value.find(day => day.day === 'monday');
   if (monday) {
@@ -613,17 +875,26 @@ const applyToAllDays = () => {
 };
 
 const saveBusinessHours = async () => {
+  if (!business.value?.id || saving.value) return;
+  
+  saving.value = true;
   try {
-    console.log("Guardando horarios:", businessHours.value);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Usar tu BusinessService para guardar horarios
+    // await api.post(`/api/Business/${business.value.id}/hours`, { hours: businessHours.value });
+    console.log('Guardando horarios:', businessHours.value);
     alert('Horarios guardados correctamente');
-  } catch (err) {
+  } catch (error) {
+    console.error('Error guardando horarios:', error);
     alert('Error al guardar los horarios');
-    console.error(err);
+  } finally {
+    saving.value = false;
   }
 };
 
+// Cambio de contraseña
 const changePassword = async () => {
+  if (saving.value) return;
+  
   try {
     passwordError.value = '';
     if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
@@ -634,37 +905,40 @@ const changePassword = async () => {
       passwordError.value = 'La nueva contraseña debe tener al menos 8 caracteres';
       return;
     }
-    console.log("Cambiando contraseña para:", passwordForm.value.currentPassword ? '********' : ''); // No loguear contraseñas
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    saving.value = true;
+    
+    const userId = authStore.user?.id;
+    await api.post(`/api/Users/${userId}/password`, {
+      currentPassword: passwordForm.value.currentPassword,
+      newPassword: passwordForm.value.newPassword
+    });
+    
     passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' };
     alert('Contraseña cambiada correctamente');
-  } catch (err) {
+  } catch (error) {
     passwordError.value = 'Error al cambiar la contraseña';
-    console.error(err);
+    console.error(error);
+  } finally {
+    saving.value = false;
   }
 };
 
-const saveNotificationPreferences = async () => {
-  try {
-    console.log("Guardando preferencias de notificación:", notifications.value);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    alert('Preferencias de notificación guardadas correctamente');
-  } catch (err) {
-    alert('Error al guardar las preferencias');
-    console.error(err);
-  }
-};
-
-onMounted(() => {
-  loadRestaurantData();
+onMounted(async () => {
+  await loadBusiness();
+  await loadRestaurants();
 });
 </script>
 
 <style lang="scss" scoped>
-/* Tus estilos .business-settings... se mantienen igual */
 .business-settings {
   &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
   &__title {
@@ -674,6 +948,37 @@ onMounted(() => {
     color: #1e293b;
   }
 
+  &__entity-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  &__selector-label {
+    color: #64748b;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  &__selector {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    color: #1e293b;
+    font-size: 0.9rem;
+    min-width: 200px;
+
+    &:focus {
+      outline: none;
+      border-color: #06a98d;
+      box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1);
+    }
+  }
+
+  // ... resto de estilos iguales al componente original ...
+  
   &__tabs {
     display: flex;
     overflow-x: auto;
@@ -685,10 +990,6 @@ onMounted(() => {
 
     &::-webkit-scrollbar {
       display: none;
-    }
-
-    @media (max-width: 768px) {
-      // flex-wrap: wrap; // Puede causar problemas si hay muchos tabs, mejor scroll
     }
   }
 
@@ -704,7 +1005,7 @@ onMounted(() => {
     color: #64748b;
     cursor: pointer;
     transition: all 0.2s ease;
-    flex-shrink: 0; // Para que no se encojan en el scroll
+    flex-shrink: 0;
 
     &:hover {
       background-color: #f8fafc;
@@ -773,7 +1074,6 @@ onMounted(() => {
     margin-bottom: 1.25rem;
 
     &:last-child {
-      // Para que el último form-row no tenga margen inferior si es el último elemento del form
       margin-bottom: 0;
     }
   }
@@ -796,12 +1096,18 @@ onMounted(() => {
     font-size: 0.95rem;
     color: #1e293b;
     transition: all 0.2s ease;
-    box-sizing: border-box; // Para que padding no afecte el width total
+    box-sizing: border-box;
 
     &:focus {
       outline: none;
       border-color: #06a98d;
       box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1);
+    }
+
+    &:disabled {
+      background-color: #f1f5f9;
+      color: #94a3b8;
+      cursor: not-allowed;
     }
   }
 
@@ -825,7 +1131,6 @@ onMounted(() => {
     border-radius: 6px;
     font-size: 0.9rem;
   }
-
 
   &__radio-group {
     display: grid;
@@ -886,13 +1191,18 @@ onMounted(() => {
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    border: none;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
     &--primary {
       background-color: #06a98d;
       color: white;
-      border: none;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #058a73;
       }
     }
@@ -902,7 +1212,7 @@ onMounted(() => {
       color: #64748b;
       border: 1px solid #e2e8f0;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #f1f5f9;
         color: #1e293b;
       }
@@ -913,37 +1223,11 @@ onMounted(() => {
     }
   }
 
-  // Mapa
-  &__map-container {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
-    height: 200px;
-    margin-bottom: 1rem;
-  }
-
-  &__map-placeholder {
-    width: 100%;
-    height: 100%;
-    background-color: #f1f5f9;
+  // Estilos para imágenes
+  &__images-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-
-    svg {
-      width: 32px;
-      height: 32px;
-      margin-bottom: 0.5rem;
-    }
-  }
-
-  // Imágenes
-  &__images-container {
-    // display: grid;
-    // grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    // gap: 2rem;
+    gap: 2rem;
   }
 
   &__image-section {
@@ -998,7 +1282,6 @@ onMounted(() => {
     color: #94a3b8;
     border-radius: 8px;
 
-
     svg {
       width: 32px;
       height: 32px;
@@ -1020,7 +1303,6 @@ onMounted(() => {
     transition: all 0.2s ease;
     display: inline-block;
     border: 1px solid transparent;
-
 
     &:hover {
       background-color: #e2e8f0;
@@ -1056,7 +1338,7 @@ onMounted(() => {
 
   &__cover-preview {
     width: 100%;
-    max-width: 400px; // Para que no sea demasiado ancho
+    max-width: 400px;
     height: 150px;
     border-radius: 8px;
     overflow: hidden;
@@ -1081,7 +1363,6 @@ onMounted(() => {
     color: #94a3b8;
     border-radius: 8px;
 
-
     svg {
       width: 32px;
       height: 32px;
@@ -1094,14 +1375,14 @@ onMounted(() => {
     gap: 0.75rem;
   }
 
-  // Horarios
+  // Estilos para horarios
   &__hours-container {
     max-width: 600px;
   }
 
   &__hours-row {
     display: flex;
-    align-items: center; // Alineación vertical
+    align-items: center;
     gap: 1.5rem;
     padding: 0.75rem 0;
     border-bottom: 1px solid #f1f5f9;
@@ -1118,7 +1399,7 @@ onMounted(() => {
   }
 
   &__day-checkbox {
-    width: 130px; // Un poco más de espacio
+    width: 130px;
     flex-shrink: 0;
   }
 
@@ -1130,11 +1411,7 @@ onMounted(() => {
 
     &--disabled {
       opacity: 0.5;
-      pointer-events: none; // Para que no se pueda interactuar
-    }
-
-    @media (max-width: 768px) {
-      // flex-wrap: wrap; // Puede ser mejor que cada grupo esté en su línea
+      pointer-events: none;
     }
   }
 
@@ -1142,7 +1419,7 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    flex: 1; // Para que los inputs ocupen el espacio disponible
+    flex: 1;
   }
 
   &__hours-label {
@@ -1157,9 +1434,8 @@ onMounted(() => {
     font-size: 0.9rem;
     color: #1e293b;
     transition: all 0.2s ease;
-    width: 100%; // Para que ocupe el espacio del grupo
+    width: 100%;
     box-sizing: border-box;
-
 
     &:focus {
       outline: none;
@@ -1174,30 +1450,29 @@ onMounted(() => {
   }
 
   &__hours-separator {
-    // margin-top: 1.5rem; // No necesario si los labels están arriba
     color: #64748b;
-    align-self: flex-end; // Alinear con la base de los inputs
-    padding-bottom: 0.5rem; // Ajustar si es necesario
+    align-self: flex-end;
+    padding-bottom: 0.5rem;
   }
 
   &__hours-actions {
     display: flex;
     justify-content: space-between;
-    align-items: center; // Alineación vertical
+    align-items: center;
     margin-top: 1.5rem;
     gap: 1rem;
 
     @media (max-width: 576px) {
       flex-direction: column;
-      align-items: stretch; // Para que los botones ocupen todo el ancho
+      align-items: stretch;
     }
   }
 
-  // Cuenta
+  // Estilos para cuenta
   &__account-container {
-    // display: grid;
-    // grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    // gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
   }
 
   &__account-section {
@@ -1215,26 +1490,6 @@ onMounted(() => {
     color: #1e293b;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f1f5f9;
-  }
-
-  &__notification-options {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  &__notification-option {
-    // margin-bottom: 0.5rem; No necesario si usamos gap en el padre
-  }
-
-  &__notification-description {
-    font-size: 0.85rem;
-    color: #64748b;
-    margin: 0.25rem 0 0 1.75rem; // Alineado con el texto del checkbox
-  }
-
-  &__notification-actions {
-    margin-top: 1.5rem;
   }
 }
 </style>
