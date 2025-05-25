@@ -1,671 +1,831 @@
 <template>
   <div class="business-analytics">
     <div class="business-analytics__header">
-      <h1 class="business-analytics__title">Análisis y Estadísticas</h1>
-      <div class="business-analytics__period-selector">
-        <button v-for="period in periods" :key="period.value" @click="selectedPeriod = period.value"
-          :class="['business-analytics__period-btn', { 'business-analytics__period-btn--active': selectedPeriod === period.value }]">
-          {{ period.label }}
+      <div class="business-analytics__header-left">
+        <h1 class="business-analytics__title">Analíticas</h1>
+        <p class="business-analytics__subtitle">Análisis detallado del rendimiento de tu negocio</p>
+      </div>
+      <div class="business-analytics__header-right">
+        <div class="business-analytics__date-selector">
+          <select v-model="selectedPeriod" class="business-analytics__select">
+            <option value="7">Últimos 7 días</option>
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 90 días</option>
+            <option value="365">Último año</option>
+          </select>
+        </div>
+        <div class="business-analytics__restaurant-selector" v-if="restaurants.length > 1">
+          <select v-model="selectedRestaurantId" class="business-analytics__select">
+            <option value="all">Todos los restaurantes</option>
+            <option v-for="restaurant in restaurants" :key="restaurant.id" :value="restaurant.id">
+              {{ restaurant.name }}
+            </option>
+          </select>
+        </div>
+        <button @click="refreshData" :disabled="loading" class="business-analytics__refresh-btn">
+          <svg :class="['business-analytics__refresh-icon', { 'business-analytics__refresh-icon--spinning': loading }]"
+            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          {{ loading ? 'Actualizando...' : 'Actualizar' }}
         </button>
-        <div class="business-analytics__date-range">
-          <input type="date" v-model="startDate" class="business-analytics__date-input"
-            :disabled="selectedPeriod !== 'custom'">
-          <span>hasta</span>
-          <input type="date" v-model="endDate" class="business-analytics__date-input"
-            :disabled="selectedPeriod !== 'custom'">
-          <button @click="applyDateRange" class="business-analytics__date-apply"
-            :disabled="selectedPeriod !== 'custom'">
-            Aplicar
-          </button>
-        </div>
       </div>
     </div>
 
-    <div v-if="!loading" class="business-analytics__summary">
-      <div class="business-analytics__card business-analytics__card--revenue">
-        <div class="business-analytics__card-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <title>Ingresos Totales Icono</title>
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-        </div>
-        <div class="business-analytics__card-content">
-          <h3 class="business-analytics__card-title">Ingresos Totales</h3>
-          <p class="business-analytics__card-value">{{ formatCurrency(analytics.totalRevenue) }}</p>
-          <p :class="['business-analytics__card-change', getChangeClass(analytics.revenueChange)]">
-            <span v-if="analytics.revenueChange >= 0">+</span>{{ analytics.revenueChange }}% vs periodo anterior
-          </p>
-        </div>
-      </div>
-
-      <div class="business-analytics__card business-analytics__card--orders">
-        <div class="business-analytics__card-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <title>Total Pedidos Icono</title>
-            <circle cx="9" cy="21" r="1"></circle>
-            <circle cx="20" cy="21" r="1"></circle>
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-          </svg>
-        </div>
-        <div class="business-analytics__card-content">
-          <h3 class="business-analytics__card-title">Total Pedidos</h3>
-          <p class="business-analytics__card-value">{{ analytics.totalOrders }}</p>
-          <p :class="['business-analytics__card-change', getChangeClass(analytics.ordersChange)]">
-            <span v-if="analytics.ordersChange >= 0">+</span>{{ analytics.ordersChange }}% vs periodo anterior
-          </p>
-        </div>
-      </div>
-
-      <div class="business-analytics__card business-analytics__card--avg">
-        <div class="business-analytics__card-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <title>Ticket Promedio Icono</title>
-            <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
-            <line x1="16" y1="8" x2="22" y2="8"></line>
-            <line x1="16" y1="12" x2="22" y2="12"></line>
-            <line x1="16" y1="16" x2="22" y2="16"></line>
-          </svg>
-        </div>
-        <div class="business-analytics__card-content">
-          <h3 class="business-analytics__card-title">Ticket Promedio</h3>
-          <p class="business-analytics__card-value">{{ formatCurrency(analytics.averageOrderValue) }}</p>
-          <p :class="['business-analytics__card-change', getChangeClass(analytics.aovChange)]">
-            <span v-if="analytics.aovChange >= 0">+</span>{{ analytics.aovChange }}% vs periodo anterior
-          </p>
-        </div>
-      </div>
-
-      <div class="business-analytics__card business-analytics__card--rating">
-        <div class="business-analytics__card-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <title>Valoración Media Icono</title>
-            <polygon
-              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-            </polygon>
-          </svg>
-        </div>
-        <div class="business-analytics__card-content">
-          <h3 class="business-analytics__card-title">Valoración Media</h3>
-          <p class="business-analytics__card-value">{{ analytics.averageRating.toFixed(1) }}</p>
-          <div class="business-analytics__rating-stars">
-            <div class="business-analytics__stars-filled" :style="{ width: `${(analytics.averageRating / 5) * 100}%` }">
-              ★★★★★
-            </div>
-            <div class="business-analytics__stars-empty">
-              ★★★★★
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="loading" class="business-analytics__loading">
+      <div class="business-analytics__spinner"></div>
+      <p>Cargando datos analíticos...</p>
     </div>
-     <div v-else class="business-analytics__loading-placeholder">Cargando resumen...</div>
 
-
-    <div v-if="!loading" class="business-analytics__charts">
-      <div class="business-analytics__chart-container">
-        <div class="business-analytics__chart-header">
-          <h3 class="business-analytics__chart-title">Tendencia de Ingresos</h3>
-          <div class="business-analytics__chart-legend">
-            <div class="business-analytics__legend-item">
-              <span class="business-analytics__legend-color business-analytics__legend-color--current"></span>
-              <span>Periodo actual</span>
-            </div>
-            <div class="business-analytics__legend-item">
-              <span class="business-analytics__legend-color business-analytics__legend-color--previous"></span>
-              <span>Periodo anterior</span>
-            </div>
-          </div>
-        </div>
-        <div class="business-analytics__chart">
-          <div class="business-analytics__chart-placeholder">
-            <svg class="business-analytics__chart-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
-              <path d="M0,300 L100,280 L200,260 L300,220 L400,240 L500,180 L600,150 L700,120 L800,100" fill="none"
-                stroke="#06a98d" stroke-width="3"></path>
-              <path d="M0,300 L100,290 L200,280 L300,270 L400,250 L500,230 L600,210 L700,190 L800,170" fill="none"
-                stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5"></path>
-              <path d="M0,300 L100,280 L200,260 L300,220 L400,240 L500,180 L600,150 L700,120 L800,100 L800,300 L0,300"
-                fill="url(#gradient)" opacity="0.2"></path>
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" style="stop-color:#06a98d;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#06a98d;stop-opacity:0" />
-                </linearGradient>
-              </defs>
+    <div v-else class="business-analytics__content">
+      <!-- KPI Cards -->
+      <div class="business-analytics__kpi-grid">
+        <div class="business-analytics__kpi-card business-analytics__kpi-card--revenue">
+          <div class="business-analytics__kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </div>
-        </div>
-      </div>
-
-      <div class="business-analytics__chart-container">
-        <div class="business-analytics__chart-header">
-          <h3 class="business-analytics__chart-title">Pedidos por Día de la Semana</h3>
-        </div>
-        <div class="business-analytics__chart">
-          <div class="business-analytics__chart-placeholder">
-            <svg class="business-analytics__chart-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
-              <rect x="50" y="120" width="80" height="180" fill="#06a98d" opacity="0.8"></rect>
-              <rect x="150" y="150" width="80" height="150" fill="#06a98d" opacity="0.8"></rect>
-              <rect x="250" y="100" width="80" height="200" fill="#06a98d" opacity="0.8"></rect>
-              <rect x="350" y="80" width="80" height="220" fill="#06a98d" opacity="0.8"></rect>
-              <rect x="450" y="60" width="80" height="240" fill="#06a98d" opacity="0.8"></rect>
-              <rect x="550" y="40" width="80" height="260" fill="#06a98d" opacity="0.8"></rect>
-              <rect x="650" y="90" width="80" height="210" fill="#06a98d" opacity="0.8"></rect>
-              <text x="90" y="320" text-anchor="middle" fill="#475569" font-size="14">Lun</text>
-              <text x="190" y="320" text-anchor="middle" fill="#475569" font-size="14">Mar</text>
-              <text x="290" y="320" text-anchor="middle" fill="#475569" font-size="14">Mié</text>
-              <text x="390" y="320" text-anchor="middle" fill="#475569" font-size="14">Jue</text>
-              <text x="490" y="320" text-anchor="middle" fill="#475569" font-size="14">Vie</text>
-              <text x="590" y="320" text-anchor="middle" fill="#475569" font-size="14">Sáb</text>
-              <text x="690" y="320" text-anchor="middle" fill="#475569" font-size="14">Dom</text>
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-else class="business-analytics__loading-placeholder">Cargando gráficos...</div>
-
-    <div v-if="!loading" class="business-analytics__sections">
-      <div class="business-analytics__section">
-        <div class="business-analytics__section-header">
-          <h3 class="business-analytics__section-title">Productos Más Vendidos</h3>
-        </div>
-        <div class="business-analytics__products-table-container">
-          <table class="business-analytics__products-table">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Ventas</th>
-                <th>Cantidad</th>
-                <th>Ingresos</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="product in analytics.topProducts" :key="product.id" class="business-analytics__product-row">
-                <td>
-                  <div class="business-analytics__product">
-                    <div class="business-analytics__product-image">
-                      <img :src="product.imageUrl || '/images/product-placeholder.png'" :alt="product.name">
-                    </div>
-                    <div class="business-analytics__product-info">
-                      <span class="business-analytics__product-name">{{ product.name }}</span>
-                      <span class="business-analytics__product-category">{{ product.category }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>{{ product.salesCount }}</td>
-                <td>{{ product.quantity }}</td>
-                <td>{{ formatCurrency(product.revenue) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="business-analytics__section">
-        <div class="business-analytics__section-header">
-          <h3 class="business-analytics__section-title">Distribución de Ventas por Categoría</h3>
-        </div>
-        <div class="business-analytics__pie-chart">
-          <div class="business-analytics__pie-container">
-             <svg class="business-analytics__pie-svg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" fill="transparent" stroke="#e2e8f0" stroke-width="2"></circle>
-              <path d="M50,50 L95,50 A45,45 0 0,1 80,87 Z" :fill="getCategoryColor(1)"></path>
-              <path d="M50,50 L80,87 A45,45 0 0,1 20,80 Z" :fill="getCategoryColor(2)"></path>
-              <path d="M50,50 L20,80 A45,45 0 0,1 15,30 Z" :fill="getCategoryColor(3)"></path>
-              <path d="M50,50 L15,30 A45,45 0 0,1 95,50 Z" :fill="getCategoryColor(4)"></path>
-            </svg>
-          </div>
-          <div class="business-analytics__pie-legend">
-            <div v-for="category in analytics.categorySales" :key="category.id"
-              class="business-analytics__pie-legend-item">
-              <span class="business-analytics__pie-color"
-                :style="{ backgroundColor: getCategoryColor(category.id) }"></span>
-              <span class="business-analytics__pie-label">{{ category.name }}</span>
-              <span class="business-analytics__pie-value">{{ formatCurrency(category.sales) }} ({{ category.percentage
-              }}%)</span>
+          <div class="business-analytics__kpi-content">
+            <h3>Ingresos Totales</h3>
+            <div class="business-analytics__kpi-value">{{ formatCurrency(kpiData.totalRevenue) }}</div>
+            <div class="business-analytics__kpi-change" :class="getChangeClass(kpiData.revenueChange)">
+              <svg v-if="kpiData.revenueChange > 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 11 12 6 7 11"></polyline>
+                <line x1="12" y1="18" x2="12" y2="6"></line>
+              </svg>
+              <svg v-else-if="kpiData.revenueChange < 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="7 13 12 18 17 13"></polyline>
+                <line x1="12" y1="6" x2="12" y2="18"></line>
+              </svg>
+              <span>{{ formatPercentage(kpiData.revenueChange) }}</span>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <div v-else class="business-analytics__loading-placeholder">Cargando secciones...</div>
 
-    <div v-if="!loading" class="business-analytics__customer-section">
-      <div class="business-analytics__section-header">
-        <h3 class="business-analytics__section-title">Análisis de Clientes</h3>
-      </div>
-      <div class="business-analytics__customer-stats">
-        <div class="business-analytics__customer-card">
-          <div class="business-analytics__customer-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-               <title>Clientes Nuevos Icono</title>
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        <div class="business-analytics__kpi-card business-analytics__kpi-card--orders">
+          <div class="business-analytics__kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
             </svg>
           </div>
-          <div class="business-analytics__customer-content">
-            <h4 class="business-analytics__customer-title">Clientes Nuevos</h4>
-            <p class="business-analytics__customer-value">{{ analytics.newCustomers }}</p>
-            <p :class="['business-analytics__customer-change', getChangeClass(analytics.newCustomersChange)]">
-              <span v-if="analytics.newCustomersChange >= 0">+</span>{{ analytics.newCustomersChange }}%
-            </p>
+          <div class="business-analytics__kpi-content">
+            <h3>Total Pedidos</h3>
+            <div class="business-analytics__kpi-value">{{ kpiData.totalOrders }}</div>
+            <div class="business-analytics__kpi-change" :class="getChangeClass(kpiData.ordersChange)">
+              <svg v-if="kpiData.ordersChange > 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 11 12 6 7 11"></polyline>
+                <line x1="12" y1="18" x2="12" y2="6"></line>
+              </svg>
+              <svg v-else-if="kpiData.ordersChange < 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="7 13 12 18 17 13"></polyline>
+                <line x1="12" y1="6" x2="12" y2="18"></line>
+              </svg>
+              <span>{{ formatPercentage(kpiData.ordersChange) }}</span>
+            </div>
           </div>
         </div>
 
-        <div class="business-analytics__customer-card">
-          <div class="business-analytics__customer-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <title>Clientes Recurrentes Icono</title>
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="8.5" cy="7" r="4"></circle>
-              <line x1="20" y1="8" x2="20" y2="14"></line>
-              <line x1="23" y1="11" x2="17" y2="11"></line>
-            </svg>
-          </div>
-          <div class="business-analytics__customer-content">
-            <h4 class="business-analytics__customer-title">Clientes Recurrentes</h4>
-            <p class="business-analytics__customer-value">{{ analytics.returningCustomers }}</p>
-            <p :class="['business-analytics__customer-change', getChangeClass(analytics.returningCustomersChange)]">
-              <span v-if="analytics.returningCustomersChange >= 0">+</span>{{ analytics.returningCustomersChange }}%
-            </p>
-          </div>
-        </div>
-
-        <div class="business-analytics__customer-card">
-          <div class="business-analytics__customer-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <title>Tiempo de Entrega Icono</title>
+        <div class="business-analytics__kpi-card business-analytics__kpi-card--average">
+          <div class="business-analytics__kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
           </div>
-          <div class="business-analytics__customer-content">
-            <h4 class="business-analytics__customer-title">Tiempo de Entrega</h4>
-            <p class="business-analytics__customer-value">{{ analytics.averageDeliveryTime }} min</p>
-            <p :class="['business-analytics__customer-change', getInverseChangeClass(analytics.deliveryTimeChange)]">
-              <span v-if="analytics.deliveryTimeChange <= 0">-</span>
-              <span v-else>+</span>
-              {{ Math.abs(analytics.deliveryTimeChange) }}%
-            </p>
+          <div class="business-analytics__kpi-content">
+            <h3>Ticket Promedio</h3>
+            <div class="business-analytics__kpi-value">{{ formatCurrency(kpiData.averageOrderValue) }}</div>
+            <div class="business-analytics__kpi-change" :class="getChangeClass(kpiData.aovChange)">
+              <svg v-if="kpiData.aovChange > 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 11 12 6 7 11"></polyline>
+                <line x1="12" y1="18" x2="12" y2="6"></line>
+              </svg>
+              <svg v-else-if="kpiData.aovChange < 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="7 13 12 18 17 13"></polyline>
+                <line x1="12" y1="6" x2="12" y2="18"></line>
+              </svg>
+              <span>{{ formatPercentage(kpiData.aovChange) }}</span>
+            </div>
           </div>
         </div>
 
-        <div class="business-analytics__customer-card">
-          <div class="business-analytics__customer-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <title>Clientes Totales Icono</title>
+        <div class="business-analytics__kpi-card business-analytics__kpi-card--customers">
+          <div class="business-analytics__kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
           </div>
-          <div class="business-analytics__customer-content">
-            <h4 class="business-analytics__customer-title">Clientes Totales</h4>
-            <p class="business-analytics__customer-value">{{ analytics.totalCustomers }}</p>
-            <p class="business-analytics__customer-satisfaction">
-              {{ analytics.customerSatisfaction }}% satisfacción
-            </p>
+          <div class="business-analytics__kpi-content">
+            <h3>Clientes Únicos</h3>
+            <div class="business-analytics__kpi-value">{{ kpiData.uniqueCustomers }}</div>
+            <div class="business-analytics__kpi-change" :class="getChangeClass(kpiData.customersChange)">
+              <svg v-if="kpiData.customersChange > 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 11 12 6 7 11"></polyline>
+                <line x1="12" y1="18" x2="12" y2="6"></line>
+              </svg>
+              <svg v-else-if="kpiData.customersChange < 0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="7 13 12 18 17 13"></polyline>
+                <line x1="12" y1="6" x2="12" y2="18"></line>
+              </svg>
+              <span>{{ formatPercentage(kpiData.customersChange) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="business-analytics__charts">
+        <!-- Revenue Chart -->
+        <div class="business-analytics__chart-container">
+          <div class="business-analytics__chart-header">
+            <h3>Ingresos en el Tiempo</h3>
+            <div class="business-analytics__chart-controls">
+              <button 
+                v-for="period in chartPeriods" 
+                :key="period.value"
+                @click="changeChartPeriod(period.value)"
+                :class="['business-analytics__chart-btn', { 'business-analytics__chart-btn--active': chartPeriod === period.value }]"
+              >
+                {{ period.label }}
+              </button>
+            </div>
+          </div>
+          <div class="business-analytics__chart">
+            <canvas ref="revenueChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+
+        <!-- Orders Chart -->
+        <div class="business-analytics__chart-container">
+          <div class="business-analytics__chart-header">
+            <h3>Distribución de Estados de Pedidos</h3>
+          </div>
+          <div class="business-analytics__chart">
+            <canvas ref="ordersChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tables Section -->
+      <div class="business-analytics__tables">
+        <!-- Top Products -->
+        <div class="business-analytics__table-container">
+          <div class="business-analytics__table-header">
+            <h3>Productos Más Vendidos</h3>
+            <span class="business-analytics__table-period">{{ selectedPeriodLabel }}</span>
+          </div>
+          <div class="business-analytics__table-wrapper">
+            <table class="business-analytics__table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Restaurante</th>
+                  <th>Pedidos</th>
+                  <th>Ingresos</th>
+                  <th>Precio Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="product in topProducts" :key="product.id" class="business-analytics__table-row">
+                  <td>
+                    <div class="business-analytics__product-info">
+                      <img :src="product.imageUrl || '/images/product-placeholder.png'" :alt="product.name" class="business-analytics__product-image">
+                      <span class="business-analytics__product-name">{{ product.name }}</span>
+                    </div>
+                  </td>
+                  <td>{{ product.restaurantName }}</td>
+                  <td><span class="business-analytics__metric">{{ product.totalOrders }}</span></td>
+                  <td><span class="business-analytics__metric business-analytics__metric--revenue">{{ formatCurrency(product.totalRevenue) }}</span></td>
+                  <td><span class="business-analytics__metric">{{ formatCurrency(product.averagePrice) }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-if="topProducts.length === 0" class="business-analytics__table-empty">
+              <p>No hay datos de productos para el período seleccionado</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Restaurant Performance -->
+        <div class="business-analytics__table-container" v-if="restaurants.length > 1">
+          <div class="business-analytics__table-header">
+            <h3>Rendimiento por Restaurante</h3>
+            <span class="business-analytics__table-period">{{ selectedPeriodLabel }}</span>
+          </div>
+          <div class="business-analytics__table-wrapper">
+            <table class="business-analytics__table">
+              <thead>
+                <tr>
+                  <th>Restaurante</th>
+                  <th>Pedidos</th>
+                  <th>Ingresos</th>
+                  <th>Ticket Promedio</th>
+                  <th>Rating</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="restaurant in restaurantStats" :key="restaurant.id" class="business-analytics__table-row">
+                  <td>
+                    <div class="business-analytics__restaurant-info">
+                      <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name" class="business-analytics__restaurant-image">
+                      <span class="business-analytics__restaurant-name">{{ restaurant.name }}</span>
+                    </div>
+                  </td>
+                  <td><span class="business-analytics__metric">{{ restaurant.totalOrders }}</span></td>
+                  <td><span class="business-analytics__metric business-analytics__metric--revenue">{{ formatCurrency(restaurant.totalRevenue) }}</span></td>
+                  <td><span class="business-analytics__metric">{{ formatCurrency(restaurant.averageOrderValue) }}</span></td>
+                  <td>
+                    <div class="business-analytics__rating">
+                      <span class="business-analytics__rating-value">{{ restaurant.averageRating.toFixed(1) }}</span>
+                      <div class="business-analytics__rating-stars">
+                        <span class="business-analytics__stars-filled" :style="{ width: `${(restaurant.averageRating / 5) * 100}%` }">★★★★★</span>
+                        <span class="business-analytics__stars-empty">★★★★★</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
-     <div v-else class="business-analytics__loading-placeholder">Cargando análisis de clientes...</div>
-
-    <div v-if="!loading" class="business-analytics__reports">
-      <div class="business-analytics__section-header">
-        <h3 class="business-analytics__section-title">Informes y Exportación</h3>
-      </div>
-      <div class="business-analytics__reports-grid">
-        <div class="business-analytics__report-card">
-          <div class="business-analytics__report-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <title>Descargar Informe de Ventas Icono</title>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </div>
-          <div class="business-analytics__report-content">
-            <h4 class="business-analytics__report-title">Informe de Ventas</h4>
-            <p class="business-analytics__report-description">Descarga un informe detallado con todas las ventas del
-              periodo seleccionado.</p>
-            <button class="business-analytics__report-btn" @click="downloadReport('sales_pdf')">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Descargar PDF</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="business-analytics__report-card">
-          <div class="business-analytics__report-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-               <title>Descargar Datos en Excel Icono</title>
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-          </div>
-          <div class="business-analytics__report-content">
-            <h4 class="business-analytics__report-title">Datos en Excel</h4>
-            <p class="business-analytics__report-description">Exporta todos los datos de ventas, productos y clientes a
-              formato Excel.</p>
-            <button class="business-analytics__report-btn" @click="downloadReport('data_excel')">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Descargar Excel</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="business-analytics__report-card">
-          <div class="business-analytics__report-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <title>Descargar Análisis de Rendimiento Icono</title>
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-          </div>
-          <div class="business-analytics__report-content">
-            <h4 class="business-analytics__report-title">Análisis de Rendimiento</h4>
-            <p class="business-analytics__report-description">Informe completo de rendimiento con comparativas y
-              proyecciones.</p>
-            <button class="business-analytics__report-btn" @click="downloadReport('performance_report')">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Descargar Informe</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="business-analytics__report-card">
-          <div class="business-analytics__report-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <title>Descargar Calendario de Ventas Icono</title>
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <line x1="9" y1="21" x2="9" y2="9"></line>
-            </svg>
-          </div>
-          <div class="business-analytics__report-content">
-            <h4 class="business-analytics__report-title">Calendario de Ventas</h4>
-            <p class="business-analytics__report-description">Visualiza tus ventas en un formato de calendario mensual.
-            </p>
-            <button class="business-analytics__report-btn" @click="downloadReport('sales_calendar')">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Descargar Calendario</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-else class="business-analytics__loading-placeholder">Cargando informes...</div>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue' // Removed 'computed' as it's unused
-// import { useBusinessAuthStore } from '@/stores/businessAuth' // Comment out if not used
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, nextTick, watch } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { api } from '@/services/api'
 
-// Store
-// const businessAuthStore = useBusinessAuthStore() // Comment out if not used
+const authStore = useAuthStore()
+const router = useRouter()
 
-// --- Interfaces for Type Safety (Recommended) ---
-interface ProductAnalytics {
-  id: number;
-  name: string;
-  category: string;
-  salesCount: number;
-  quantity: number;
-  revenue: number;
-  imageUrl?: string;
-}
-
-interface CategorySale {
-  id: number;
-  name: string;
-  sales: number;
-  percentage: number;
-}
-
-interface AnalyticsData {
-  totalRevenue: number;
-  revenueChange: number;
-  totalOrders: number;
-  ordersChange: number;
-  averageOrderValue: number;
-  aovChange: number;
-  averageRating: number;
-  newCustomers: number;
-  newCustomersChange: number;
-  returningCustomers: number;
-  returningCustomersChange: number;
-  totalCustomers: number;
-  customerSatisfaction: number;
-  averageDeliveryTime: number;
-  deliveryTimeChange: number;
-  topProducts: ProductAnalytics[];
-  categorySales: CategorySale[];
-  // Future: Add fields for dynamic chart data if not using a library
-  // revenueTrendData?: { current: { x: any, y: number }[], previous: { x: any, y: number }[] };
-  // ordersByDayData?: { day: string, orders: number }[];
-}
-
-// Estado
+// Estado principal
 const loading = ref(true)
-const selectedPeriod = ref('month') // Default period
-const initialStartDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-const initialEndDate = new Date();
+const business = ref(null)
+const restaurants = ref([])
+const allOrders = ref([])
+const allProducts = ref([])
+const isComponentMounted = ref(false)
+const isDataLoaded = ref(false)
 
-const startDate = ref(initialStartDate.toISOString().split('T')[0])
-const endDate = ref(initialEndDate.toISOString().split('T')[0])
+// Filtros
+const selectedPeriod = ref(30)
+const selectedRestaurantId = ref('all')
+const chartPeriod = ref('daily')
 
-// Opciones de periodos
-const periods = [
-  { label: 'Hoy', value: 'today' },
-  { label: 'Esta Semana', value: 'week' },
-  { label: 'Este Mes', value: 'month' },
-  { label: 'Este Año', value: 'year' },
-  { label: 'Personalizado', value: 'custom' }
+// Charts
+const revenueChart = ref(null)
+const ordersChart = ref(null)
+let revenueChartInstance = null
+let ordersChartInstance = null
+
+// Períodos disponibles
+const chartPeriods = [
+  { label: 'Diario', value: 'daily' },
+  { label: 'Semanal', value: 'weekly' },
+  { label: 'Mensual', value: 'monthly' }
 ]
 
-// Datos de ejemplo (en un caso real, estos datos vendrían de una API)
-const analytics = ref<AnalyticsData>({
-  totalRevenue: 12567.85,
-  revenueChange: 12.4,
-  totalOrders: 324,
-  ordersChange: 8.7,
-  averageOrderValue: 38.79,
-  aovChange: 3.5,
-  averageRating: 4.6,
-
-  newCustomers: 87,
-  newCustomersChange: 15.3,
-  returningCustomers: 156,
-  returningCustomersChange: 4.2,
-  totalCustomers: 243,
-  customerSatisfaction: 92,
-  averageDeliveryTime: 28,
-  deliveryTimeChange: -5.2,
-
-  topProducts: [
-    { id: 1, name: 'Hamburguesa Clásica', category: 'Hamburguesas', salesCount: 156, quantity: 156, revenue: 1918.20, imageUrl: '/images/product-placeholder.png' },
-    { id: 2, name: 'Pizza Margarita', category: 'Pizzas', salesCount: 124, quantity: 124, revenue: 1612.00, imageUrl: '/images/product-placeholder.png' },
-    { id: 3, name: 'Pasta Carbonara', category: 'Pastas', salesCount: 98, quantity: 98, revenue: 1372.00, imageUrl: '/images/product-placeholder.png' },
-    { id: 4, name: 'Ensalada César', category: 'Ensaladas', salesCount: 76, quantity: 76, revenue: 912.00, imageUrl: '/images/product-placeholder.png' },
-    { id: 5, name: 'Patatas Fritas', category: 'Complementos', salesCount: 243, quantity: 243, revenue: 849.00, imageUrl: '/images/product-placeholder.png' }
-  ],
-
-  categorySales: [
-    { id: 1, name: 'Hamburguesas', sales: 3624.50, percentage: 40 },
-    { id: 2, name: 'Pizzas', sales: 2718.38, percentage: 30 },
-    { id: 3, name: 'Pastas', sales: 1812.25, percentage: 20 },
-    { id: 4, name: 'Ensaladas y Complementos', sales: 906.13, percentage: 10 }
-  ]
+// Computed
+const selectedPeriodLabel = computed(() => {
+  const labels = {
+    7: 'Últimos 7 días',
+    30: 'Últimos 30 días', 
+    90: 'Últimos 90 días',
+    365: 'Último año'
+  }
+  return labels[selectedPeriod.value] || 'Período personalizado'
 })
 
-// --- Métodos ---
-const formatCurrency = (value: number | undefined): string => {
-  if (typeof value !== 'number' || isNaN(value)) {
-    return '0,00 €';
-  }
-  return value.toFixed(2).replace('.', ',') + ' €'
-}
+// Filtrar órdenes por período y restaurante
+const filteredOrders = computed(() => {
+  let orders = [...allOrders.value]
 
-const getChangeClass = (change: number | undefined): string => {
-  if (typeof change !== 'number' || isNaN(change)) return '';
-  return change >= 0 ? 'business-analytics__card-change--positive' : 'business-analytics__card-change--negative'
-}
+  // Filtrar por período
+  const now = new Date()
+  const startDate = new Date(now.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
+  orders = orders.filter(order => new Date(order.createdAt) >= startDate)
 
-const getInverseChangeClass = (change: number | undefined): string => {
-  if (typeof change !== 'number' || isNaN(change)) return '';
-  return change <= 0 ? 'business-analytics__card-change--positive' : 'business-analytics__card-change--negative'
-}
-
-const getCategoryColor = (categoryId: number | undefined): string => {
-  if (typeof categoryId !== 'number' || isNaN(categoryId)) return '#cccccc'; // Default color
-  const colors = ['#06a98d', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#6366f1'];
-  // Ensure positive index and handle categoryId possibly being 0 or other non 1-based values
-  return colors[((categoryId - 1 % colors.length) + colors.length) % colors.length];
-}
-
-const fetchAnalyticsData = async (start: string, end: string) => {
-  loading.value = true;
-  console.log(`Workspaceing data for period: ${start} to ${end}`);
-  // --- Simulación de API ---
-  // En una aplicación real, aquí harías una llamada a tu backend:
-  // try {
-  //   const response = await api.getAnalytics({ startDate: start, endDate: end });
-  //   analytics.value = response.data; // Actualiza analytics.value con los datos recibidos
-  // } catch (error) {
-  //   console.error("Error fetching analytics data:", error);
-  //   // Manejar el error, quizás mostrar un mensaje al usuario
-  // } finally {
-  //   loading.value = false;
-  // }
-
-  // Simulación con setTimeout
-  await new Promise(resolve => setTimeout(resolve, 800));
-  // Aquí podrías modificar `analytics.value` con datos mock diferentes según el rango,
-  // pero para esta demo, simplemente usamos los datos hardcodeados.
-  // Por ejemplo, para simular un cambio:
-  // analytics.value.totalRevenue = Math.random() * 20000;
-  // analytics.value.totalOrders = Math.floor(Math.random() * 500);
-  loading.value = false;
-}
-
-
-const applyDateRange = () => {
-  // Este método se llama cuando se pulsa "Aplicar" para el rango personalizado
-  // o cuando se cambia un periodo predefinido (a través de updateDateRange)
-  fetchAnalyticsData(startDate.value, endDate.value);
-}
-
-const updateDateRange = (newPeriodValue?: string) => {
-  const periodToUpdate = newPeriodValue || selectedPeriod.value;
-  const today = new Date();
-  let newStart = new Date(today); // Default to today
-  let newEnd = new Date(today);   // Default to today
-
-  switch (periodToUpdate) {
-    case 'today':
-      // newStart and newEnd are already today
-      break;
-    case 'week':
-      // Lunes de esta semana
-      const dayOfWeek = today.getDay(); // 0 (Domingo) a 6 (Sábado)
-      const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para que Lunes sea el inicio
-      newStart = new Date(today.setDate(diffToMonday));
-      // newEnd es hoy
-      break;
-    case 'month':
-      newStart = new Date(today.getFullYear(), today.getMonth(), 1); // Primer día del mes actual
-      // newEnd es hoy
-      break;
-    case 'year':
-      newStart = new Date(today.getFullYear(), 0, 1); // Primer día del año actual
-      // newEnd es hoy
-      break;
-    case 'custom':
-      // Para 'custom', las fechas se gestionan directamente por los inputs y el botón "Aplicar".
-      // No es necesario actualizar startDate y endDate aquí, solo llamar a fetch si se pulsa "Aplicar".
-      // Si se selecciona 'custom' desde otro periodo, no se hace nada hasta pulsar "Aplicar".
-      return;
+  // Filtrar por restaurante
+  if (selectedRestaurantId.value !== 'all') {
+    orders = orders.filter(order => order.restaurantId === selectedRestaurantId.value)
   }
 
-  startDate.value = newStart.toISOString().split('T')[0];
-  endDate.value = newEnd.toISOString().split('T')[0];
+  return orders
+})
 
-  fetchAnalyticsData(startDate.value, endDate.value);
-}
+// Calcular KPIs basados en datos reales
+const kpiData = computed(() => {
+  const currentOrders = filteredOrders.value
+  const currentRevenue = currentOrders.reduce((sum, order) => sum + order.total, 0)
+  const currentOrderCount = currentOrders.length
+  const uniqueCustomerIds = new Set(currentOrders.map(order => order.userId))
+  const uniqueCustomers = uniqueCustomerIds.size
 
-const downloadReport = (reportType: string) => {
-  // Lógica para descargar informes (simulada)
-  alert(`Descargando informe: ${reportType} para el periodo ${startDate.value} - ${endDate.value}`);
-  // En una app real:
-  // 1. Preparar los datos del informe.
-  // 2. Usar una librería (jsPDF, ExcelJS) o una API de backend para generar el archivo.
-  // 3. Provocar la descarga en el navegador.
-}
-
-// --- Lifecycle Hooks ---
-onMounted(() => {
-  updateDateRange(); // Carga los datos para el periodo por defecto ('month')
-});
-
-// --- Watchers ---
-watch(selectedPeriod, (newPeriodValue) => {
-  if (newPeriodValue !== 'custom') {
-    updateDateRange(newPeriodValue);
+  // Calcular período anterior para comparación
+  const now = new Date()
+  const currentStartDate = new Date(now.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
+  const previousStartDate = new Date(currentStartDate.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
+  
+  let previousOrders = [...allOrders.value]
+  if (selectedRestaurantId.value !== 'all') {
+    previousOrders = previousOrders.filter(order => order.restaurantId === selectedRestaurantId.value)
   }
-  // Si es 'custom', el usuario debe ajustar las fechas y pulsar 'Aplicar'.
-  // Los date inputs ya están vinculados con v-model a startDate y endDate.
-});
+  previousOrders = previousOrders.filter(order => {
+    const orderDate = new Date(order.createdAt)
+    return orderDate >= previousStartDate && orderDate < currentStartDate
+  })
 
-// Opcional: Si quieres que los cambios en las fechas 'custom' se apliquen inmediatamente
-// sin necesidad del botón "Aplicar", podrías hacer watch sobre startDate y endDate
-// cuando selectedPeriod.value === 'custom'. Sin embargo, el botón "Aplicar" da más control.
-// watch([startDate, endDate], () => {
-//   if (selectedPeriod.value === 'custom') {
-//      fetchAnalyticsData(startDate.value, endDate.value);
-//   }
-// });
+  const previousRevenue = previousOrders.reduce((sum, order) => sum + order.total, 0)
+  const previousOrderCount = previousOrders.length
+  const previousUniqueCustomerIds = new Set(previousOrders.map(order => order.userId))
+  const previousUniqueCustomers = previousUniqueCustomerIds.size
 
+  // Calcular cambios porcentuales
+  const revenueChange = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0
+  const ordersChange = previousOrderCount > 0 ? ((currentOrderCount - previousOrderCount) / previousOrderCount) * 100 : 0
+  const customersChange = previousUniqueCustomers > 0 ? ((uniqueCustomers - previousUniqueCustomers) / previousUniqueCustomers) * 100 : 0
+
+  const currentAOV = currentOrderCount > 0 ? currentRevenue / currentOrderCount : 0
+  const previousAOV = previousOrderCount > 0 ? previousRevenue / previousOrderCount : 0
+  const aovChange = previousAOV > 0 ? ((currentAOV - previousAOV) / previousAOV) * 100 : 0
+
+  return {
+    totalRevenue: currentRevenue,
+    totalOrders: currentOrderCount,
+    averageOrderValue: currentAOV,
+    uniqueCustomers: uniqueCustomers,
+    revenueChange,
+    ordersChange,  
+    aovChange,
+    customersChange
+  }
+})
+
+// Top productos basados en datos reales
+const topProducts = computed(() => {
+  const productStats = new Map()
+
+  filteredOrders.value.forEach(order => {
+    order.orderItems?.forEach(item => {
+      const productId = item.productId
+      if (!productStats.has(productId)) {
+        productStats.set(productId, {
+          id: productId,
+          name: item.product?.name || 'Producto desconocido',
+          imageUrl: item.product?.imageUrl,
+          restaurantName: order.restaurant?.name || 'Restaurante',
+          totalOrders: 0,
+          totalRevenue: 0,
+          totalQuantity: 0
+        })
+      }
+
+      const stats = productStats.get(productId)
+      stats.totalOrders += item.quantity
+      stats.totalRevenue += item.subtotal
+      stats.totalQuantity += item.quantity
+    })
+  })
+
+  return Array.from(productStats.values())
+    .map(product => ({
+      ...product,
+      averagePrice: product.totalQuantity > 0 ? product.totalRevenue / product.totalQuantity : 0
+    }))
+    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .slice(0, 10)
+})
+
+// Stats por restaurante
+const restaurantStats = computed(() => {
+  if (restaurants.value.length <= 1) return []
+
+  return restaurants.value.map(restaurant => {
+    const restaurantOrders = filteredOrders.value.filter(order => order.restaurantId === restaurant.id)
+    const totalRevenue = restaurantOrders.reduce((sum, order) => sum + order.total, 0)
+    const totalOrders = restaurantOrders.length
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+
+    return {
+      id: restaurant.id,
+      name: restaurant.name,
+      logoUrl: restaurant.logoUrl,
+      totalOrders,
+      totalRevenue,
+      averageOrderValue,
+      averageRating: restaurant.averageRating || 0
+    }
+  }).sort((a, b) => b.totalRevenue - a.totalRevenue)
+})
+
+// Funciones de utilidad
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(value)
+}
+
+const formatPercentage = (value: number): string => {
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
+}
+
+const getChangeClass = (change: number): string => {
+  if (change > 0) return 'business-analytics__kpi-change--positive'
+  if (change < 0) return 'business-analytics__kpi-change--negative'
+  return 'business-analytics__kpi-change--neutral'
+}
+
+// Cargar datos (usando mismo patrón que BusinessHome.vue)
+const loadBusiness = async () => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
+
+    const response = await api.get(`/api/Business/user/${userId}`)
+    if (response.data) {
+      business.value = response.data
+    }
+  } catch (error) {
+    console.error('Error cargando business:', error)
+  }
+}
+
+const loadRestaurants = async () => {
+  try {
+    if (!business.value?.id) return
+
+    const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
+    if (response.data) {
+      restaurants.value = response.data
+    }
+  } catch (error) {
+    console.error('Error cargando restaurantes:', error)
+    restaurants.value = []
+  }
+}
+
+const loadOrders = async () => {
+  if (restaurants.value.length === 0) return
+
+  try {
+    const allOrdersData = []
+
+    for (const restaurant of restaurants.value) {
+      try {
+        const ordersResponse = await api.get(`/api/Orders/restaurant/${restaurant.id}`)
+        if (ordersResponse.data) {
+          const restaurantOrders = ordersResponse.data.map((order: any) => ({
+            ...order,
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name
+          }))
+          allOrdersData.push(...restaurantOrders)
+        }
+      } catch (error) {
+        console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
+      }
+    }
+
+    allOrders.value = allOrdersData
+  } catch (error) {
+    console.error('Error cargando pedidos:', error)
+  }
+}
+
+const loadProducts = async () => {
+  if (restaurants.value.length === 0) return
+
+  try {
+    const allProductsData = []
+
+    for (const restaurant of restaurants.value) {
+      try {
+        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
+        if (productsResponse.data) {
+          const restaurantProducts = productsResponse.data.map((product: any) => ({
+            ...product,
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name
+          }))
+          allProductsData.push(...restaurantProducts)
+        }
+      } catch (error) {
+        console.error(`Error productos restaurante ${restaurant.id}:`, error)
+      }
+    }
+
+    allProducts.value = allProductsData
+  } catch (error) {
+    console.error('Error cargando productos:', error)
+  }
+}
+
+// Crear gráficos
+const createRevenueChart = async () => {
+  if (!revenueChart.value) return
+
+  const ctx = revenueChart.value.getContext('2d')
+  if (!ctx) return
+  
+  // Preparar datos de ingresos por día
+  const chartData = prepareRevenueChartData()
+  
+  // Destruir gráfico anterior si existe
+  if (revenueChartInstance) {
+    revenueChartInstance.destroy()
+    revenueChartInstance = null
+  }
+
+  // Verificar que Chart.js esté disponible
+  if (!window.Chart) return
+
+  // Crear nuevo gráfico usando Chart.js básico
+  const gradient = ctx.createLinearGradient(0, 0, 0, 400)
+  gradient.addColorStop(0, 'rgba(6, 169, 141, 0.1)')
+  gradient.addColorStop(1, 'rgba(6, 169, 141, 0)')
+
+  revenueChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [{
+        label: 'Ingresos',
+        data: chartData.values,
+        borderColor: '#06a98d',
+        backgroundColor: gradient,
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return formatCurrency(value)
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+const createOrdersChart = async () => {
+  if (!ordersChart.value) return
+
+  const ctx = ordersChart.value.getContext('2d')
+  if (!ctx) return
+  
+  // Contar pedidos por estado
+  const statusCounts = filteredOrders.value.reduce((acc, order) => {
+    acc[order.status] = (acc[order.status] || 0) + 1
+    return acc
+  }, {})
+
+  const statusLabels = {
+    'Pending': 'Pendientes',
+    'Accepted': 'Aceptados', 
+    'Preparing': 'En preparación',
+    'ReadyForPickup': 'Listos',
+    'OnTheWay': 'En camino',
+    'Delivered': 'Entregados',
+    'Cancelled': 'Cancelados'
+  }
+
+  const labels = Object.keys(statusCounts).map(status => statusLabels[status] || status)
+  const data = Object.values(statusCounts)
+  const colors = [
+    '#fbbf24', '#3b82f6', '#8b5cf6', '#0ea5e9', '#10b981', '#ef4444'
+  ]
+
+  // Destruir gráfico anterior si existe
+  if (ordersChartInstance) {
+    ordersChartInstance.destroy()
+    ordersChartInstance = null
+  }
+
+  // Verificar que Chart.js esté disponible
+  if (!window.Chart) return
+
+  // Si no hay datos, mostrar mensaje
+  if (data.length === 0 || data.every(d => d === 0)) {
+    ordersChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Sin datos'],
+        datasets: [{
+          data: [1],
+          backgroundColor: ['#e2e8f0'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    })
+    return
+  }
+
+  ordersChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  })
+}
+
+const prepareRevenueChartData = () => {
+  const now = new Date()
+  const startDate = new Date(now.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
+  
+  const labels = []
+  const values = []
+  
+  // Generar etiquetas según el período del gráfico
+  const daysInPeriod = selectedPeriod.value
+  const dataPoints = chartPeriod.value === 'daily' ? Math.min(daysInPeriod, 30) : 
+                     chartPeriod.value === 'weekly' ? Math.min(Math.ceil(daysInPeriod / 7), 12) :
+                     Math.min(Math.ceil(daysInPeriod / 30), 12)
+  
+  for (let i = dataPoints - 1; i >= 0; i--) {
+    let periodStart, periodEnd, label
+    
+    if (chartPeriod.value === 'daily') {
+      periodStart = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000))
+      periodEnd = new Date(periodStart.getTime() + (24 * 60 * 60 * 1000))
+      label = periodStart.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })
+    } else if (chartPeriod.value === 'weekly') {
+      periodStart = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000))
+      periodEnd = new Date(periodStart.getTime() + (7 * 24 * 60 * 60 * 1000))
+      label = `Sem ${Math.ceil((now.getTime() - periodStart.getTime()) / (7 * 24 * 60 * 60 * 1000))}`
+    } else {
+      periodStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      periodEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+      label = periodStart.toLocaleDateString('es-ES', { month: 'short' })
+    }
+    
+    const periodRevenue = filteredOrders.value
+      .filter(order => {
+        const orderDate = new Date(order.createdAt)
+        return orderDate >= periodStart && orderDate < periodEnd
+      })
+      .reduce((sum, order) => sum + order.total, 0)
+    
+    labels.push(label)
+    values.push(periodRevenue)
+  }
+  
+  return { labels, values }
+}
+
+// Event handlers
+const updateAnalytics = async () => {
+  await nextTick()
+  await createCharts()
+}
+
+const changeChartPeriod = async (period: string) => {
+  chartPeriod.value = period
+  await nextTick()
+  await createCharts()
+}
+
+const createCharts = async () => {
+  await nextTick()
+  await Promise.all([
+    createRevenueChart(),
+    createOrdersChart()
+  ])
+}
+
+const refreshData = async () => {
+  loading.value = true
+  
+  // Resetear el estado para que el watcher se dispare
+  isDataLoaded.value = false
+  
+  try {
+    await loadBusiness()
+    await loadRestaurants() 
+    await loadOrders()
+    await loadProducts()
+    isDataLoaded.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+// Watcher para crear gráficos cuando los datos estén listos
+watch(isDataLoaded, async (newValue) => {
+  if (newValue && isComponentMounted.value) {
+    await nextTick()
+    await createCharts()
+  }
+})
+
+// Watchers para actualizar automáticamente cuando cambian los filtros
+watch([selectedPeriod, selectedRestaurantId], async () => {
+  if (isDataLoaded.value) {
+    await updateAnalytics()
+  }
+})
+
+watch(chartPeriod, async () => {
+  if (isDataLoaded.value) {
+    await updateAnalytics()  
+  }
+})
+
+// Lifecycle
+onMounted(async () => {
+  isComponentMounted.value = true
+  
+  if (!authStore.isAuthenticated()) {
+    const isAuth = await authStore.checkAuth()
+    if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
+      router.push('/login')
+      return
+    }
+  }
+
+  // Cargar Chart.js si no está disponible
+  if (!window.Chart) {
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js'
+    script.onload = async () => {
+      await refreshData()
+    }
+    document.head.appendChild(script)
+  } else {
+    await refreshData()
+  }
+})
+
+onActivated(async () => {
+  if (isDataLoaded.value) {
+    await nextTick()
+    await createCharts()
+  }
+})
+
+onBeforeUnmount(() => {
+  isComponentMounted.value = false
+  isDataLoaded.value = false
+  
+  if (revenueChartInstance) {
+    revenueChartInstance.destroy()
+    revenueChartInstance = null
+  }
+  if (ordersChartInstance) {
+    ordersChartInstance.destroy()
+    ordersChartInstance = null
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -673,171 +833,157 @@ watch(selectedPeriod, (newPeriodValue) => {
   &__header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
 
-    @media (max-width: 992px) {
+    @media (max-width: 768px) {
       flex-direction: column;
-      align-items: flex-start;
     }
+  }
+
+  &__header-left {
+    flex: 1;
   }
 
   &__title {
     font-size: 1.75rem;
     font-weight: 700;
-    margin: 0;
-    color: #1e293b; // Consider SCSS variable: $color-text-dark;
+    margin: 0 0 0.25rem;
+    color: #1e293b;
   }
 
-  &__period-selector {
+  &__subtitle {
+    color: #64748b;
+    margin: 0;
+  }
+
+  &__header-right {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
 
-    @media (max-width: 768px) {
+    @media (max-width: 480px) {
       width: 100%;
       flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
     }
   }
 
-  &__period-btn {
-    background: none;
-    border: none;
+  &__select {
     padding: 0.5rem 0.75rem;
-    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    color: #1e293b;
     font-size: 0.9rem;
-    color: #64748b; // $color-text-light
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #f1f5f9; // $color-bg-subtle-hover
-      color: #1e293b; // $color-text-dark
-    }
-
-    &--active {
-      background-color: #e0f2fe; // $color-primary-light
-      color: #0ea5e9; // $color-primary-active
-      font-weight: 500;
-    }
-  }
-
-  &__date-range {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-left: 0.5rem;
-
-    @media (max-width: 768px) {
-      margin-left: 0;
-      width: 100%;
-      flex-wrap: wrap;
-    }
-
-    span {
-      color: #64748b; // $color-text-light
-      font-size: 0.9rem;
-    }
-  }
-
-  &__date-input {
-    padding: 0.4rem 0.6rem;
-    border: 1px solid #e2e8f0; // $color-border
-    border-radius: 6px;
-    font-size: 0.9rem;
-    color: #1e293b; // $color-text-dark
-
-    &:disabled {
-      background-color: #f1f5f9; // $color-bg-disabled
-      color: #94a3b8; // $color-text-disabled
-      cursor: not-allowed;
-    }
+    min-width: 150px;
 
     &:focus {
       outline: none;
-      border-color: #06a98d; // $color-primary
-      box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1); // Consider rgba($color-primary, 0.1)
+      border-color: #06a98d;
+      box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1);
+    }
+
+    @media (max-width: 480px) {
+      width: 100%;
     }
   }
 
-  &__date-apply {
-    padding: 0.4rem 0.8rem;
-    background-color: #06a98d; // $color-primary
-    color: white;
-    border: none;
-    border-radius: 6px;
+  &__refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #1e293b;
     font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 
-    &:hover {
-      background-color: #058a73;
+    &:hover:not(:disabled) {
+      border-color: #cbd5e0;
+      background-color: #f8fafc;
     }
 
     &:disabled {
-      background-color: #94a3b8; // $color-bg-disabled-strong
+      opacity: 0.6;
       cursor: not-allowed;
     }
   }
 
-  &__loading-placeholder {
-    padding: 2rem;
+  &__refresh-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.8s ease;
+
+    &--spinning {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
     text-align: center;
-    color: #64748b;
-    font-size: 1rem;
   }
 
-  // Summary cards
-  &__summary {
+  &__spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f1f5f9;
+    border-radius: 50%;
+    border-top-color: #06a98d;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  // KPI Cards
+  &__kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
     margin-bottom: 2rem;
-
-    @media (max-width: 768px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    @media (max-width: 480px) {
-      grid-template-columns: 1fr;
-    }
   }
 
-  &__card {
+  &__kpi-card {
     background-color: white;
     border-radius: 12px;
+    padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
+    border-left: 4px solid transparent;
 
     &--revenue {
-      border-top: 3px solid #10b981; // $color-success
+      border-left-color: #10b981;
     }
 
     &--orders {
-      border-top: 3px solid #3b82f6; // $color-info
+      border-left-color: #3b82f6;
     }
 
-    &--avg {
-      border-top: 3px solid #8b5cf6; // $color-purple
+    &--average {
+      border-left-color: #8b5cf6;
     }
 
-    &--rating {
-      border-top: 3px solid #f59e0b; // $color-warning
+    &--customers {
+      border-left-color: #f59e0b;
     }
   }
 
-  &__card-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
+  &__kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -848,87 +994,79 @@ watch(selectedPeriod, (newPeriodValue) => {
       height: 24px;
     }
 
-    .business-analytics__card--revenue & {
-      background-color: rgba(16, 185, 129, 0.1); // rgba($color-success, 0.1)
-      color: #10b981; // $color-success
+    .business-analytics__kpi-card--revenue & {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #10b981;
     }
 
-    .business-analytics__card--orders & {
-      background-color: rgba(59, 130, 246, 0.1); // rgba($color-info, 0.1)
-      color: #3b82f6; // $color-info
+    .business-analytics__kpi-card--orders & {
+      background-color: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
     }
 
-    .business-analytics__card--avg & {
-      background-color: rgba(139, 92, 246, 0.1); // rgba($color-purple, 0.1)
-      color: #8b5cf6; // $color-purple
+    .business-analytics__kpi-card--average & {
+      background-color: rgba(139, 92, 246, 0.1);
+      color: #8b5cf6;
     }
 
-    .business-analytics__card--rating & {
-      background-color: rgba(245, 158, 11, 0.1); // rgba($color-warning, 0.1)
-      color: #f59e0b; // $color-warning
+    .business-analytics__kpi-card--customers & {
+      background-color: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
     }
   }
 
-  &__card-content {
+  &__kpi-content {
     flex: 1;
+
+    h3 {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #64748b;
+      margin: 0 0 0.5rem;
+    }
   }
 
-  &__card-title {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #64748b; // $color-text-light
-    margin: 0 0 0.5rem;
-  }
-
-  &__card-value {
-    font-size: 1.5rem;
+  &__kpi-value {
+    font-size: 1.75rem;
     font-weight: 700;
-    margin: 0 0 0.5rem;
-    color: #1e293b; // $color-text-dark
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
   }
 
-  &__card-change {
+  &__kpi-change {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     font-size: 0.85rem;
-    // color: #ef4444; // $color-danger (default if not positive)
-    margin: 0;
+    font-weight: 600;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
 
     &--positive {
-      color: #10b981; // $color-success
+      color: #10b981;
     }
 
     &--negative {
-      color: #ef4444; // $color-danger
-    }
-  }
-
-  &__rating-stars {
-    position: relative;
-    display: inline-block;
-    font-size: 1.25rem;
-    line-height: 1;
-
-    .business-analytics__stars-filled {
-      position: absolute;
-      top: 0;
-      left: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      color: #f59e0b; // $color-warning
+      color: #ef4444;
     }
 
-    .business-analytics__stars-empty {
-      color: #e2e8f0; // $color-border-light
+    &--neutral {
+      color: #64748b;
     }
   }
 
   // Charts
   &__charts {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 
-    @media (max-width: 992px) {
+    @media (max-width: 768px) {
       grid-template-columns: 1fr;
     }
   }
@@ -936,110 +1074,106 @@ watch(selectedPeriod, (newPeriodValue) => {
   &__chart-container {
     background-color: white;
     border-radius: 12px;
+    padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
   }
 
   &__chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
+    margin-bottom: 1.5rem;
 
-  &__chart-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0;
-    color: #1e293b; // $color-text-dark
-  }
-
-  &__chart-legend {
-    display: flex;
-    gap: 1rem;
-  }
-
-  &__legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    color: #64748b; // $color-text-light
-  }
-
-  &__legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-
-    &--current {
-      background-color: #06a98d; // $color-primary
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0;
     }
 
-    &--previous {
-      background-color: #94a3b8; // $color-grey
+    @media (max-width: 480px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+  }
+
+  &__chart-controls {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  &__chart-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #e2e8f0;
+    background-color: white;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+
+    &--active {
+      background-color: #06a98d;
+      color: white;
+      border-color: #06a98d;
     }
   }
 
   &__chart {
     height: 300px;
     position: relative;
-  }
 
-  &__chart-placeholder {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  &__chart-svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  // Sections with tables
-  &__sections {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-
-    @media (max-width: 992px) {
-      grid-template-columns: 1fr;
+    canvas {
+      max-height: 100%;
     }
   }
 
-  &__section {
+  // Tables
+  &__tables {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  &__table-container {
     background-color: white;
     border-radius: 12px;
+    padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    // height: 100%; // Be careful with fixed heights, can cause overflow. Consider min-height or letting content define height.
+  }
+
+  &__table-header {
     display: flex;
-    flex-direction: column; // To allow pie chart legend to push container height
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0;
+    }
   }
 
-  &__section-header {
-    margin-bottom: 1.25rem;
+  &__table-period {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
   }
 
-  &__section-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0;
-    color: #1e293b; // $color-text-dark
-  }
-
-  &__products-table-container {
+  &__table-wrapper {
     overflow-x: auto;
-    flex-grow: 1; // Allow table to take available space if section is flex
   }
 
-  &__products-table {
+  &__table {
     width: 100%;
     border-collapse: collapse;
 
@@ -1047,293 +1181,104 @@ watch(selectedPeriod, (newPeriodValue) => {
       text-align: left;
       padding: 0.75rem;
       font-weight: 600;
-      color: #64748b; // $color-text-light
-      border-bottom: 1px solid #e2e8f0; // $color-border
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
       font-size: 0.85rem;
       white-space: nowrap;
     }
-
-    td {
-      padding: 0.75rem;
-      border-bottom: 1px solid #f1f5f9; // $color-border-subtle
-      font-size: 0.9rem;
-      color: #1e293b; // $color-text-dark
-    }
   }
 
-  &__product {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  &__product-image {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    overflow: hidden;
-    flex-shrink: 0;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  }
-
-  &__product-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__product-name {
-    font-weight: 500;
-    color: #1e293b; // $color-text-dark
-  }
-
-  &__product-category {
-    font-size: 0.85rem;
-    color: #64748b; // $color-text-light
-  }
-
-  // Pie chart
-  &__pie-chart {
-    display: flex;
-    flex-direction: column;
-    // height: 100%; // Let content define height or use flex-grow on container
-    flex-grow: 1;
-  }
-
-  &__pie-container {
-    // flex: 1; // This might make the SVG too big if legend is small.
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    // max-height: 200px; // This is good to constrain SVG size
-    min-height: 180px; // Ensure some space for the pie
-    margin-bottom: 1.25rem;
-  }
-
-  &__pie-svg {
-    max-width: 180px; // Adjusted for better balance with legend
-    max-height: 180px;
-    width: 100%;
-    height: auto; // Maintain aspect ratio
-  }
-
-  &__pie-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    // margin-top: auto; // If you want legend pushed to bottom if pie container has fixed height
-  }
-
-  &__pie-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  &__pie-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-
-  &__pie-label {
-    flex: 1;
-    font-size: 0.9rem;
-    color: #1e293b; // $color-text-dark
-    word-break: break-word;
-  }
-
-  &__pie-value {
-    font-weight: 500;
-    color: #1e293b; // $color-text-dark
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-
-  // Customer section
-  &__customer-section {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    margin-bottom: 2rem;
-  }
-
-  &__customer-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.25rem;
-  }
-
-  &__customer-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 1.25rem;
-    background-color: #f8fafc; // $color-bg-subtle
-    border-radius: 8px;
-  }
-
-  &__customer-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 24px;
-    background-color: #e0f2fe; // $color-primary-light
-    color: #0ea5e9; // $color-primary-active
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-    flex-shrink: 0;
-
-    svg {
-      width: 24px;
-      height: 24px;
-    }
-  }
-
-  &__customer-title {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #64748b; // $color-text-light
-    margin: 0 0 0.5rem;
-  }
-
-  &__customer-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem;
-    color: #1e293b; // $color-text-dark
-  }
-
-  &__customer-change {
-    font-size: 0.85rem;
-    // color: #ef4444; // $color-danger (default if not positive)
-    margin: 0;
-
-    &--positive {
-      color: #10b981; // $color-success
-    }
-
-    &--negative {
-      color: #ef4444; // $color-danger
-    }
-  }
-
-  &__customer-satisfaction {
-    font-size: 0.85rem;
-    color: #10b981; // $color-success
-    font-weight: 500;
-  }
-
-  // Reports section
-  &__reports {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    margin-bottom: 2rem; // Or remove if it's the last element
-  }
-
-  &__reports-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.25rem;
-  }
-
-  &__report-card {
-    display: flex;
-    gap: 1rem;
-    padding: 1.25rem;
-    background-color: #f8fafc; // $color-bg-subtle
-    border-radius: 8px;
-    transition: all 0.2s ease;
+  &__table-row {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.15s ease;
 
     &:hover {
-      background-color: #f1f5f9; // $color-bg-subtle-hover
-      // Consider adding a subtle border or shadow on hover too
-      // box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      background-color: #f8fafc;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    td {
+      padding: 1rem 0.75rem;
+      font-size: 0.9rem;
+      color: #1e293b;
     }
   }
 
-  &__report-icon {
+  &__product-info,
+  &__restaurant-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__product-image,
+  &__restaurant-image {
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background-color: #dbeafe; // $color-info-light
-    color: #3b82f6; // $color-info
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__product-name,
+  &__restaurant-name {
+    font-weight: 500;
+    color: #1e293b;
+  }
+
+  &__metric {
+    font-weight: 600;
+    color: #1e293b;
+
+    &--revenue {
+      color: #10b981;
+    }
+  }
+
+  &__rating {
     display: flex;
     align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-
-    svg {
-      width: 20px;
-      height: 20px;
-    }
-  }
-
-  &__report-content {
-    flex: 1;
-  }
-
-  &__report-title {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem;
-    color: #1e293b; // $color-text-dark
-  }
-
-  &__report-description {
-    font-size: 0.9rem;
-    color: #64748b; // $color-text-light
-    margin: 0 0 1rem;
-    line-height: 1.4;
-  }
-
-  &__report-btn {
-    display: inline-flex; // Changed to inline-flex for better alignment with text if needed
-    align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background-color: white;
-    border: 1px solid #e2e8f0; // $color-border
-    border-radius: 6px;
-    font-size: 0.85rem;
-    color: #1e293b; // $color-text-dark
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none; // If you were to use <a> tags
+  }
 
-    &:hover {
-      background-color: #3b82f6; // $color-info
-      border-color: #3b82f6; // $color-info
-      color: white;
-    }
+  &__rating-value {
+    font-weight: 600;
+    color: #1e293b;
+  }
 
-    svg {
-      width: 16px;
-      height: 16px;
-      // fill: currentColor; // If SVG should inherit color from text
-    }
+  &__rating-stars {
+    position: relative;
+    display: inline-block;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  &__stars-filled {
+    position: absolute;
+    top: 0;
+    left: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    color: #f59e0b;
+  }
+
+  &__stars-empty {
+    color: #e2e8f0;
+  }
+
+  &__table-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
   }
 }
 
-// Animaciones (Consider removing if not used)
-/*
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
+@keyframes spin {
   to {
-    opacity: 1;
+    transform: rotate(360deg);
   }
 }
-*/
 </style>
