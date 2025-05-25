@@ -6,12 +6,25 @@
         <div class="business-orders__filter">
           <select v-model="statusFilter" class="business-orders__select">
             <option value="all">Todos los estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="preparing">En preparación</option>
-            <option value="ready">Listos para entrega</option>
-            <option value="delivering">En camino</option>
-            <option value="delivered">Entregados</option>
-            <option value="cancelled">Cancelados</option>
+            <option value="Pending">Pendientes</option>
+            <option value="Accepted">Aceptados</option>
+            <option value="Preparing">En preparación</option>
+            <option value="ReadyForPickup">Listos para entrega</option>
+            <option value="OnTheWay">En camino</option>
+            <option value="Delivered">Entregados</option>
+            <option value="Cancelled">Cancelados</option>
+          </select>
+        </div>
+        <div class="business-orders__restaurant-filter" v-if="restaurants.length > 1">
+          <select v-model="restaurantFilter" class="business-orders__select">
+            <option value="all">Todos los restaurantes</option>
+            <option 
+              v-for="restaurant in restaurants" 
+              :key="restaurant.id" 
+              :value="restaurant.id"
+            >
+              {{ restaurant.name }}
+            </option>
           </select>
         </div>
         <div class="business-orders__search">
@@ -60,11 +73,11 @@
 
       <div v-else-if="isMobileView" class="business-orders__cards">
         <div v-for="order in paginatedOrders" :key="order.id" class="business-orders__card"
-          :class="`business-orders__card--${order.status}`">
+          :class="`business-orders__card--${order.status.toLowerCase()}`">
           <div class="business-orders__card-header">
             <div>
               <span class="business-orders__card-id">Pedido #{{ order.id }}</span>
-              <span :class="['business-orders__status', `business-orders__status--${order.status}`]">
+              <span :class="['business-orders__status', `business-orders__status--${order.status.toLowerCase()}`]">
                 {{ getStatusLabel(order.status) }}
               </span>
             </div>
@@ -72,14 +85,14 @@
           </div>
 
           <div class="business-orders__card-customer">
-            <span class="business-orders__card-customer-name">{{ order.customerName }}</span>
-            <span class="business-orders__card-customer-email">{{ order.customerEmail }}</span>
+            <span class="business-orders__card-customer-name">{{ getCustomerName(order) }}</span>
+            <span class="business-orders__card-customer-email">{{ order.user?.email || 'Sin email' }}</span>
           </div>
 
           <div class="business-orders__card-info">
             <div class="business-orders__card-info-item">
               <span class="business-orders__card-label">Items:</span>
-              <span class="business-orders__card-value">{{ order.items.length }}</span>
+              <span class="business-orders__card-value">{{ order.orderItems?.length || 0 }}</span>
             </div>
             <div class="business-orders__card-info-item">
               <span class="business-orders__card-label">Total:</span>
@@ -119,6 +132,7 @@
             <tr>
               <th>Pedido #</th>
               <th>Cliente</th>
+              <th>Restaurante</th>
               <th>Fecha</th>
               <th>Total</th>
               <th>Estado</th>
@@ -130,8 +144,13 @@
               <td class="business-orders__order-id">{{ order.id }}</td>
               <td>
                 <div class="business-orders__customer">
-                  <span class="business-orders__customer-name">{{ order.customerName }}</span>
-                  <span class="business-orders__customer-email">{{ order.customerEmail }}</span>
+                  <span class="business-orders__customer-name">{{ getCustomerName(order) }}</span>
+                  <span class="business-orders__customer-email">{{ order.user?.email || 'Sin email' }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="business-orders__restaurant">
+                  <span class="business-orders__restaurant-name">{{ order.restaurant?.name || 'Restaurant' }}</span>
                 </div>
               </td>
               <td>
@@ -142,7 +161,7 @@
               </td>
               <td class="business-orders__total">{{ formatCurrency(order.total) }}</td>
               <td>
-                <span :class="['business-orders__status', `business-orders__status--${order.status}`]">
+                <span :class="['business-orders__status', `business-orders__status--${order.status.toLowerCase()}`]">
                   {{ getStatusLabel(order.status) }}
                 </span>
               </td>
@@ -194,6 +213,7 @@
       </button>
     </div>
 
+    <!-- Modal de detalles -->
     <div v-if="selectedOrder" class="business-orders__modal" @click="closeModal">
       <div class="business-orders__modal-content" @click.stop>
         <div class="business-orders__modal-header">
@@ -213,15 +233,15 @@
               <h3 class="business-orders__section-title">Información del Cliente</h3>
               <div class="business-orders__detail-item">
                 <span class="business-orders__detail-label">Nombre:</span>
-                <span class="business-orders__detail-value">{{ selectedOrder.customerName }}</span>
+                <span class="business-orders__detail-value">{{ getCustomerName(selectedOrder) }}</span>
               </div>
               <div class="business-orders__detail-item">
                 <span class="business-orders__detail-label">Email:</span>
-                <span class="business-orders__detail-value">{{ selectedOrder.customerEmail }}</span>
+                <span class="business-orders__detail-value">{{ selectedOrder.user?.email || 'Sin email' }}</span>
               </div>
               <div class="business-orders__detail-item">
                 <span class="business-orders__detail-label">Teléfono:</span>
-                <span class="business-orders__detail-value">{{ selectedOrder.customerPhone }}</span>
+                <span class="business-orders__detail-value">{{ selectedOrder.user?.phoneNumber || 'Sin teléfono' }}</span>
               </div>
             </div>
 
@@ -229,16 +249,15 @@
               <h3 class="business-orders__section-title">Información de Entrega</h3>
               <div class="business-orders__detail-item">
                 <span class="business-orders__detail-label">Dirección:</span>
-                <span class="business-orders__detail-value">{{ selectedOrder.deliveryAddress }}</span>
+                <span class="business-orders__detail-value">{{ getDeliveryAddress(selectedOrder) }}</span>
               </div>
               <div class="business-orders__detail-item">
-                <span class="business-orders__detail-label">Método:</span>
-                <span class="business-orders__detail-value">{{ selectedOrder.deliveryMethod }}</span>
+                <span class="business-orders__detail-label">Restaurante:</span>
+                <span class="business-orders__detail-value">{{ selectedOrder.restaurant?.name || 'Restaurant' }}</span>
               </div>
               <div class="business-orders__detail-item">
                 <span class="business-orders__detail-label">Hora estimada:</span>
-                <span class="business-orders__detail-value">{{ formatDateTime(selectedOrder.estimatedDeliveryTime)
-                  }}</span>
+                <span class="business-orders__detail-value">{{ formatDateTime(selectedOrder.estimatedDeliveryTime) }}</span>
               </div>
             </div>
           </div>
@@ -256,21 +275,20 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in selectedOrder.items" :key="item.id" class="business-orders__item-row">
+                  <tr v-for="item in selectedOrder.orderItems || []" :key="item.id" class="business-orders__item-row">
                     <td>
                       <div class="business-orders__product">
                         <div class="business-orders__product-image">
-                          <img :src="item.imageUrl || '/images/product-placeholder.png'" :alt="item.name">
+                          <img :src="item.product?.imageUrl || '/images/product-placeholder.png'" :alt="item.product?.name">
                         </div>
                         <div class="business-orders__product-info">
-                          <span class="business-orders__product-name">{{ item.name }}</span>
-                          <span v-if="item.variant" class="business-orders__product-variant">{{ item.variant }}</span>
+                          <span class="business-orders__product-name">{{ item.product?.name || 'Producto' }}</span>
                         </div>
                       </div>
                     </td>
-                    <td>{{ formatCurrency(item.price) }}</td>
+                    <td>{{ formatCurrency(item.unitPrice) }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>{{ formatCurrency(item.price * item.quantity) }}</td>
+                    <td>{{ formatCurrency(item.subtotal) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -298,32 +316,6 @@
               </div>
             </div>
           </div>
-
-          <div class="business-orders__detail-section">
-            <h3 class="business-orders__section-title">Estado del Pedido</h3>
-            <div class="business-orders__status-timeline">
-              <div v-for="(status, index) in orderStatusTimeline" :key="status.value" :class="[
-                'business-orders__status-step',
-                {
-                  'business-orders__status-step--active': isStatusCompleted(status.value, selectedOrder.status),
-                  'business-orders__status-step--current': selectedOrder.status === status.value,
-                }
-              ]">
-                <div class="business-orders__status-indicator"></div>
-                <div class="business-orders__status-content">
-                  <span class="business-orders__status-label">{{ status.label }}</span>
-                  <span v-if="selectedOrder.statusHistory && selectedOrder.statusHistory[status.value]"
-                    class="business-orders__status-time">
-                    {{ formatTime(selectedOrder.statusHistory[status.value]) }}
-                  </span>
-                </div>
-                <div v-if="index < orderStatusTimeline.length - 1" :class="[
-                  'business-orders__status-line',
-                  { 'business-orders__status-line--active': isNextStatusCompleted(status.value, selectedOrder.status) }
-                ]"></div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="business-orders__modal-footer">
@@ -337,8 +329,8 @@
               {{ getNextStatusActionLabel(selectedOrder.status) }}
             </button>
 
-            <button v-if="selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered'"
-              @click="updateStatus(selectedOrder, 'cancelled')"
+            <button v-if="selectedOrder.status !== 'Cancelled' && selectedOrder.status !== 'Delivered'"
+              @click="updateStatus(selectedOrder, 'Cancelled')"
               class="business-orders__modal-btn business-orders__modal-btn--danger">
               Cancelar Pedido
             </button>
@@ -347,6 +339,7 @@
       </div>
     </div>
 
+    <!-- Modal de actualización de estado -->
     <div v-if="statusUpdateOrder" class="business-orders__modal" @click="statusUpdateOrder = null">
       <div class="business-orders__modal-content business-orders__modal-content--small" @click.stop>
         <div class="business-orders__modal-header">
@@ -362,14 +355,14 @@
 
         <div class="business-orders__modal-body">
           <p class="business-orders__status-prompt">
-            Pedido #{{ statusUpdateOrder.id }} - {{ statusUpdateOrder.customerName }}
+            Pedido #{{ statusUpdateOrder.id }} - {{ getCustomerName(statusUpdateOrder) }}
           </p>
 
           <div class="business-orders__status-options">
             <button v-for="option in getAvailableStatusOptions(statusUpdateOrder.status)" :key="option.value"
               @click="updateStatus(statusUpdateOrder, option.value)" :class="[
                 'business-orders__status-option',
-                `business-orders__status-option--${option.value}`
+                `business-orders__status-option--${option.value.toLowerCase()}`
               ]">
               <div class="business-orders__status-option-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -395,504 +388,360 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useBusinessAuthStore } from '@/stores/businessAuth'
+import { useAuthStore } from '@/stores/auth'
+import { api } from '@/services/api'
 
-interface OrderItem {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-  imageUrl?: string;
-  variant?: string;
-}
+const authStore = useAuthStore()
 
-interface Order {
-  id: number;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  createdAt: Date;
-  status: 'pending' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'cancelled';
-  subtotal: number;
-  deliveryFee: number;
-  tax: number;
-  total: number;
-  deliveryAddress: string;
-  deliveryMethod: string;
-  estimatedDeliveryTime: Date;
-  items: OrderItem[];
-  statusHistory?: Record<string, Date>;
-}
-
-const businessAuthStore = useBusinessAuthStore();
-
-const loading = ref(true);
-const orders = ref<Order[]>([]);
-const selectedOrder = ref<Order | null>(null);
-const statusUpdateOrder = ref<Order | null>(null);
-const searchQuery = ref('');
-const statusFilter = ref('all');
-const currentTab = ref('today');
-const currentPage = ref(1);
-const pageSize = ref(10);
-const isMobileView = ref(false);
+// Estados
+const loading = ref(true)
+const business = ref(null)
+const restaurants = ref([])
+const orders = ref([])
+const selectedOrder = ref(null)
+const statusUpdateOrder = ref(null)
+const searchQuery = ref('')
+const statusFilter = ref('all')
+const restaurantFilter = ref('all')
+const currentTab = ref('today')
+const currentPage = ref(1)
+const pageSize = ref(10)
+const isMobileView = ref(false)
 
 const tabs = [
   { label: 'Hoy', value: 'today' },
   { label: 'Pendientes', value: 'pending' },
   { label: 'Historial', value: 'history' }
-];
+]
 
-const orderStatusTimeline = [
-  { label: 'Recibido', value: 'pending' },
-  { label: 'En preparación', value: 'preparing' },
-  { label: 'Listo para entrega', value: 'ready' },
-  { label: 'En camino', value: 'delivering' },
-  { label: 'Entregado', value: 'delivered' }
-];
-
-const updateViewType = () => {
-  isMobileView.value = window.innerWidth < 768;
-};
-
-const loadOrders = async () => {
-  loading.value = true;
+// Cargar datos del business
+const loadBusiness = async () => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    orders.value = generateMockOrders();
-  } catch (error) {
-    console.error('Error al cargar pedidos:', error);
-  } finally {
-    loading.value = false;
-  }
-};
+    const userId = authStore.user?.id
+    if (!userId) return
 
-const generateMockOrders = (): Order[] => {
-  return [
-    {
-      id: 1001,
-      customerName: 'María López',
-      customerEmail: 'maria.lopez@ejemplo.com',
-      customerPhone: '+34 612 345 678',
-      createdAt: new Date(),
-      status: 'pending',
-      subtotal: 27.90,
-      deliveryFee: 3.50,
-      tax: 6.60,
-      total: 38.00,
-      deliveryAddress: 'Calle Mayor 24, 3B, 50001 Zaragoza',
-      deliveryMethod: 'Domicilio',
-      estimatedDeliveryTime: new Date(Date.now() + 45 * 60000),
-      items: [
-        {
-          id: 1,
-          name: 'Pizza Margarita',
-          price: 12.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 2,
-          name: 'Pasta Carbonara',
-          price: 14.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
+    const response = await api.get(`/api/Business/user/${userId}`)
+    if (response.data) {
+      business.value = response.data
+    }
+  } catch (error) {
+    console.error('Error cargando business:', error)
+  }
+}
+
+// Cargar restaurantes
+const loadRestaurants = async () => {
+  try {
+    if (!business.value?.id) return
+
+    const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
+    if (response.data) {
+      restaurants.value = response.data
+    }
+  } catch (error) {
+    console.error('Error cargando restaurantes:', error)
+    restaurants.value = []
+  }
+}
+
+// Cargar pedidos de todos los restaurantes
+const loadOrders = async () => {
+  if (restaurants.value.length === 0) return
+  
+  loading.value = true
+  try {
+    const allOrdersData = []
+    
+    for (const restaurant of restaurants.value) {
+      try {
+        const ordersResponse = await api.get(`/api/Orders/restaurant/${restaurant.id}`)
+        if (ordersResponse.data) {
+          allOrdersData.push(...ordersResponse.data)
         }
-      ],
-      statusHistory: {
-        'pending': new Date()
-      }
-    },
-    {
-      id: 1000,
-      customerName: 'Juan García',
-      customerEmail: 'juan.garcia@ejemplo.com',
-      customerPhone: '+34 698 765 432',
-      createdAt: new Date(Date.now() - 60 * 60000),
-      status: 'preparing',
-      subtotal: 32.85,
-      deliveryFee: 3.50,
-      tax: 7.65,
-      total: 44.00,
-      deliveryAddress: 'Avenida Goya 75, 1C, 50005 Zaragoza',
-      deliveryMethod: 'Domicilio',
-      estimatedDeliveryTime: new Date(Date.now() + 30 * 60000),
-      items: [
-        {
-          id: 3,
-          name: 'Hamburguesa Completa',
-          price: 10.95,
-          quantity: 2,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 4,
-          name: 'Patatas Fritas',
-          price: 3.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 5,
-          name: 'Refresco Cola',
-          price: 2.50,
-          quantity: 2,
-          imageUrl: '/images/product-placeholder.png'
-        }
-      ],
-      statusHistory: {
-        'pending': new Date(Date.now() - 60 * 60000),
-        'preparing': new Date(Date.now() - 30 * 60000)
-      }
-    },
-    {
-      id: 999,
-      customerName: 'Ana Martínez',
-      customerEmail: 'ana.martinez@ejemplo.com',
-      customerPhone: '+34 654 321 987',
-      createdAt: new Date(Date.now() - 120 * 60000),
-      status: 'delivered',
-      subtotal: 42.85,
-      deliveryFee: 0,
-      tax: 9.15,
-      total: 52.00,
-      deliveryAddress: 'Paseo Independencia 12, 4D, 50004 Zaragoza',
-      deliveryMethod: 'Recogida en local',
-      estimatedDeliveryTime: new Date(Date.now() - 30 * 60000),
-      items: [
-        {
-          id: 6,
-          name: 'Ensalada César',
-          price: 8.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 7,
-          name: 'Sushi Variado',
-          price: 24.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 8,
-          name: 'Tiramisú',
-          price: 5.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 9,
-          name: 'Agua Mineral',
-          price: 1.50,
-          quantity: 2,
-          imageUrl: '/images/product-placeholder.png'
-        }
-      ],
-      statusHistory: {
-        'pending': new Date(Date.now() - 120 * 60000),
-        'preparing': new Date(Date.now() - 100 * 60000),
-        'ready': new Date(Date.now() - 80 * 60000),
-        'delivering': new Date(Date.now() - 60 * 60000),
-        'delivered': new Date(Date.now() - 30 * 60000)
-      }
-    },
-    {
-      id: 998,
-      customerName: 'Carlos Rodríguez',
-      customerEmail: 'carlos.rodriguez@ejemplo.com',
-      customerPhone: '+34 678 901 234',
-      createdAt: new Date(Date.now() - 24 * 60 * 60000),
-      status: 'cancelled',
-      subtotal: 36.90,
-      deliveryFee: 3.50,
-      tax: 8.60,
-      total: 49.00,
-      deliveryAddress: 'Calle Delicias 45, 2A, 50017 Zaragoza',
-      deliveryMethod: 'Domicilio',
-      estimatedDeliveryTime: new Date(Date.now() - 23 * 60 * 60000),
-      items: [
-        {
-          id: 10,
-          name: 'Pizza Cuatro Quesos',
-          price: 14.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 11,
-          name: 'Lasaña de Carne',
-          price: 12.95,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 12,
-          name: 'Tarta de Chocolate',
-          price: 6.50,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        },
-        {
-          id: 13,
-          name: 'Refresco Naranja',
-          price: 2.50,
-          quantity: 1,
-          imageUrl: '/images/product-placeholder.png'
-        }
-      ],
-      statusHistory: {
-        'pending': new Date(Date.now() - 24 * 60 * 60000),
-        'cancelled': new Date(Date.now() - 23.5 * 60 * 60000)
+      } catch (error) {
+        console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
       }
     }
-  ];
-};
+    
+    orders.value = allOrdersData
+    console.log('Pedidos cargados:', orders.value.length)
+  } catch (error) {
+    console.error('Error cargando pedidos:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
+// Pedidos filtrados
 const filteredOrders = computed(() => {
-  let result = orders.value;
+  let result = orders.value
 
+  // Filtrar por estado
   if (statusFilter.value !== 'all') {
-    result = result.filter(order => order.status === statusFilter.value);
+    result = result.filter(order => order.status === statusFilter.value)
   }
 
+  // Filtrar por restaurante
+  if (restaurantFilter.value !== 'all') {
+    result = result.filter(order => order.restaurantId === restaurantFilter.value)
+  }
+
+  // Filtrar por búsqueda
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
+    const query = searchQuery.value.toLowerCase()
     result = result.filter(order =>
       order.id.toString().includes(query) ||
-      order.customerName.toLowerCase().includes(query) ||
-      order.customerEmail.toLowerCase().includes(query)
-    );
+      getCustomerName(order).toLowerCase().includes(query) ||
+      (order.user?.email && order.user.email.toLowerCase().includes(query))
+    )
   }
 
+  // Filtrar por tab
   if (currentTab.value === 'today') {
-    const today = new Date();
-    result = result.filter(order =>
-      order.createdAt.getDate() === today.getDate() &&
-      order.createdAt.getMonth() === today.getMonth() &&
-      order.createdAt.getFullYear() === today.getFullYear()
-    );
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    result = result.filter(order => {
+      const orderDate = new Date(order.createdAt)
+      orderDate.setHours(0, 0, 0, 0)
+      return orderDate.getTime() === today.getTime()
+    })
   } else if (currentTab.value === 'pending') {
     result = result.filter(order =>
-      ['pending', 'preparing', 'ready'].includes(order.status)
-    );
+      ['Pending', 'Accepted', 'Preparing', 'ReadyForPickup'].includes(order.status)
+    )
   } else if (currentTab.value === 'history') {
     result = result.filter(order =>
-      ['delivered', 'cancelled'].includes(order.status)
-    );
+      ['Delivered', 'Cancelled'].includes(order.status)
+    )
   }
 
-  return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-});
+  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+})
 
+// Paginación
 const paginatedOrders = computed(() => {
-  const startIndex = (currentPage.value - 1) * pageSize.value;
-  return filteredOrders.value.slice(startIndex, startIndex + pageSize.value);
-});
+  const startIndex = (currentPage.value - 1) * pageSize.value
+  return filteredOrders.value.slice(startIndex, startIndex + pageSize.value)
+})
 
 const totalPages = computed(() => {
-  if (filteredOrders.value.length === 0) return 0;
-  return Math.ceil(filteredOrders.value.length / pageSize.value);
-});
+  if (filteredOrders.value.length === 0) return 0
+  return Math.ceil(filteredOrders.value.length / pageSize.value)
+})
 
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
-  }
-};
-
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-  }
-};
-
-const formatDate = (date: Date) => {
+// Funciones de utilidad
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
   return new Intl.DateTimeFormat('es', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(date);
-};
+  }).format(date)
+}
 
-const formatTime = (date: Date) => {
+const formatTime = (dateStr: string) => {
+  const date = new Date(dateStr)
   return new Intl.DateTimeFormat('es', {
     hour: '2-digit',
     minute: '2-digit'
-  }).format(date);
-};
+  }).format(date)
+}
 
-const formatDateTime = (date: Date) => {
-  return `${formatDate(date)} ${formatTime(date)}`;
-};
+const formatDateTime = (dateStr: string) => {
+  return `${formatDate(dateStr)} ${formatTime(dateStr)}`
+}
 
 const formatCurrency = (value: number) => {
-  return value.toFixed(2).replace('.', ',') + ' €';
-};
+  return value.toFixed(2).replace('.', ',') + ' €'
+}
 
 const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return 'Pendiente';
-    case 'preparing':
-      return 'En preparación';
-    case 'ready':
-      return 'Listo';
-    case 'delivering':
-      return 'En camino';
-    case 'delivered':
-      return 'Entregado';
-    case 'cancelled':
-      return 'Cancelado';
-    default:
-      return status;
+  const labels = {
+    'Pending': 'Pendiente',
+    'Accepted': 'Aceptado',
+    'Preparing': 'En preparación',
+    'ReadyForPickup': 'Listo',
+    'OnTheWay': 'En camino',
+    'Delivered': 'Entregado',
+    'Cancelled': 'Cancelado'
   }
-};
+  return labels[status] || status
+}
 
-const clearSearch = () => {
-  searchQuery.value = '';
-};
+const getCustomerName = (order: any) => {
+  if (order.user) {
+    return `${order.user.firstName} ${order.user.lastName}`.trim()
+  }
+  return 'Cliente'
+}
 
-const resetFilters = () => {
-  searchQuery.value = '';
-  statusFilter.value = 'all';
-  currentTab.value = 'today';
-};
+const getDeliveryAddress = (order: any) => {
+  if (order.deliveryAddress) {
+    return `${order.deliveryAddress.street} ${order.deliveryAddress.number}, ${order.deliveryAddress.city}`
+  }
+  return 'Dirección no disponible'
+}
 
 const getOrdersCountByTab = (tabValue: string) => {
+  let filtered = orders.value
+  
   if (tabValue === 'today') {
-    const today = new Date();
-    return orders.value.filter(order =>
-      order.createdAt.getDate() === today.getDate() &&
-      order.createdAt.getMonth() === today.getMonth() &&
-      order.createdAt.getFullYear() === today.getFullYear()
-    ).length;
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    filtered = orders.value.filter(order => {
+      const orderDate = new Date(order.createdAt)
+      orderDate.setHours(0, 0, 0, 0)
+      return orderDate.getTime() === today.getTime()
+    })
   } else if (tabValue === 'pending') {
-    return orders.value.filter(order =>
-      ['pending', 'preparing', 'ready'].includes(order.status)
-    ).length;
+    filtered = orders.value.filter(order =>
+      ['Pending', 'Accepted', 'Preparing', 'ReadyForPickup'].includes(order.status)
+    )
   } else if (tabValue === 'history') {
-    return orders.value.filter(order =>
-      ['delivered', 'cancelled'].includes(order.status)
-    ).length;
+    filtered = orders.value.filter(order =>
+      ['Delivered', 'Cancelled'].includes(order.status)
+    )
   }
-  return 0;
-};
-
-const viewOrder = (order: Order) => {
-  selectedOrder.value = order;
-};
-
-const closeModal = () => {
-  selectedOrder.value = null;
-};
-
-const updateOrderStatus = (order: Order) => {
-  statusUpdateOrder.value = order;
-};
+  
+  return filtered.length
+}
 
 const canUpdateStatus = (status: string) => {
-  return !['delivered', 'cancelled'].includes(status);
-};
+  return !['Delivered', 'Cancelled'].includes(status)
+}
 
 const getNextStatus = (currentStatus: string) => {
-  switch (currentStatus) {
-    case 'pending':
-      return 'preparing';
-    case 'preparing':
-      return 'ready';
-    case 'ready':
-      return 'delivering';
-    case 'delivering':
-      return 'delivered';
-    default:
-      return currentStatus;
+  const statusFlow = {
+    'Pending': 'Accepted',
+    'Accepted': 'Preparing',
+    'Preparing': 'ReadyForPickup',
+    'ReadyForPickup': 'OnTheWay',
+    'OnTheWay': 'Delivered'
   }
-};
+  return statusFlow[currentStatus] || currentStatus
+}
 
 const getNextStatusActionLabel = (currentStatus: string) => {
-  switch (currentStatus) {
-    case 'pending':
-      return 'Comenzar Preparación';
-    case 'preparing':
-      return 'Marcar como Listo';
-    case 'ready':
-      return 'Iniciar Entrega';
-    case 'delivering':
-      return 'Confirmar Entrega';
-    default:
-      return 'Actualizar Estado';
+  const labels = {
+    'Pending': 'Aceptar Pedido',
+    'Accepted': 'Comenzar Preparación',
+    'Preparing': 'Marcar como Listo',
+    'ReadyForPickup': 'Iniciar Entrega',
+    'OnTheWay': 'Confirmar Entrega'
   }
-};
+  return labels[currentStatus] || 'Actualizar Estado'
+}
 
 const getAvailableStatusOptions = (currentStatus: string) => {
-  const options = [];
-
-  if (currentStatus === 'pending') {
-    options.push({ label: 'Iniciar Preparación', value: 'preparing' });
-  } else if (currentStatus === 'preparing') {
-    options.push({ label: 'Marcar como Listo', value: 'ready' });
-  } else if (currentStatus === 'ready') {
-    options.push({ label: 'Iniciar Entrega', value: 'delivering' });
-  } else if (currentStatus === 'delivering') {
-    options.push({ label: 'Confirmar Entrega', value: 'delivered' });
+  const options = []
+  
+  const nextStatus = getNextStatus(currentStatus)
+  if (nextStatus !== currentStatus) {
+    options.push({ 
+      label: getNextStatusActionLabel(currentStatus), 
+      value: nextStatus 
+    })
   }
 
-  if (!['delivered', 'cancelled'].includes(currentStatus)) {
-    options.push({ label: 'Cancelar Pedido', value: 'cancelled' });
+  if (!['Delivered', 'Cancelled'].includes(currentStatus)) {
+    options.push({ label: 'Cancelar Pedido', value: 'Cancelled' })
   }
 
-  return options;
-};
+  return options
+}
 
-const isStatusCompleted = (status: string, currentStatus: string) => {
-  const statuses = ['pending', 'preparing', 'ready', 'delivering', 'delivered'];
-  const statusIndex = statuses.indexOf(status);
-  const currentIndex = statuses.indexOf(currentStatus);
+// Funciones de interfaz
+const updateViewType = () => {
+  isMobileView.value = window.innerWidth < 768
+}
 
-  return statusIndex <= currentIndex;
-};
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
 
-const isNextStatusCompleted = (status: string, currentStatus: string) => {
-  const statuses = ['pending', 'preparing', 'ready', 'delivering', 'delivered'];
-  const statusIndex = statuses.indexOf(status);
-  const currentIndex = statuses.indexOf(currentStatus);
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
 
-  return statusIndex < currentIndex;
-};
+const clearSearch = () => {
+  searchQuery.value = ''
+}
 
-const updateStatus = async (order: Order, newStatus: string) => {
-  if (order) {
-    order.status = newStatus as any;
-    if (!order.statusHistory) {
-      order.statusHistory = {};
+const resetFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = 'all'
+  restaurantFilter.value = 'all'
+  currentTab.value = 'today'
+}
+
+const viewOrder = (order: any) => {
+  selectedOrder.value = order
+}
+
+const closeModal = () => {
+  selectedOrder.value = null
+}
+
+const updateOrderStatus = (order: any) => {
+  statusUpdateOrder.value = order
+}
+
+// Actualizar estado del pedido
+const updateStatus = async (order: any, newStatus: string) => {
+  try {
+    const response = await api.put(`/api/Orders/${order.id}/status`, {
+      status: newStatus
+    })
+    
+    if (response.data) {
+      // Actualizar el pedido en la lista local
+      const orderIndex = orders.value.findIndex(o => o.id === order.id)
+      if (orderIndex !== -1) {
+        orders.value[orderIndex] = { ...orders.value[orderIndex], status: newStatus }
+      }
+      
+      // Actualizar el pedido seleccionado si está abierto
+      if (selectedOrder.value && selectedOrder.value.id === order.id) {
+        selectedOrder.value = { ...selectedOrder.value, status: newStatus }
+      }
+      
+      console.log(`Pedido #${order.id} actualizado a estado: ${newStatus}`)
     }
-    order.statusHistory[newStatus] = new Date();
-
-    statusUpdateOrder.value = null;
-
-    if (selectedOrder.value && selectedOrder.value.id === order.id) {
-      selectedOrder.value = { ...order };
-    }
-
-    console.log(`Pedido #${order.id} actualizado a estado: ${newStatus}`);
+  } catch (error) {
+    console.error('Error actualizando estado del pedido:', error)
+    // Aquí podrías mostrar una notificación de error
+  } finally {
+    statusUpdateOrder.value = null
   }
-};
+}
 
-onMounted(() => {
-  updateViewType();
-  window.addEventListener('resize', updateViewType);
-  loadOrders();
-});
+// Lifecycle hooks
+onMounted(async () => {
+  if (!authStore.isAuthenticated()) {
+    return
+  }
+
+  updateViewType()  
+  window.addEventListener('resize', updateViewType)
+  
+  // Cargar datos en secuencia
+  await loadBusiness()
+  await loadRestaurants()
+  await loadOrders()
+})
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateViewType);
-});
+  window.removeEventListener('resize', updateViewType)
+})
 
-watch([searchQuery, statusFilter, currentTab], () => {
-  currentPage.value = 1;
-});
-
+// Watchers
+watch([searchQuery, statusFilter, restaurantFilter, currentTab], () => {
+  currentPage.value = 1
+})
 </script>
 
 <style scoped lang="scss">
@@ -2000,3 +1849,6 @@ watch([searchQuery, statusFilter, currentTab], () => {
   }
 }
 </style>
+
+
+

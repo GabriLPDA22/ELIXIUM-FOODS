@@ -6,7 +6,7 @@
         <p class="business-home__welcome">Aquí tienes un resumen de tu actividad.</p>
       </div>
       <div class="business-home__header-right">
-        <div class="business-home__restaurant-selector" v-if="restaurants.length > 0">
+        <div class="business-home__restaurant-selector" v-if="restaurants.length > 1">
           <label for="restaurantSelect" class="business-home__selector-label">Restaurante:</label>
           <select 
             id="restaurantSelect" 
@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <div v-if="selectedRestaurant && !selectedRestaurant.isOpen" class="business-home__alert">
+    <div v-if="!isRestaurantOpen" class="business-home__alert">
       <div class="business-home__alert-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
@@ -168,8 +168,8 @@
       </div>
     </div>
 
-    <!-- Sección de restaurantes -->
-    <div v-if="restaurants.length > 0" class="business-home__restaurants-overview">
+    <!-- Nueva sección de restaurantes -->
+    <div v-if="restaurants.length > 1" class="business-home__restaurants-overview">
       <div class="business-home__section-header">
         <h2 class="business-home__section-title">Tus Restaurantes</h2>
         <router-link :to="{ name: 'business-settings' }" class="business-home__section-link">
@@ -237,21 +237,25 @@
             </svg>
           </router-link>
         </div>
-        <div v-if="pendingOrders.length > 0" class="business-home__orders-list">
+        <div v-if="loadingOrders" class="business-home__loading">
+          <div class="business-home__spinner"></div>
+          <p>Cargando pedidos...</p>
+        </div>
+        <div v-else-if="pendingOrders.length > 0" class="business-home__orders-list">
           <div v-for="order in pendingOrders.slice(0, 3)" :key="order.id" class="business-home__order-item">
             <div class="business-home__order-info">
               <div class="business-home__order-header">
                 <h4 class="business-home__order-id">Pedido #{{ order.id }}</h4>
-                <span class="business-home__order-time">{{ formatTime(order.date) }}</span>
+                <span class="business-home__order-time">{{ formatTime(order.createdAt) }}</span>
               </div>
               <div class="business-home__order-details">
-                <p class="business-home__customer-name">{{ order.customerName }}</p>
-                <p class="business-home__order-items">{{ order.items }} artículo(s)</p>
+                <p class="business-home__customer-name">{{ getCustomerName(order) }}</p>
+                <p class="business-home__order-items">{{ order.orderItems?.length || 0 }} artículo(s)</p>
               </div>
             </div>
             <div class="business-home__order-actions">
               <span class="business-home__order-total">{{ formatCurrency(order.total) }}</span>
-              <span :class="['business-home__status', `business-home__status--${order.status}`]">{{
+              <span :class="['business-home__status', `business-home__status--${order.status.toLowerCase()}`]">{{
                 getStatusLabel(order.status) }}</span>
               <button @click="viewOrderDetails(order)" class="business-home__order-btn">Ver Detalles</button>
             </div>
@@ -352,24 +356,23 @@
             <h4 class="business-home__details-title">Información del Cliente</h4>
             <div class="business-home__details-item">
               <span class="business-home__details-label">Nombre:</span>
-              <span class="business-home__details-value">{{ selectedOrder.customerName }}</span>
+              <span class="business-home__details-value">{{ getCustomerName(selectedOrder) }}</span>
             </div>
             <div class="business-home__details-item">
               <span class="business-home__details-label">Hora:</span>
-              <span class="business-home__details-value">{{ formatTime(selectedOrder.date) }}</span>
+              <span class="business-home__details-value">{{ formatTime(selectedOrder.createdAt) }}</span>
             </div>
           </div>
 
           <div class="business-home__order-details-section">
             <h4 class="business-home__details-title">Artículos del Pedido</h4>
             <ul class="business-home__order-items-list">
-              <li v-for="(item, index) in orderItems" :key="index" class="business-home__order-item-detail">
+              <li v-for="item in selectedOrder.orderItems || []" :key="item.id" class="business-home__order-item-detail">
                 <span class="business-home__item-quantity">{{ item.quantity }}x</span>
                 <div class="business-home__item-info">
-                  <span class="business-home__item-name">{{ item.name }}</span>
-                  <span v-if="item.options" class="business-home__item-options">{{ item.options }}</span>
+                  <span class="business-home__item-name">{{ item.product?.name || 'Producto' }}</span>
                 </div>
-                <span class="business-home__item-price">{{ formatCurrency(item.price * item.quantity) }}</span>
+                <span class="business-home__item-price">{{ formatCurrency(item.subtotal) }}</span>
               </li>
             </ul>
             <div class="business-home__order-summary">
@@ -381,22 +384,9 @@
           </div>
         </div>
         <div class="business-home__modal-footer">
-          <div class="business-home__status-update">
-            <label for="statusSelect" class="business-home__status-label">Estado:</label>
-            <select id="statusSelect" v-model="selectedOrderStatus" class="business-home__status-select">
-              <option value="pending">Pendiente</option>
-              <option value="preparing">En preparación</option>
-              <option value="ready">Listo para recoger/enviar</option>
-              <option value="delivering">En reparto</option>
-              <option value="delivered">Entregado</option>
-              <option value="cancelled">Cancelado</option>
-            </select>
-          </div>
           <div class="business-home__modal-actions">
             <button @click="closeOrderDetails"
               class="business-home__modal-btn business-home__modal-btn--secondary">Cerrar</button>
-            <button @click="updateOrderStatus"
-              class="business-home__modal-btn business-home__modal-btn--primary">Actualizar Estado</button>
           </div>
         </div>
       </div>
@@ -405,8 +395,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
@@ -421,339 +411,274 @@ const selectedRestaurantId = ref('all')
 const isRefreshing = ref(false)
 const popularProducts = ref([])
 const allProducts = ref([])
-const restaurantProductsMap = ref({}) // Mapa de productos por restaurante
+const allOrders = ref([])
+const loadingOrders = ref(false)
 
-// Nombre del negocio desde el business cargado
+// Nombre del negocio REAL desde el business cargado
 const businessName = computed(() => {
   return business.value?.name || authStore.user?.businessName || 'Mi Negocio'
-})
-
-// Restaurante seleccionado
-const selectedRestaurant = computed(() => {
-  if (selectedRestaurantId.value === 'all') return null
-  return restaurants.value.find(r => r.id === selectedRestaurantId.value)
 })
 
 const selectedRestaurantName = computed(() => {
   if (selectedRestaurantId.value === 'all') {
     return 'Tu negocio'
   }
-  return selectedRestaurant.value?.name || 'Restaurante'
+  const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
+  return restaurant?.name || 'Restaurante'
 })
 
-// Stats hardcodeadas base que cambian según el restaurante seleccionado
-const baseStats = {
-  todayOrders: 25,
-  todayRevenue: 680.50,
-  orderChange: 12,
-  revenueChange: 18,
-  averageRating: 4.5,
-  totalProducts: 0
-}
+// Pedidos filtrados según el estado
+const pendingOrders = computed(() => {
+  return allOrders.value.filter(order => 
+    ['Pending', 'Accepted', 'Preparing'].includes(order.status)
+  ).filter(order => {
+    // Filtrar por restaurante si está seleccionado
+    if (selectedRestaurantId.value === 'all') return true
+    return order.restaurantId === selectedRestaurantId.value
+  })
+})
 
-// Stats actuales basadas en el restaurante seleccionado
+const pendingOrdersCount = computed(() => {
+  return pendingOrders.value.length
+})
+
+// Stats calculadas basadas en pedidos reales
 const currentStats = computed(() => {
-  if (selectedRestaurantId.value === 'all') {
-    // Para todos los restaurantes, mostrar el total de productos
-    return {
-      ...baseStats,
-      totalProducts: allProducts.value.length
-    }
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  
+  let filteredOrders = allOrders.value
+  
+  // Filtrar por restaurante si está seleccionado
+  if (selectedRestaurantId.value !== 'all') {
+    filteredOrders = filteredOrders.filter(order => order.restaurantId === selectedRestaurantId.value)
   }
   
-  // Para un restaurante específico
-  const restaurantId = selectedRestaurantId.value
-  const restaurantProducts = restaurantProductsMap.value[restaurantId] || []
-  const restaurant = selectedRestaurant.value
+  // Pedidos de hoy
+  const todayOrders = filteredOrders.filter(order => 
+    new Date(order.createdAt) >= todayStart
+  )
   
-  // Stats para restaurante específico
+  // Ingresos de hoy
+  const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0)
+  
+  // Calcular productos totales
+  let totalProducts = 0
+  if (selectedRestaurantId.value === 'all') {
+    totalProducts = allProducts.value.length
+  } else {
+    totalProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value).length
+  }
+  
+  // Rating promedio (hardcodeado por ahora)
+  let averageRating = 4.5
+  if (selectedRestaurantId.value !== 'all') {
+    const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
+    averageRating = restaurant?.averageRating || 4.5
+  }
+  
   return {
-    todayOrders: Math.floor(baseStats.todayOrders * 0.6), // Simulado como 60% del total
-    todayRevenue: baseStats.todayRevenue * 0.6,
-    orderChange: baseStats.orderChange - 3,
-    revenueChange: baseStats.revenueChange - 5,
-    averageRating: restaurant?.averageRating || 4.3,
-    totalProducts: restaurantProducts.length
+    todayOrders: todayOrders.length,
+    todayRevenue: todayRevenue,
+    orderChange: 12, // Hardcodeado por ahora
+    revenueChange: 18, // Hardcodeado por ahora
+    averageRating: averageRating,
+    totalProducts: totalProducts
   }
 })
 
-// Pedidos hardcodeados por ahora
-const pendingOrders = ref([
-  {
-    id: 1,
-    date: new Date(),
-    customerName: 'Juan Pérez',
-    items: 3,
-    total: 24.50,
-    status: 'pending'
-  }
-])
+// Estados existentes
+const isRestaurantOpen = ref(true)
 
 // Modal
 const selectedOrder = ref(null)
-const selectedOrderStatus = ref('')
-const orderItems = ref([])
 
 // Computed
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 })
 
-const pendingOrdersCount = computed(() => {
-  return pendingOrders.value.filter(order => ['pending', 'preparing', 'ready'].includes(order.status)).length
-})
-
 // Funciones
-const formatCurrency = (value) => {
+const formatCurrency = (value: number): string => {
   if (typeof value !== 'number' || isNaN(value)) return '0,00 €'
   return value.toFixed(2).replace('.', ',') + ' €'
 }
 
-const formatTime = (date) => {
-  if (!(date instanceof Date)) return '00:00'
+const formatTime = (dateStr: string): string => {
+  const date = new Date(dateStr)
   return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
 }
 
-const getStatusLabel = (status) => {
-  const labels = {
-    pending: 'Pendiente',
-    preparing: 'En preparación', 
-    ready: 'Listo',
-    delivering: 'En reparto',
-    delivered: 'Entregado',
-    cancelled: 'Cancelado'
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    'Pending': 'Pendiente',
+    'Accepted': 'Aceptado',
+    'Preparing': 'En preparación', 
+    'ReadyForPickup': 'Listo',
+    'OnTheWay': 'En reparto',
+    'Delivered': 'Entregado',
+    'Cancelled': 'Cancelado'
   }
   return labels[status] || status
 }
 
-const getRestaurantAddress = (restaurant) => {
+const getCustomerName = (order: any): string => {
+  if (order.user) {
+    return `${order.user.firstName} ${order.user.lastName}`.trim()
+  }
+  return 'Cliente'
+}
+
+const getRestaurantAddress = (restaurant: any): string => {
   if (!restaurant.address) return 'Dirección no disponible'
-  return `${restaurant.address.street || ''}, ${restaurant.address.city || ''}`
+  return `${restaurant.address.street}, ${restaurant.address.city}`
 }
 
-const getRestaurantProductCount = (restaurantId) => {
-  return restaurantProductsMap.value[restaurantId]?.length || 0
+const getRestaurantProductCount = (restaurantId: number): number => {
+  return allProducts.value.filter(p => p.restaurantId === restaurantId).length
 }
 
-// Cargar business usando endpoint real
+// Cargar business REAL usando tu endpoint
 const loadBusiness = async () => {
   try {
     const userId = authStore.user?.id
-    if (!userId) {
-      console.error('No user ID found')
-      return false
-    }
+    if (!userId) return
 
-    console.log('Loading business for user ID:', userId)
     const response = await api.get(`/api/Business/user/${userId}`)
-    
     if (response.data) {
       business.value = response.data
-      console.log('Business loaded:', business.value)
-      return true
-    } else {
-      console.error('No business data returned')
-      return false
     }
   } catch (error) {
-    console.error('Error loading business:', error)
+    console.error('Error cargando business:', error)
     business.value = null
-    return false
   }
 }
 
-// Cargar restaurantes del business usando endpoint real
+// Cargar restaurantes REALES del business
 const loadRestaurants = async () => {
   try {
-    if (!business.value?.id) {
-      console.error('No business ID found')
-      return false
-    }
+    if (!business.value?.id) return
 
-    console.log('Loading restaurants for business ID:', business.value.id)
     const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
-    
-    if (response.data && Array.isArray(response.data)) {
+    if (response.data) {
       restaurants.value = response.data
-      console.log('Restaurants loaded:', restaurants.value.length, 'restaurants')
-      return true
-    } else {
-      console.error('No restaurant data returned or invalid format')
-      return false
+      console.log('Restaurantes cargados:', restaurants.value)
     }
   } catch (error) {
-    console.error('Error loading restaurants:', error)
+    console.error('Error cargando restaurantes:', error)
     restaurants.value = []
-    return false
   }
 }
 
-// Cargar productos de cada restaurante
+// Cargar productos REALES usando tus endpoints
 const loadProducts = async () => {
   try {
-    if (restaurants.value.length === 0) {
-      console.error('No restaurants found')
-      return false
-    }
+    if (!business.value?.id) return
 
-    console.log('Loading products for restaurants...')
     const allProductsData = []
-    const productsMap = {}
     
     for (const restaurant of restaurants.value) {
       try {
-        console.log(`Loading products for restaurant ID: ${restaurant.id}`)
         const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
-        
-        if (productsResponse.data && Array.isArray(productsResponse.data)) {
-          const restaurantProducts = productsResponse.data.map((product) => ({
+        if (productsResponse.data) {
+          const restaurantProducts = productsResponse.data.map((product: any) => ({
             ...product,
             restaurantId: restaurant.id,
             restaurantName: restaurant.name,
-            image: product.imageUrl || product.productImageUrl
+            image: product.imageUrl,
+            price: product.basePrice
           }))
-          
-          // Guardar productos en el mapa
-          productsMap[restaurant.id] = restaurantProducts
-          
-          // Añadir al array total
           allProductsData.push(...restaurantProducts)
-          console.log(`Loaded ${restaurantProducts.length} products for restaurant ${restaurant.name}`)
         }
       } catch (error) {
-        console.error(`Error loading products for restaurant ${restaurant.id}:`, error)
-        productsMap[restaurant.id] = []
+        console.error(`Error productos restaurante ${restaurant.id}:`, error)
       }
     }
     
-    // Actualizar los datos
     allProducts.value = allProductsData
-    restaurantProductsMap.value = productsMap
-    console.log('Total products loaded:', allProducts.value.length)
     
-    // Simular productos populares (por ahora)
-    if (allProductsData.length > 0) {
-      popularProducts.value = allProductsData.slice(0, 8).map(product => ({
-        ...product,
-        ordersCount: Math.floor(Math.random() * 50) + 5,
-        revenue: product.price * (Math.floor(Math.random() * 50) + 5)
-      }))
-    } else {
-      popularProducts.value = []
-    }
+    // Filtrar productos populares (simulado por ahora)
+    popularProducts.value = allProductsData.slice(0, 8).map(product => ({
+      ...product,
+      ordersCount: Math.floor(Math.random() * 50) + 5,
+      revenue: product.price * (Math.floor(Math.random() * 50) + 5)
+    }))
     
-    return allProductsData.length > 0
+    console.log('Productos cargados:', allProducts.value.length)
   } catch (error) {
-    console.error('Error loading products:', error)
+    console.error('Error cargando productos:', error)
     allProducts.value = []
     popularProducts.value = []
-    restaurantProductsMap.value = {}
-    return false
   }
 }
 
-const selectRestaurant = (restaurantId) => {
+// Cargar pedidos REALES desde la API
+const loadOrders = async () => {
+  if (restaurants.value.length === 0) return
+  
+  loadingOrders.value = true
+  try {
+    const allOrdersData = []
+    
+    for (const restaurant of restaurants.value) {
+      try {
+        const ordersResponse = await api.get(`/api/Orders/restaurant/${restaurant.id}`)
+        if (ordersResponse.data) {
+          const restaurantOrders = ordersResponse.data.map((order: any) => ({
+            ...order,
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name
+          }))
+          allOrdersData.push(...restaurantOrders)
+        }
+      } catch (error) {
+        console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
+      }
+    }
+    
+    allOrders.value = allOrdersData
+    console.log('Pedidos cargados:', allOrders.value.length)
+  } catch (error) {
+    console.error('Error cargando pedidos:', error)
+    allOrders.value = []
+  } finally {
+    loadingOrders.value = false
+  }
+}
+
+const selectRestaurant = (restaurantId: number | string) => {
   selectedRestaurantId.value = restaurantId
-  console.log('Restaurant selected:', restaurantId)
+  console.log('Restaurante seleccionado:', restaurantId)
 }
 
 const onRestaurantChange = () => {
-  console.log('Restaurant changed to:', selectedRestaurantId.value)
-  // Actualizar los productos populares según el restaurante seleccionado
-  if (selectedRestaurantId.value !== 'all') {
-    const restaurantProducts = restaurantProductsMap.value[selectedRestaurantId.value] || []
-    if (restaurantProducts.length > 0) {
-      popularProducts.value = restaurantProducts.slice(0, 8).map(product => ({
-        ...product,
-        ordersCount: Math.floor(Math.random() * 50) + 5,
-        revenue: product.price * (Math.floor(Math.random() * 50) + 5)
-      }))
-    } else {
-      popularProducts.value = []
-    }
-  } else {
-    // Para "Todos los restaurantes", mostrar productos de todos
-    const allProductsArray = allProducts.value
-    if (allProductsArray.length > 0) {
-      popularProducts.value = allProductsArray.slice(0, 8).map(product => ({
-        ...product,
-        ordersCount: Math.floor(Math.random() * 50) + 5,
-        revenue: product.price * (Math.floor(Math.random() * 50) + 5)
-      }))
-    } else {
-      popularProducts.value = []
-    }
-  }
+  console.log('Cambio de restaurante:', selectedRestaurantId.value)
 }
 
 const refreshData = async () => {
   isRefreshing.value = true
   try {
-    console.log('Starting data refresh...')
-    
-    const businessLoaded = await loadBusiness()
-    if (!businessLoaded) {
-      console.error('Failed to load business, aborting refresh')
-      return
-    }
-    
-    const restaurantsLoaded = await loadRestaurants()
-    if (!restaurantsLoaded) {
-      console.warn('Failed to load restaurants, but continuing...')
-    }
-    
+    await loadBusiness()
+    await loadRestaurants()
     await loadProducts()
-    
-    console.log('Data refresh completed')
-  } catch (error) {
-    console.error('Error during data refresh:', error)
+    await loadOrders()
   } finally {
     isRefreshing.value = false
   }
 }
 
-const toggleRestaurantOpen = async () => {
-  if (!selectedRestaurant.value) return
-  
-  try {
-    // Actualizar el estado en el modelo local primero
-    const restaurant = selectedRestaurant.value
-    restaurant.isOpen = !restaurant.isOpen
-    
-    // Aquí podrías actualizar el estado en el backend
-    // Ejemplo: await api.put(`/api/Restaurants/${restaurant.id}/toggle-status`, { isOpen: restaurant.isOpen })
-    
-    console.log(`Restaurant ${restaurant.id} status changed to: ${restaurant.isOpen ? 'Open' : 'Closed'}`)
-  } catch (error) {
-    console.error('Error toggling restaurant status:', error)
-    // Revertir en caso de error
-    if (selectedRestaurant.value) {
-      selectedRestaurant.value.isOpen = !selectedRestaurant.value.isOpen
-    }
-  }
+const toggleRestaurantOpen = () => {
+  isRestaurantOpen.value = !isRestaurantOpen.value
 }
 
-const viewOrderDetails = (order) => {
+const viewOrderDetails = (order: any) => {
   selectedOrder.value = order
-  selectedOrderStatus.value = order.status
-  orderItems.value = [
-    { name: 'Producto ejemplo', quantity: 2, price: 12.50, options: null }
-  ]
 }
 
 const closeOrderDetails = () => {
   selectedOrder.value = null
-  orderItems.value = []
 }
 
-const updateOrderStatus = () => {
-  if (selectedOrder.value) {
-    selectedOrder.value.status = selectedOrderStatus.value
-  }
-  closeOrderDetails()
-}
-
-// Inicializar datos
 onMounted(async () => {
   if (!authStore.isAuthenticated()) {
     const isAuth = await authStore.checkAuth()
@@ -763,20 +688,42 @@ onMounted(async () => {
     }
   }
 
-  // Cargar datos en secuencia
-  await refreshData()
+  // Cargar todo en secuencia
+  await loadBusiness()
+  await loadRestaurants()
+  await loadProducts()
+  await loadOrders()
 })
-
-// Vigilar cambios en los restaurantes para actualizar el restaurante seleccionado si es necesario
-watch(restaurants, (newRestaurants) => {
-  if (newRestaurants.length > 0 && selectedRestaurantId.value === 'all') {
-    // Si se cargan restaurantes y no hay ninguno seleccionado, seleccionar el primero
-    console.log('Auto-selecting first restaurant')
-  }
-}, { deep: true })
 </script>
 
 <style lang="scss" scoped>
+// Agregar estilos para el loading
+.business-home__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.business-home__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f1f5f9;
+  border-radius: 50%;
+  border-top-color: #06a98d;
+  animation: spinner 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// El resto de estilos se mantienen igual...
 .business-home {
   &__restaurant-selector {
     display: flex;
@@ -1459,17 +1406,22 @@ watch(restaurants, (newRestaurants) => {
       color: #b45309;
     }
 
+    &--accepted {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
     &--preparing {
       background-color: #dbeafe;
       color: #1e40af;
     }
 
-    &--ready {
+    &--readyforpickup {
       background-color: #e0e7ff;
       color: #3730a3;
     }
 
-    &--delivering {
+    &--ontheway {
       background-color: #cffafe;
       color: #0891b2;
     }
@@ -1825,13 +1777,6 @@ watch(restaurants, (newRestaurants) => {
     line-height: 1.3;
   }
 
-  &__item-options {
-    font-size: 0.8rem;
-    color: #64748b;
-    margin-top: 0.2rem;
-    font-style: italic;
-  }
-
   &__item-price {
     font-size: 0.9rem;
     font-weight: 500;
@@ -1885,35 +1830,6 @@ watch(restaurants, (newRestaurants) => {
     }
   }
 
-  &__status-update {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  &__status-label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #1e293b;
-    white-space: nowrap;
-  }
-
-  &__status-select {
-    padding: 0.6rem 0.85rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    color: #1e293b;
-    background-color: white;
-    flex-grow: 1;
-
-    &:focus {
-      outline: none;
-      border-color: #06a98d;
-      box-shadow: 0 0 0 2px rgba(6, 169, 141, 0.2);
-    }
-  }
-
   &__modal-actions {
     display: flex;
     gap: 0.75rem;
@@ -1931,19 +1847,6 @@ watch(restaurants, (newRestaurants) => {
     @media (max-width: 520px) {
       flex-grow: 1;
       text-align: center;
-    }
-
-    &--primary {
-      background-color: #06a98d;
-      color: white;
-
-      &:hover {
-        background-color: #058a73;
-      }
-
-      &:active {
-        background-color: #047660;
-      }
     }
 
     &--secondary {

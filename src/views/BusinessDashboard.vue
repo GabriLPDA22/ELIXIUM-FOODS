@@ -3,9 +3,9 @@
     <div class="business-dashboard__sidebar" :class="{ 'business-dashboard__sidebar--open': isSidebarOpen }">
       <div class="business-dashboard__sidebar-header">
         <div class="business-dashboard__logo">
-          <img :src="business?.logoUrl || '/images/restaurant-placeholder.png'" alt="Logo del restaurante"
+          <img :src="business?.logoUrl || '/images/restaurant-placeholder.png'" :alt="`Logo de ${business?.name || 'Mi Negocio'}`"
             class="business-dashboard__logo-img" />
-          <h2 class="business-dashboard__restaurant-name">{{ business?.name || 'Mi Restaurante' }}</h2>
+          <h2 class="business-dashboard__restaurant-name">{{ business?.name || 'Mi Negocio' }}</h2>
         </div>
         <button @click="toggleSidebar" class="business-dashboard__close-sidebar">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -122,7 +122,7 @@
           <div class="business-dashboard__user-menu">
             <div class="business-dashboard__user-info">
               <span class="business-dashboard__user-name">
-                {{ business?.name }}
+                {{ business?.name || 'Mi Negocio' }}
               </span>
             </div>
           </div>
@@ -140,14 +140,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBusinessAuthStore } from '@/stores/businessAuth'
+import { useAuthStore } from '@/stores/auth'
+import { api } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
 const businessAuthStore = useBusinessAuthStore()
+const authStore = useAuthStore()
 
 const isSidebarOpen = ref(false)
-
-const business = computed(() => businessAuthStore.business)
+const business = ref(null)
 
 const businessRoleLabel = computed(() => {
   const role = businessAuthStore.businessRole
@@ -171,66 +173,77 @@ const currentPageTitle = computed(() => {
   }
 })
 
+// Cargar business REAL usando el endpoint
+const loadBusiness = async () => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
+
+    const response = await api.get(`/api/Business/user/${userId}`)
+    if (response.data) {
+      business.value = response.data
+      console.log('Business cargado en dashboard:', business.value)
+    }
+  } catch (error) {
+    console.error('Error cargando business en dashboard:', error)
+    business.value = null
+  }
+}
+
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
 }
 
 const logout = async () => {
   await businessAuthStore.logout()
-  router.push({ name: 'business-login' }) // Usar nombre de ruta es más seguro
+  router.push({ name: 'business-login' })
 }
 
 onMounted(async () => {
-  // Considera si esta lógica es necesaria aquí si ya tienes guardias globales robustas.
-  // Podría ser útil si el usuario llega directamente a una página del dashboard
-  // sin pasar por una transición de ruta que active la guardia global (ej. refresco de página).
-  if (!businessAuthStore.isAuthenticated) { // Asumiendo que 'isAuthenticated' es una propiedad/getter reactivo
-    try {
-      const isAuth = await businessAuthStore.checkAuth()
-      if (!isAuth) {
-        router.push({ name: 'business-login' })
-      }
-    } catch (error) {
-      console.error("Error en checkAuth de BusinessDashboard:", error)
-      router.push({ name: 'business-login' })
+  // Verificar autenticación
+  if (!authStore.isAuthenticated()) {
+    const isAuth = await authStore.checkAuth()
+    if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
+      router.push('/login')
+      return
     }
   }
+
+  // Cargar datos del business
+  await loadBusiness()
 })
 </script>
 
 <style lang="scss" scoped>
-/* Tus estilos .business-dashboard ... se mantienen igual */
+/* Los estilos se mantienen igual */
 .business-dashboard {
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: #f8fafc; // Ejemplo de color de fondo
+  background-color: #f8fafc;
 
-  // Variables CSS (ejemplo, defínelas donde corresponda, ej. globalmente o en este scope)
   --white: #fff;
-  --primary: #ff416c; // Color rosa de ejemplo
+  --primary: #ff416c;
   --medium: #6c757d;
   --dark: #343a40;
   --shadow: 0 0 15px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease-in-out;
   --border-radius-sm: 6px;
 
-
   &__sidebar {
     width: 260px;
     background-color: var(--white);
     border-right: 1px solid #e2e8f0;
     height: 100vh;
-    position: fixed; // O 'sticky' si el header principal no es fijo
+    position: fixed;
     top: 0;
     left: 0;
-    z-index: 1001; // Asegurar que esté por encima del contenido principal
+    z-index: 1001;
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease;
 
     @media (max-width: 992px) {
-      // Breakpoint para ocultar/mostrar sidebar
       transform: translateX(-100%);
     }
 
@@ -268,26 +281,25 @@ onMounted(async () => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 160px; // Ajusta según sea necesario
+    max-width: 160px;
   }
 
   &__close-sidebar {
-    display: none; // Oculto por defecto
+    display: none;
     background: none;
     border: none;
     color: var(--medium);
     cursor: pointer;
 
     @media (max-width: 992px) {
-      // Visible solo en móvil para cerrar
       display: block;
     }
   }
 
   &__nav {
-    flex-grow: 1; // Permite que la navegación ocupe el espacio restante
+    flex-grow: 1;
     padding: 1.5rem 0;
-    overflow-y: auto; // Para scroll si hay muchos ítems
+    overflow-y: auto;
   }
 
   &__nav-item {
@@ -299,17 +311,15 @@ onMounted(async () => {
     text-decoration: none;
     transition: var(--transition);
     font-weight: 500;
-    border-left: 3px solid transparent; // Para el indicador activo
+    border-left: 3px solid transparent;
 
     &:hover {
       background-color: rgba(0, 0, 0, 0.03);
       color: var(--dark);
     }
 
-    // Estilo para el enlace activo
     &.business-dashboard__nav-item--active {
-      // Vue Router usa 'router-link-exact-active' por defecto
-      background-color: rgba(255, 65, 108, 0.08); // Color primario con opacidad
+      background-color: rgba(255, 65, 108, 0.08);
       color: var(--primary);
       border-left-color: var(--primary);
       font-weight: 600;
@@ -321,9 +331,9 @@ onMounted(async () => {
   }
 
   &__nav-icon {
-    width: 1.2rem; // 20px
-    height: 1.2rem; // 20px
-    flex-shrink: 0; // Evita que el ícono se encoja
+    width: 1.2rem;
+    height: 1.2rem;
+    flex-shrink: 0;
   }
 
   &__sidebar-footer {
@@ -346,21 +356,20 @@ onMounted(async () => {
     transition: var(--transition);
 
     &:hover {
-      background-color: #fef2f2; // Un rojo claro para el hover de logout
-      color: #ef4444; // Rojo
+      background-color: #fef2f2;
+      color: #ef4444;
       border-color: #fecaca;
     }
   }
 
   &__main {
-    flex-grow: 1; // Ocupa el resto del espacio
-    margin-left: 260px; // Mismo ancho que la sidebar
+    flex-grow: 1;
+    margin-left: 260px;
     transition: margin-left 0.3s ease;
-
 
     @media (max-width: 992px) {
       margin-left: 0;
-      width: 100%; // Asegurar que ocupe todo el ancho si la sidebar está oculta
+      width: 100%;
     }
   }
 
@@ -372,9 +381,9 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: sticky; // Header fijo al hacer scroll
+    position: sticky;
     top: 0;
-    z-index: 1000; // Debajo de la sidebar si es fija y se superpone
+    z-index: 1000;
   }
 
   &__menu-toggle {
@@ -382,20 +391,17 @@ onMounted(async () => {
     border: none;
     color: var(--medium);
     cursor: pointer;
-    display: none; // Oculto en desktop
+    display: none;
 
     @media (max-width: 992px) {
-      // Visible solo en móvil/tablet para abrir sidebar
       display: block;
     }
   }
 
   &__icon {
-    // Icono general
-    width: 1.5rem; // 24px
-    height: 1.5rem; // 24px
+    width: 1.5rem;
+    height: 1.5rem;
   }
-
 
   &__header-title {
     h1 {
@@ -416,52 +422,18 @@ onMounted(async () => {
     gap: 1.5rem;
   }
 
-  &__notifications {
-    position: relative;
-  }
-
-  &__notification-btn {
-    background: none;
-    border: none;
-    color: var(--medium);
-    cursor: pointer;
-    position: relative; // Para el badge
-
-    &:hover {
-      color: var(--dark);
-    }
-  }
-
-  &__notification-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background-color: var(--primary);
-    color: var(--white);
-    font-size: 0.75rem; // 12px
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1; // Para centrar el número si es de un solo dígito
-  }
-
   &__user-menu {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    cursor: pointer; // Si es un dropdown
+    cursor: pointer;
   }
 
   &__user-info {
     text-align: right;
-    display: none; // Oculto en móvil por defecto
+    display: none;
 
     @media (min-width: 768px) {
-      // Visible en pantallas más grandes
       display: block;
     }
   }
@@ -471,36 +443,13 @@ onMounted(async () => {
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--dark);
-    max-width: 150px; // Evitar que nombres largos rompan el layout
+    max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  &__user-role {
-    color: var(--medium);
-    font-size: 0.8rem;
-  }
-
-  &__user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px; // O 50% para círculo
-    overflow: hidden;
-    background-color: #f1f5f9; // Color de fondo por si la imagen no carga
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &__avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; // Asegura que la imagen cubra el área sin distorsionarse
-  }
-
   &__content {
-    // Área principal donde se renderiza el <router-view />
     padding: 1.5rem;
 
     @media (max-width: 768px) {
