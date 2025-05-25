@@ -52,6 +52,15 @@
         </div>
 
         <div class="business-products__filter">
+          <select v-model="restaurantFilter" class="business-products__select">
+            <option value="">Todos los restaurantes (precios base)</option>
+            <option v-for="restaurant in restaurants" :key="restaurant.id" :value="restaurant.id">
+              {{ restaurant.name }} (precios locales)
+            </option>
+          </select>
+        </div>
+
+        <div class="business-products__filter">
           <select v-model="sortOption" class="business-products__select">
             <option value="name_asc">Nombre (A-Z)</option>
             <option value="name_desc">Nombre (Z-A)</option>
@@ -106,7 +115,7 @@
         </svg>
       </div>
       <h3>No se encontraron productos</h3>
-      <p v-if="searchQuery || categoryFilter">
+      <p v-if="searchQuery || categoryFilter || restaurantFilter">
         No hay resultados para los filtros seleccionados. Prueba con otros criterios.
       </p>
       <p v-else>
@@ -158,10 +167,7 @@
           <p class="business-products__card-description">{{ truncateText(product.description, 80) }}</p>
           <div class="business-products__card-footer">
             <div class="business-products__price-container">
-              <span class="business-products__price">{{ formatPrice(product.price) }}</span>
-              <span v-if="product.originalPrice && product.originalPrice > product.price" class="business-products__original-price">
-                {{ formatPrice(product.originalPrice) }}
-              </span>
+              <span class="business-products__price">{{ formatPrice(getCurrentPrice(product)) }}</span>
             </div>
             <div class="business-products__card-toggle">
               <button
@@ -209,10 +215,7 @@
             </td>
             <td class="business-products__cell">
               <div class="business-products__price-info">
-                <span class="business-products__price-value">{{ formatPrice(product.price) }}</span>
-                <span v-if="product.originalPrice && product.originalPrice > product.price" class="business-products__price-original">
-                  {{ formatPrice(product.originalPrice) }}
-                </span>
+                <span class="business-products__price-value">{{ formatPrice(getCurrentPrice(product)) }}</span>
               </div>
             </td>
             <td class="business-products__cell">
@@ -365,27 +368,12 @@
                 <input
                   type="number"
                   id="productPrice"
-                  v-model="productForm.price"
+                  v-model="productForm.basePrice"
                   class="business-products__form-input"
                   step="0.01"
                   min="0"
                   placeholder="0.00"
                   required
-                />
-              </div>
-              <div class="business-products__form-group">
-                <label for="productOriginalPrice" class="business-products__form-label">
-                  Precio original (€)
-                  <span class="business-products__form-hint">(para mostrar descuento)</span>
-                </label>
-                <input
-                  type="number"
-                  id="productOriginalPrice"
-                  v-model="productForm.originalPrice"
-                  class="business-products__form-input"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
                 />
               </div>
             </div>
@@ -609,17 +597,18 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { api } from '@/services/api';
 
-// Interfaces
 interface Product {
   id?: number;
   name: string;
   description: string;
-  price: number;
+  basePrice: number;
+  restaurantPrice?: number;
   imageUrl?: string;
   isAvailable: boolean;
   categoryId: number;
   categoryName?: string;
   restaurantName?: string;
+  restaurantId?: number;
 }
 
 interface Category {
@@ -636,23 +625,20 @@ const authStore = useAuthStore();
 const business = ref(null);
 const restaurants = ref([]);
 const loading = ref(false);
-const isRefreshing = ref(false);
 const products = ref<Product[]>([]);
 const categories = ref<Category[]>([]);
 
 // Estados de UI
 const searchQuery = ref('');
 const categoryFilter = ref('');
+const restaurantFilter = ref('');
 const sortOption = ref('name_asc');
 const viewMode = ref('grid');
-const currentPage = ref(1);
-const itemsPerPage = ref(12);
 
 // Estados del modal
 const showAddModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-const showAdvancedOptions = ref(false);
 const formSubmitting = ref(false);
 const deleteLoading = ref(false);
 const productToDelete = ref<Product | null>(null);
@@ -663,19 +649,10 @@ const productForm = reactive({
   id: undefined,
   name: '',
   description: '',
-  price: 0,
-  originalPrice: null,
+  basePrice: 0,
   categoryId: 0,
   available: true,
-  imageUrl: '',
-  sku: '',
-  stock: null,
-  tags: '',
-  featured: false
-});
-
-const shouldOpenNewProductModal = computed(() => {
-  return route.name === 'business-products-new' || route.query.openModal === 'true';
+  imageUrl: ''
 });
 
 // Computed properties
@@ -694,83 +671,47 @@ const filteredProducts = computed(() => {
     result = result.filter(product => product.categoryId === parseInt(categoryFilter.value));
   }
 
-  // Aplicar ordenamiento
+  if (restaurantFilter.value) {
+    result = result.filter(product => product.restaurantId === parseInt(restaurantFilter.value));
+  }
+
+  // Ordenamiento
   switch (sortOption.value) {
     case 'name_desc':
       result.sort((a, b) => b.name.localeCompare(a.name));
       break;
     case 'price_asc':
-      result.sort((a, b) => a.price - b.price);
+      result.sort((a, b) => getCurrentPrice(a) - getCurrentPrice(b));
       break;
     case 'price_desc':
-      result.sort((a, b) => b.price - a.price);
+      result.sort((a, b) => getCurrentPrice(b) - getCurrentPrice(a));
       break;
-    default: // name_asc
+    default:
       result.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   return result;
 });
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredProducts.value.length / itemsPerPage.value);
-});
-
-const paginationButtons = computed(() => {
-  const total = totalPages.value;
-  const current = currentPage.value;
-  const buttons = [];
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) {
-      buttons.push(i);
-    }
-  } else {
-    if (current <= 4) {
-      for (let i = 1; i <= 5; i++) buttons.push(i);
-      buttons.push('...');
-      buttons.push(total);
-    } else if (current >= total - 3) {
-      buttons.push(1);
-      buttons.push('...');
-      for (let i = total - 4; i <= total; i++) buttons.push(i);
-    } else {
-      buttons.push(1);
-      buttons.push('...');
-      for (let i = current - 1; i <= current + 1; i++) buttons.push(i);
-      buttons.push('...');
-      buttons.push(total);
-    }
-  }
-
-  return buttons;
-});
-
 // Watchers
 watch([searchQuery, categoryFilter, sortOption], () => {
-  currentPage.value = 1;
+  // Estos filtros no requieren recargar desde el backend
 });
 
-// Cargar business usando la misma lógica que BusinessHome.vue
+// Watcher específico para restaurantFilter que SÍ requiere recarga
+watch(restaurantFilter, () => {
+  loadProducts(); // Siempre recargar cuando cambie el filtro de restaurante
+});
+
+// Cargar business
 const loadBusiness = async () => {
   try {
     const userId = authStore.user?.id;
-    if (!userId) {
-      console.error('No se encontró userId en authStore');
-      return;
-    }
+    if (!userId) return;
 
-    console.log('Cargando business para userId:', userId);
     const response = await api.get(`/api/Business/user/${userId}`);
-    if (response.data) {
-      business.value = response.data;
-      console.log('Business cargado:', business.value);
-    } else {
-      console.error('No se encontró business para este usuario');
-      business.value = null;
-    }
+    business.value = response.data || null;
   } catch (error) {
-    console.error('Error cargando business:', error);
     business.value = null;
   }
 };
@@ -778,30 +719,18 @@ const loadBusiness = async () => {
 // Cargar restaurantes del business
 const loadRestaurants = async () => {
   try {
-    if (!business.value?.id) {
-      console.log('No hay businessId disponible');
-      return;
-    }
+    if (!business.value?.id) return;
 
-    console.log('Cargando restaurantes para businessId:', business.value.id);
     const response = await api.get(`/api/Restaurants/business/${business.value.id}`);
-    if (response.data && response.data.length > 0) {
-      restaurants.value = response.data;
-      console.log('Restaurantes cargados:', restaurants.value.length);
-    } else {
-      console.log('No se encontraron restaurantes para este business');
-      restaurants.value = [];
-    }
+    restaurants.value = response.data || [];
   } catch (error) {
-    console.error('Error cargando restaurantes:', error);
     restaurants.value = [];
   }
 };
 
-// Cargar productos de todos los restaurantes
+// Cargar productos
 const loadProducts = async () => {
   if (!restaurants.value.length) {
-    console.log('No hay restaurantes disponibles');
     products.value = [];
     return;
   }
@@ -811,42 +740,65 @@ const loadProducts = async () => {
   try {
     const allProducts: Product[] = [];
 
-    for (const restaurant of restaurants.value) {
-      try {
-        console.log('Cargando productos del restaurante:', restaurant.id);
-        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`);
-        if (productsResponse.data) {
-          const restaurantProducts = productsResponse.data.map((product: any) => ({
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            imageUrl: product.imageUrl,
-            isAvailable: product.isAvailable ?? true,
-            available: product.isAvailable ?? true, // Alias para compatibilidad
-            categoryId: product.categoryId,
-            categoryName: product.categoryName,
-            restaurantName: restaurant.name,
-            originalPrice: product.originalPrice
-          }));
-          allProducts.push(...restaurantProducts);
+    if (restaurantFilter.value) {
+      // Productos de un restaurante específico con precios locales
+      const restaurantId = parseInt(restaurantFilter.value);
+      const response = await api.get(`/api/Products/Restaurant/${restaurantId}`);
+      
+      if (response.data) {
+        const restaurantProducts = response.data.map((product: any) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          basePrice: product.basePrice,
+          restaurantPrice: product.restaurantPrice || product.price,
+          imageUrl: product.imageUrl,
+          isAvailable: product.restaurantAvailability ?? product.isAvailable ?? true,
+          available: product.restaurantAvailability ?? product.isAvailable ?? true,
+          categoryId: product.categoryId,
+          categoryName: product.categoryName,
+          restaurantName: restaurants.value.find(r => r.id === restaurantId)?.name,
+          restaurantId: restaurantId
+        }));
+        allProducts.push(...restaurantProducts);
+      }
+    } else {
+      // Productos de todos los restaurantes del business
+      for (const restaurant of restaurants.value) {
+        try {
+          const response = await api.get(`/api/Products/Restaurant/${restaurant.id}`);
+          
+          if (response.data) {
+            const restaurantProducts = response.data.map((product: any) => ({
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              basePrice: product.basePrice,
+              imageUrl: product.imageUrl,
+              isAvailable: product.isAvailable ?? true,
+              available: product.isAvailable ?? true,
+              categoryId: product.categoryId,
+              categoryName: product.categoryName,
+              restaurantName: restaurant.name,
+              restaurantId: restaurant.id
+            }));
+            allProducts.push(...restaurantProducts);
+          }
+        } catch (error) {
+          // Continuar con el siguiente restaurante
         }
-      } catch (error) {
-        console.error(`Error cargando productos del restaurante ${restaurant.id}:`, error);
       }
     }
 
     products.value = allProducts;
-    console.log('Total productos cargados:', products.value.length);
   } catch (error) {
-    console.error('Error cargando productos:', error);
     products.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-// Cargar categorías de todos los restaurantes
+// Cargar categorías
 const loadCategories = async () => {
   if (!restaurants.value.length) {
     categories.value = [];
@@ -858,34 +810,33 @@ const loadCategories = async () => {
 
     for (const restaurant of restaurants.value) {
       try {
-        // Obtener el restaurante con detalles (menús y categorías)
-        const restaurantResponse = await api.get(`/api/Restaurants/${restaurant.id}`);
-        if (restaurantResponse.data && restaurantResponse.data.menus) {
-          for (const menu of restaurantResponse.data.menus) {
+        const response = await api.get(`/api/Restaurants/${restaurant.id}`);
+        if (response.data?.menus) {
+          response.data.menus.forEach(menu => {
             if (menu.categories) {
               allCategories.push(...menu.categories);
             }
-          }
+          });
         }
       } catch (error) {
-        console.error(`Error cargando categorías del restaurante ${restaurant.id}:`, error);
+        // Continuar con el siguiente restaurante
       }
     }
 
-    // Eliminar duplicados por ID
-    const uniqueCategories = allCategories.filter((category, index, self) =>
+    // Eliminar duplicados
+    categories.value = allCategories.filter((category, index, self) =>
       index === self.findIndex(c => c.id === category.id)
     );
-
-    categories.value = uniqueCategories;
-    console.log('Categorías cargadas:', categories.value.length);
   } catch (error) {
-    console.error('Error cargando categorías:', error);
     categories.value = [];
   }
 };
 
 // Funciones auxiliares
+const getCurrentPrice = (product: Product): number => {
+  return product.restaurantPrice ?? product.basePrice;
+};
+
 const formatPrice = (value: number) => {
   return new Intl.NumberFormat('es-ES', {
     style: 'currency',
@@ -918,15 +869,10 @@ const resetProductForm = () => {
     id: undefined,
     name: '',
     description: '',
-    price: 0,
-    originalPrice: null,
+    basePrice: 0,
     categoryId: 0,
     available: true,
-    imageUrl: '',
-    sku: '',
-    stock: null,
-    tags: '',
-    featured: false
+    imageUrl: ''
   });
   imagePreview.value = '';
 };
@@ -934,8 +880,13 @@ const resetProductForm = () => {
 const editProduct = (product: Product) => {
   showEditModal.value = true;
   Object.assign(productForm, {
-    ...product,
-    available: product.isAvailable
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    basePrice: getCurrentPrice(product),
+    categoryId: product.categoryId,
+    available: product.isAvailable,
+    imageUrl: product.imageUrl || ''
   });
   imagePreview.value = product.imageUrl || '';
 };
@@ -948,19 +899,11 @@ const confirmDelete = (product: Product) => {
 const toggleProductAvailability = async (product: Product) => {
   try {
     const newAvailability = !product.isAvailable;
-    // Aquí llamarías a tu API para actualizar la disponibilidad
-    console.log(`Toggling availability for product ${product.id} to ${newAvailability}`);
-
-    // Actualizar localmente
     product.isAvailable = newAvailability;
     product.available = newAvailability;
   } catch (error) {
-    console.error('Error updating product availability:', error);
+    // Manejo de error si es necesario
   }
-};
-
-const toggleAdvancedOptions = () => {
-  showAdvancedOptions.value = !showAdvancedOptions.value;
 };
 
 // Manejo de archivos
@@ -1000,7 +943,7 @@ const submitProductForm = async () => {
     const productData = {
       name: productForm.name,
       description: productForm.description,
-      price: productForm.price,
+      basePrice: productForm.basePrice,
       imageUrl: productForm.imageUrl || '',
       isAvailable: productForm.available,
       categoryId: productForm.categoryId
@@ -1008,10 +951,8 @@ const submitProductForm = async () => {
 
     if (showEditModal.value && productForm.id) {
       await api.put(`/api/Products/${productForm.id}`, productData);
-      console.log('Producto actualizado');
     } else {
       await api.post('/api/Products', productData);
-      console.log('Producto creado');
     }
 
     await loadProducts();
@@ -1019,7 +960,6 @@ const submitProductForm = async () => {
     alert(`Producto ${showEditModal.value ? 'actualizado' : 'creado'} correctamente.`);
 
   } catch (error) {
-    console.error('Error guardando producto:', error);
     alert(`Error al ${showEditModal.value ? 'actualizar' : 'crear'} el producto.`);
   } finally {
     formSubmitting.value = false;
@@ -1038,69 +978,45 @@ const deleteProduct = async () => {
     productToDelete.value = null;
     alert('Producto eliminado correctamente.');
   } catch (error) {
-    console.error('Error eliminando producto:', error);
     alert('Error al eliminar el producto.');
   } finally {
     deleteLoading.value = false;
   }
 };
 
-// Paginación
-const changePage = (page: number) => {
-  if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page;
-  }
-};
-
 // Inicialización
 onMounted(async () => {
-  console.log('BusinessProducts mounted');
-
-  // Verificar autenticación
   if (!authStore.isAuthenticated()) {
     try {
       const isAuth = await authStore.checkAuth();
       if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
-        console.log('Usuario no autorizado, redirigiendo...');
         router.push('/login?redirect=/business/products');
         return;
       }
     } catch (error) {
-      console.error("Error en checkAuth:", error);
       router.push('/login');
       return;
     }
   }
 
-  console.log('Usuario autenticado:', authStore.user);
-
-  // Cargar datos en secuencia
   try {
     await loadBusiness();
     if (!business.value) {
-      console.error('No se pudo cargar el business');
       router.push('/business/unauthorized');
       return;
     }
 
     await loadRestaurants();
-    if (!restaurants.value.length) {
-      console.log('No se encontraron restaurantes');
-      // No redirigir, simplemente mostrar mensaje vacío
-    }
-
     await Promise.all([loadProducts(), loadCategories()]);
 
-    // Abrir modal si se indica en la ruta
-    if (shouldOpenNewProductModal.value) {
+    if (route.name === 'business-products-new' || route.query.openModal === 'true') {
       showAddModal.value = true;
     }
   } catch (error) {
-    console.error('Error en la inicialización:', error);
+    // Error manejado en funciones individuales
   }
 });
 </script>
-
 <style lang="scss" scoped>
 .business-products {
   &__header {
