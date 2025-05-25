@@ -729,7 +729,7 @@ $transition: all 0.2s ease;
   color: white;
 
   &:hover {
-    background-color: darken($primary-color, 5%);
+    background-color: $primary-color;
     transform: translateY(-2px);
   }
 }
@@ -739,7 +739,7 @@ $transition: all 0.2s ease;
   color: $text-primary;
 
   &:hover {
-    background-color: darken($medium-gray, 5%);
+    background-color: $medium-gray;
   }
 }
 
@@ -761,12 +761,12 @@ $transition: all 0.2s ease;
   animation: slideIn 0.3s ease;
 
   &--success {
-    background: linear-gradient(135deg, $success-color, darken($success-color, 10%));
+    background: linear-gradient(135deg, $success-color, $success-color);
     color: white;
   }
 
   &--error {
-    background: linear-gradient(135deg, $error-color, darken($error-color, 10%));
+    background: linear-gradient(135deg, $error-color, $error-color);
     color: white;
   }
 

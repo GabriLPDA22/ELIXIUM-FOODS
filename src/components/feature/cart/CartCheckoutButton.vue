@@ -65,7 +65,7 @@ const proceedToCheckout = () => {
   box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
 
   &:hover:not(:disabled) {
-    background-color: darken(#06C167, 5%);
+    background-color: #06C167;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
   }

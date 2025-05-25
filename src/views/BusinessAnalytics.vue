@@ -776,7 +776,7 @@ watch(selectedPeriod, (newPeriodValue) => {
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: #058a73; // darken($color-primary, 5%)
+      background-color: #058a73;
     }
 
     &:disabled {

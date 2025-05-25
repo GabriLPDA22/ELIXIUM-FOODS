@@ -161,7 +161,7 @@ $transition: all 0.2s ease;
   transition: $transition;
 
   &:hover {
-    border-color: darken($medium-gray, 10%);
+    border-color: $medium-gray;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   }
@@ -328,7 +328,7 @@ $transition: all 0.2s ease;
   }
   
   &:hover {
-    border-color: darken($medium-gray, 10%);
+    border-color: $medium-gray;
   }
   
   &__header {

@@ -1161,7 +1161,7 @@ watch([searchQuery, statusFilter, restaurantFilter, currentTab], () => {
       color: var(--color-dark);
 
       &:hover {
-        background-color: darken(#f1f5f9, 5%);
+        background-color: #f1f5f9;
       }
     }
 
@@ -1170,7 +1170,7 @@ watch([searchQuery, statusFilter, restaurantFilter, currentTab], () => {
       color: var(--color-info);
 
       &:hover {
-        background-color: darken(#dbeafe, 5%);
+        background-color: #dbeafe;
       }
     }
   }
@@ -1327,7 +1327,7 @@ watch([searchQuery, statusFilter, restaurantFilter, currentTab], () => {
       color: var(--color-medium);
 
       &:hover {
-        background-color: darken(#f1f5f9, 5%);
+        background-color: #f1f5f9;
       }
     }
 

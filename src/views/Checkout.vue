@@ -1162,7 +1162,7 @@ $transition: all 0.2s ease;
 
   &:hover {
     background: rgba($primary-color, 0.15);
-    border-color: darken($primary-color, 10%);
+    border-color: $primary-color;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
   }
@@ -1334,7 +1334,7 @@ $transition: all 0.2s ease;
   min-width: 100px;
 
   &:hover:not(:disabled) {
-    background: darken($primary-color, 5%);
+    background: $primary-color;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(6, 193, 103, 0.3);
   }
@@ -1717,7 +1717,7 @@ $transition: all 0.2s ease;
   box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
 
   &:hover:not(:disabled) {
-    background-color: darken($primary-color, 5%);
+    background-color: $primary-color;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
   }
@@ -1764,7 +1764,7 @@ $transition: all 0.2s ease;
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background-color: darken($primary-color, 5%);
+    background-color: $primary-color;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
   }
@@ -1965,7 +1965,7 @@ $transition: all 0.2s ease;
   transition: $transition;
 
   &:hover:not(:disabled) {
-    background-color: darken($primary-color, 5%);
+    background-color: $primary-color;
   }
 
   &:disabled {

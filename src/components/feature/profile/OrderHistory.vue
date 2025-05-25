@@ -704,7 +704,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
       color: $text;
 
       &:hover {
-        background: darken($light, 3%);
+        background: $light;
       }
     }
 
@@ -713,7 +713,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
       color: white;
 
       &:hover:not(:disabled) {
-        background: darken($error, 5%);
+        background: $error;
         transform: translateY(-2px);
       }
 
