@@ -151,7 +151,7 @@
 
           <!-- Tabs de componentes -->
           <AdminUsers v-if="activeTab === 'users'" :users="users" @refresh="refreshAllData" @update="updateStats"
-            @add-alert="addAlert" />
+            @add-alert="addAlert" @view-user-secret="handleViewUserSecret" @go-to-jwt-debug="handleGoToJWTDebug" />
 
           <AdminBusinesses v-if="activeTab === 'businesses'" :businesses="businesses" @refresh="refreshAllData"
             @update="updateStats" @add-alert="addAlert" @view-restaurants="handleViewBusinessRestaurants" />
@@ -483,6 +483,23 @@ const handleViewBusinessRestaurants = (data) => {
   activeFilterBusinessId.value = data.businessId;
   activeTab.value = 'restaurants';
   addAlert(`Mostrando restaurantes de ${data.businessName}`, 'info');
+};
+
+// 🔧 NUEVOS MANEJADORES PARA JWT DEBUG
+const handleViewUserSecret = (user) => {
+  // Este manejador maneja cuando se hace clic en el ícono de clave secreta
+  // pero se mantiene en el popup, no cambia de pestaña
+  console.log('Ver clave secreta de:', user);
+};
+
+const handleGoToJWTDebug = (user) => {
+  // Este manejador se ejecuta cuando se hace clic en "Ir a JWT Debug" en el popup
+  activeTab.value = 'jwt';
+  addAlert(`Cambiando a JWT Debug para ${user.firstName} ${user.lastName}`, 'info');
+
+  // Opcional: Si necesitas pasar el usuario al componente JWT Debug
+  // puedes usar un estado global o evento
+  // selectedUserForJWT.value = user;
 };
 
 // Exportar datos
