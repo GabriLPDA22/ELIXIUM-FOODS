@@ -97,7 +97,7 @@
               <div v-else class="text-sm text-gray-500">No asignado</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ formatDateTime(order.createdAt) }}
+              {{ formatDateTimeLocal(order.createdAt) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
               <div class="flex gap-2">
@@ -158,7 +158,7 @@
 
     <!-- Modal de detalles de Pedido -->
     <div v-if="showOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl max-w-3xl w-full mx-4 overflow-hidden">
+      <div class="bg-white rounded-xl max-w-4xl w-full mx-4 overflow-hidden max-h-[90vh] overflow-y-auto">
         <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h3 class="text-lg font-medium text-gray-900">
             Detalles del Pedido #{{ viewingOrder.id }}
@@ -190,6 +190,7 @@
                     {{ viewingOrder.user.firstName || '' }} {{ viewingOrder.user.lastName || '' }}
                   </p>
                   <p v-if="viewingOrder.user" class="text-sm text-gray-600">{{ viewingOrder.user.email || '' }}</p>
+                  <p v-if="viewingOrder.user && viewingOrder.user.phoneNumber" class="text-sm text-gray-600">{{ viewingOrder.user.phoneNumber }}</p>
                   <p v-if="!viewingOrder.user" class="text-sm text-gray-600">Usuario no disponible</p>
                 </div>
                 <div class="mb-3">
@@ -199,27 +200,39 @@
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Repartidor:</span>
-                  <p v-if="viewingOrder.deliveryPerson" class="font-medium">
-                    {{ viewingOrder.deliveryPerson.firstName || '' }} {{ viewingOrder.deliveryPerson.lastName || '' }}
-                  </p>
-                  <p v-else class="text-gray-600">No asignado</p>
+                  <div v-if="viewingOrder.deliveryPerson">
+                    <p class="font-medium">
+                      {{ viewingOrder.deliveryPerson.firstName || '' }} {{ viewingOrder.deliveryPerson.lastName || '' }}
+                    </p>
+                    <p v-if="viewingOrder.deliveryPerson.phoneNumber" class="text-sm text-gray-600">{{ viewingOrder.deliveryPerson.phoneNumber }}</p>
+                  </div>
+                  <div v-else class="flex items-center gap-2">
+                    <p class="text-gray-600">No asignado</p>
+                    <button v-if="canAssignDeliveryPerson(viewingOrder)"
+                            @click="openAssignDeliveryModal(viewingOrder)"
+                            class="text-blue-600 hover:text-blue-900 text-sm underline">
+                      Asignar repartidor
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="mb-3">
                   <span class="text-sm text-gray-500">Fecha del pedido:</span>
-                  <p class="font-medium">{{ formatDateTime(viewingOrder.createdAt) }}</p>
+                  <p class="font-medium">{{ formatDateTimeLocal(viewingOrder.createdAt) }}</p>
                 </div>
                 <div class="mb-3">
                   <span class="text-sm text-gray-500">Entrega estimada:</span>
-                  <p class="font-medium">{{ formatDateTime(viewingOrder.estimatedDeliveryTime) }}</p>
+                  <p class="font-medium">{{ formatDateTimeLocal(viewingOrder.estimatedDeliveryTime) }}</p>
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Dirección de entrega:</span>
-                  <p v-if="viewingOrder.deliveryAddress" class="font-medium">
-                    {{ viewingOrder.deliveryAddress.street || '' }} {{ viewingOrder.deliveryAddress.number || '' }},
-                    {{ viewingOrder.deliveryAddress.city || '' }}
-                  </p>
+                  <div v-if="viewingOrder.deliveryAddress" class="font-medium">
+                    <p>{{ viewingOrder.deliveryAddress.street || '' }} {{ viewingOrder.deliveryAddress.number || '' }}</p>
+                    <p>{{ viewingOrder.deliveryAddress.city || '' }} {{ viewingOrder.deliveryAddress.zipCode || '' }}</p>
+                    <p v-if="viewingOrder.deliveryAddress.interior" class="text-sm text-gray-600">Interior: {{ viewingOrder.deliveryAddress.interior }}</p>
+                    <p v-if="viewingOrder.deliveryAddress.phone" class="text-sm text-gray-600">Tel: {{ viewingOrder.deliveryAddress.phone }}</p>
+                  </div>
                   <p v-else class="text-sm text-gray-600">Dirección no disponible</p>
                 </div>
               </div>
@@ -295,7 +308,7 @@
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Fecha:</span>
-                  <p class="font-medium">{{ formatDateTime(viewingOrder.payment.paymentDate) }}</p>
+                  <p class="font-medium">{{ formatDateTimeLocal(viewingOrder.payment.paymentDate) }}</p>
                 </div>
               </div>
             </div>
@@ -322,6 +335,47 @@
       </div>
     </div>
 
+    <!-- Modal para asignar repartidor -->
+    <div v-if="showAssignDeliveryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl max-w-md w-full mx-4 overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 class="text-lg font-medium text-gray-900">Asignar Repartidor</h3>
+          <button @click="closeAssignDeliveryModal" class="text-gray-400 hover:text-gray-500">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6">
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 mb-4">
+              Asignar repartidor al pedido #{{ assigningOrder.id }}
+            </p>
+
+            <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar repartidor:</label>
+            <select v-model="selectedDeliveryPersonForAssign" required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+              <option value="">Seleccionar repartidor</option>
+              <option v-for="deliveryPerson in deliveryPersons" :key="deliveryPerson.id" :value="deliveryPerson.id">
+                {{ deliveryPerson.firstName }} {{ deliveryPerson.lastName }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex justify-end gap-4 mt-6">
+            <button @click="closeAssignDeliveryModal" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button @click="assignDeliveryPerson" :disabled="!selectedDeliveryPersonForAssign || isAssigningDelivery"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+              {{ isAssigningDelivery ? 'Asignando...' : 'Asignar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal para actualizar estado del pedido -->
     <div v-if="showUpdateStatusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-xl max-w-md w-full mx-4 overflow-hidden">
@@ -337,7 +391,7 @@
         <div class="p-6">
           <div class="mb-4">
             <p class="text-sm text-gray-600 mb-2">
-              Pedido #{{ updatingOrder.id }} para 
+              Pedido #{{ updatingOrder.id }} para
               {{ updatingOrder.user ? (updatingOrder.user.firstName + ' ' + updatingOrder.user.lastName) : 'Usuario no disponible' }}
             </p>
             <p class="text-sm text-gray-600 mb-4">Estado actual: <span class="font-semibold">{{ getOrderStatusText(updatingOrder.status || '') }}</span></p>
@@ -390,8 +444,8 @@
           <div class="mb-6">
             <p class="text-sm text-gray-600 mb-2">¿Estás seguro de que deseas eliminar el siguiente pedido?</p>
             <div v-if="itemToDelete" class="bg-gray-50 p-4 rounded-lg text-sm">
-              <strong>Pedido #{{ itemToDelete.id }}:</strong> 
-              {{ itemToDelete.restaurant ? itemToDelete.restaurant.name : 'Restaurante no disponible' }} - 
+              <strong>Pedido #{{ itemToDelete.id }}:</strong>
+              {{ itemToDelete.restaurant ? itemToDelete.restaurant.name : 'Restaurante no disponible' }} -
               €{{ itemToDelete.total ? itemToDelete.total.toFixed(2) : '0.00' }}
             </div>
             <p class="text-sm text-red-600 mt-2">Esta acción no se puede deshacer.</p>
@@ -445,8 +499,10 @@ const ordersPerPage = 10;
 const showOrderModal = ref(false);
 const showUpdateStatusModal = ref(false);
 const showConfirmDelete = ref(false);
+const showAssignDeliveryModal = ref(false);
 const itemToDelete = ref(null);
 const isUpdatingOrderStatus = ref(false);
+const isAssigningDelivery = ref(false);
 
 // Valores iniciales para evitar errores de nullish
 const defaultOrder = {
@@ -472,8 +528,10 @@ const viewingOrder = reactive({...defaultOrder});
 
 // Estado para actualización de orden con valores seguros
 const updatingOrder = reactive({...defaultOrder});
+const assigningOrder = reactive({...defaultOrder});
 const newOrderStatus = ref('');
 const selectedDeliveryPerson = ref('');
+const selectedDeliveryPersonForAssign = ref('');
 
 // Lifecycle hooks
 onMounted(() => {
@@ -511,7 +569,11 @@ const filteredOrders = computed(() => {
 
   if (orderDateFilter.value) {
     const searchDate = orderDateFilter.value;
-    filtered = filtered.filter(order => order.createdAt && order.createdAt.startsWith(searchDate));
+    filtered = filtered.filter(order => {
+      if (!order.createdAt) return false;
+      const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+      return orderDate === searchDate;
+    });
   }
 
   const start = (orderPage.value - 1) * ordersPerPage;
@@ -521,7 +583,7 @@ const filteredOrders = computed(() => {
 
 const totalOrderPages = computed(() => {
   if (!props.orders) return 1;
-  
+
   let filtered = [...props.orders];
 
   if (orderSearch.value) {
@@ -539,7 +601,11 @@ const totalOrderPages = computed(() => {
 
   if (orderDateFilter.value) {
     const searchDate = orderDateFilter.value;
-    filtered = filtered.filter(order => order.createdAt && order.createdAt.startsWith(searchDate));
+    filtered = filtered.filter(order => {
+      if (!order.createdAt) return false;
+      const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+      return orderDate === searchDate;
+    });
   }
 
   return Math.ceil(filtered.length / ordersPerPage) || 1;
@@ -582,7 +648,7 @@ const refreshOrders = async () => {
   refreshing.value = true;
   isLoading.value = true;
   emit('refresh');
-  
+
   // Simular un pequeño retraso para mostrar el feedback al usuario
   setTimeout(() => {
     refreshing.value = false;
@@ -594,7 +660,7 @@ const searchOrders = async () => {
   isLoading.value = true;
   orderPage.value = 1;
   emit('refresh');
-  
+
   // Simular un pequeño retraso para mostrar el feedback al usuario
   setTimeout(() => {
     isLoading.value = false;
@@ -604,10 +670,10 @@ const searchOrders = async () => {
 const viewOrder = (order) => {
   // Crear una copia profunda para evitar problemas de reactivity
   const orderCopy = JSON.parse(JSON.stringify(order));
-  
+
   // Usar Object.assign para preservar las propiedades reactivas
   Object.assign(viewingOrder, defaultOrder, orderCopy);
-  
+
   showOrderModal.value = true;
 };
 
@@ -620,7 +686,7 @@ const closeOrderModal = () => {
 const updateOrderStatus = (order) => {
   // Crear una copia profunda para evitar problemas de reactivity
   const orderCopy = JSON.parse(JSON.stringify(order));
-  
+
   // Inicializar el modal de actualización con valores seguros
   Object.assign(updatingOrder, defaultOrder, orderCopy);
 
@@ -708,6 +774,74 @@ const submitOrderStatusUpdate = async () => {
   }
 };
 
+// Métodos para asignar repartidor
+const canAssignDeliveryPerson = (order) => {
+  return !order.deliveryPersonId && ['ReadyForPickup', 'Accepted', 'Preparing'].includes(order.status);
+};
+
+const openAssignDeliveryModal = (order) => {
+  const orderCopy = JSON.parse(JSON.stringify(order));
+  Object.assign(assigningOrder, defaultOrder, orderCopy);
+  selectedDeliveryPersonForAssign.value = '';
+  showAssignDeliveryModal.value = true;
+};
+
+const closeAssignDeliveryModal = () => {
+  showAssignDeliveryModal.value = false;
+  selectedDeliveryPersonForAssign.value = '';
+  Object.assign(assigningOrder, defaultOrder);
+};
+
+const assignDeliveryPerson = async () => {
+  if (!selectedDeliveryPersonForAssign.value) {
+    emit('add-alert', 'Selecciona un repartidor', 'warning');
+    return;
+  }
+
+  isAssigningDelivery.value = true;
+
+  try {
+    const updateData = {
+      status: 'OnTheWay',
+      deliveryPersonId: selectedDeliveryPersonForAssign.value
+    };
+
+    await api.put(`/api/Orders/${assigningOrder.id}/status`, updateData);
+
+    // Actualizar el pedido en las listas
+    const orderIndex = props.orders.findIndex(o => o.id === assigningOrder.id);
+    if (orderIndex !== -1) {
+      props.orders[orderIndex].status = 'OnTheWay';
+      props.orders[orderIndex].deliveryPersonId = updateData.deliveryPersonId;
+
+      const deliveryPerson = props.deliveryPersons.find(dp => dp.id.toString() === updateData.deliveryPersonId.toString());
+      if (deliveryPerson) {
+        props.orders[orderIndex].deliveryPerson = deliveryPerson;
+      }
+    }
+
+    // Si el modal de detalles está abierto, actualizarlo
+    if (showOrderModal.value && viewingOrder.id === assigningOrder.id) {
+      viewingOrder.status = 'OnTheWay';
+      viewingOrder.deliveryPersonId = updateData.deliveryPersonId;
+
+      const deliveryPerson = props.deliveryPersons.find(dp => dp.id.toString() === updateData.deliveryPersonId.toString());
+      if (deliveryPerson) {
+        viewingOrder.deliveryPerson = deliveryPerson;
+      }
+    }
+
+    emit('add-alert', 'Repartidor asignado correctamente', 'success');
+    closeAssignDeliveryModal();
+    emit('update');
+  } catch (error) {
+    console.error('Error al asignar repartidor:', error);
+    emit('add-alert', 'Error al asignar repartidor: ' + (error.response?.data?.message || error.message), 'error');
+  } finally {
+    isAssigningDelivery.value = false;
+  }
+};
+
 const cancelOrder = async (order) => {
   if (!confirm(`¿Estás seguro de que quieres cancelar el pedido #${order.id}?`)) {
     return;
@@ -750,7 +884,7 @@ const cancelDelete = () => {
 
 const handleDelete = async () => {
   if (!itemToDelete.value) return;
-  
+
   try {
     await api.delete(`/api/Orders/${itemToDelete.value.id}`);
 
@@ -793,10 +927,31 @@ const nextOrderPage = () => {
   }
 };
 
-// Utilidades
+// Utilidades mejoradas para formateo de fechas
 const formatDateTime = (date) => {
   if (!date) return 'N/A';
-  return new Date(date).toLocaleString('es-ES');
+  return new Date(date).toLocaleString('es-ES', {
+    timeZone: 'Europe/Madrid'
+  });
+};
+
+const formatDateTimeLocal = (date) => {
+  if (!date) return 'N/A';
+
+  const dateObj = new Date(date);
+
+  // Verificar si la fecha es válida
+  if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+
+  return dateObj.toLocaleString('es-ES', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 };
 
 const getOrderStatusBadgeColor = (status) => {

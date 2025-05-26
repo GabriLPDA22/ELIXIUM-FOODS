@@ -163,10 +163,13 @@
             @restaurant-edit-opened="restaurantToEdit = null" />
 
           <AdminCategories v-if="activeTab === 'categories'" :categories="categories" :businesses="businesses"
-            @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert" />
+            @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert"
+            @view-category-products="handleViewCategoryProducts" />
 
           <AdminProducts v-if="activeTab === 'products'" :products="products" :categories="categories"
-            :businesses="businesses" @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert" />
+            :businesses="businesses" :filterByCategoryId="activeFilterCategoryId"
+            :filterByBusinessId="activeFilterBusinessId" @refresh="refreshAllData" @update="updateStats"
+            @add-alert="addAlert" @clear-filters="handleClearProductFilters" @view-restaurants="handleViewProductRestaurants" />
 
           <AdminOrders v-if="activeTab === 'orders'" :orders="orders" :deliveryPersons="deliveryPersons"
             @refresh="refreshOrders" @update="updateStats" @add-alert="addAlert" />
@@ -204,7 +207,8 @@ const refreshing = ref(false);
 const activeTab = ref('dashboard');
 const alerts = ref([]);
 const activeFilterBusinessId = ref(null);
-const restaurantToEdit = ref(null); // 🆕 NUEVO: Estado para el restaurante a editar
+const restaurantToEdit = ref(null);
+const activeFilterCategoryId = ref(null);
 
 // Datos principales
 const users = ref([]);
@@ -484,17 +488,40 @@ const refreshOrders = async () => {
 // Manejadores para interacción entre componentes
 const handleViewBusinessRestaurants = (data) => {
   activeFilterBusinessId.value = data.businessId;
-  restaurantToEdit.value = null; // 🆕 Limpiar restaurante a editar cuando se cambia de filtro
+  activeFilterCategoryId.value = null;
+  restaurantToEdit.value = null;
   activeTab.value = 'restaurants';
   addAlert(`Mostrando restaurantes de ${data.businessName}`, 'info');
 };
 
-// 🆕 NUEVO: Manejador para editar restaurante desde modal de negocio
+const handleViewCategoryProducts = (data) => {
+  activeFilterCategoryId.value = data.categoryId;
+  activeFilterBusinessId.value = data.businessId;
+  activeTab.value = 'products';
+  addAlert(`Mostrando productos de la categoría "${data.categoryName}"`, 'info');
+};
+
 const handleEditRestaurant = (restaurant) => {
   restaurantToEdit.value = restaurant;
   activeFilterBusinessId.value = restaurant.businessId; // Establecer filtro por negocio si aplica
   activeTab.value = 'restaurants';
   addAlert(`Editando restaurante: ${restaurant.name}`, 'info');
+};
+
+// Nuevo manejador para navegar desde productos a restaurantes
+const handleViewProductRestaurants = (data) => {
+  // Limpiar filtros previos y cambiar a la vista de restaurantes
+  activeFilterBusinessId.value = null;
+  activeFilterCategoryId.value = null;
+  restaurantToEdit.value = null;
+  activeTab.value = 'restaurants';
+
+  // Mostrar alerta informativa
+  addAlert(`Funcionalidad: Ver restaurantes que ofrecen "${data.productName}" - En desarrollo`, 'info');
+
+  // TODO: Aquí podrías implementar un filtro específico para mostrar
+  // solo los restaurantes que tienen este producto
+  // Por ejemplo: activeFilterByProductId.value = data.productId;
 };
 
 // Manejadores para JWT Debug
@@ -504,14 +531,15 @@ const handleViewUserSecret = (user) => {
   console.log('Ver clave secreta de:', user);
 };
 
+const handleClearProductFilters = () => {
+  activeFilterCategoryId.value = null;
+  activeFilterBusinessId.value = null;
+  addAlert('Filtros eliminados', 'info');
+};
+
 const handleGoToJWTDebug = (user) => {
-  // Este manejador se ejecuta cuando se hace clic en "Ir a JWT Debug" en el popup
   activeTab.value = 'jwt';
   addAlert(`Cambiando a JWT Debug para ${user.firstName} ${user.lastName}`, 'info');
-
-  // Opcional: Si necesitas pasar el usuario al componente JWT Debug
-  // puedes usar un estado global o evento
-  // selectedUserForJWT.value = user;
 };
 
 // Exportar datos

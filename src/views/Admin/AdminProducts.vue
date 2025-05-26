@@ -62,11 +62,70 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imagen</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Negocio</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Base</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disponibilidad
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                @click="sortBy('name')">
+              <div class="flex items-center gap-1">
+                Nombre
+                <svg v-if="sortField === 'name'" class="h-4 w-4" :class="sortDirection === 'asc' ? 'transform rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                <svg v-else class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+              </div>
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                @click="sortBy('categoryName')">
+              <div class="flex items-center gap-1">
+                Categoría
+                <svg v-if="sortField === 'categoryName'" class="h-4 w-4" :class="sortDirection === 'asc' ? 'transform rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                <svg v-else class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+              </div>
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                @click="sortBy('businessName')">
+              <div class="flex items-center gap-1">
+                Negocio
+                <svg v-if="sortField === 'businessName'" class="h-4 w-4" :class="sortDirection === 'asc' ? 'transform rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                <svg v-else class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+              </div>
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                @click="sortBy('basePrice')">
+              <div class="flex items-center gap-1">
+                Precio Base
+                <svg v-if="sortField === 'basePrice'" class="h-4 w-4" :class="sortDirection === 'asc' ? 'transform rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                <svg v-else class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+              </div>
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                @click="sortBy('isAvailable')">
+              <div class="flex items-center gap-1">
+                Disponibilidad
+                <svg v-if="sortField === 'isAvailable'" class="h-4 w-4" :class="sortDirection === 'asc' ? 'transform rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                <svg v-else class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+              </div>
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurantes</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -327,6 +386,10 @@ const showConfirmDelete = ref(false);
 const itemToDelete = ref(null);
 const selectedBusinessId = ref('');
 
+// Estados de ordenamiento - NUEVOS
+const sortField = ref('');
+const sortDirection = ref('asc');
+
 const editingProduct = reactive({
   id: null,
   name: '',
@@ -380,6 +443,39 @@ const filteredProducts = computed(() => {
     filtered = filtered.filter(product => product.isAvailable === isAvailable);
   }
 
+  // NUEVO: Aplicar ordenamiento
+  if (sortField.value) {
+    filtered.sort((a, b) => {
+      let aValue = a[sortField.value];
+      let bValue = b[sortField.value];
+
+      // Manejar valores nulos o undefined
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Ordenamiento especial para precios
+      if (sortField.value === 'basePrice') {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      }
+
+      // Ordenamiento especial para disponibilidad
+      if (sortField.value === 'isAvailable') {
+        aValue = aValue ? 1 : 0;
+        bValue = bValue ? 1 : 0;
+      }
+
+      // Comparación
+      if (aValue < bValue) {
+        return sortDirection.value === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection.value === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+
   const start = (productPage.value - 1) * productsPerPage;
   const end = start + productsPerPage;
   return filtered.slice(start, end);
@@ -420,6 +516,16 @@ const totalProductPages = computed(() => {
 watch(businessFilter, () => {
   categoryFilter.value = '';
 });
+
+// NUEVO: Método de ordenamiento
+const sortBy = (field) => {
+  if (sortField.value === field) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortField.value = field;
+    sortDirection.value = 'asc';
+  }
+};
 
 // Métodos
 const addProduct = () => {
@@ -466,7 +572,7 @@ const saveProduct = async () => {
       name: editingProduct.name.trim(),
       description: editingProduct.description.trim(),
       basePrice: parseFloat(editingProduct.basePrice),
-      imageUrl: editingProduct.imageUrl.trim(),
+      imageUrl: editingProduct.imageUrl.trim() || '', // CORREGIDO: Permitir cadena vacía
       isAvailable: editingProduct.isAvailable,
       categoryId: parseInt(editingProduct.categoryId)
     };
@@ -533,7 +639,7 @@ const toggleProductAvailability = async (product) => {
       name: product.name,
       description: product.description,
       basePrice: product.basePrice,
-      imageUrl: product.imageUrl,
+      imageUrl: product.imageUrl || '', // CORREGIDO: Manejar cadenas vacías
       isAvailable: !product.isAvailable,
       categoryId: product.categoryId
     };
@@ -552,7 +658,11 @@ const toggleProductAvailability = async (product) => {
 };
 
 const viewProductRestaurants = (product) => {
-  emit('add-alert', `Ver restaurantes que ofrecen "${product.name}" - Funcionalidad próximamente`, 'info');
+  // CORREGIDO: Emitir evento en lugar de solo mostrar alerta
+  emit('view-restaurants', {
+    productId: product.id,
+    productName: product.name
+  });
 };
 
 const getRestaurantCount = (productId) => {

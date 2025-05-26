@@ -232,7 +232,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['refresh', 'update', 'add-alert']);
+const emit = defineEmits(['refresh', 'update', 'add-alert', 'view-category-products']);
 
 // Estados
 const isLoading = ref(false);
@@ -332,10 +332,8 @@ const saveCategory = async () => {
     };
 
     if (editingCategory.id) {
-      // Actualizar categoría existente
       await api.put(`/api/Categories/${editingCategory.id}`, categoryData);
 
-      // Actualizar en la lista local
       const index = props.categories.findIndex(c => c.id === editingCategory.id);
       if (index !== -1) {
         Object.assign(props.categories[index], categoryData);
@@ -343,7 +341,6 @@ const saveCategory = async () => {
 
       emit('add-alert', 'Categoría actualizada correctamente', 'success');
     } else {
-      // Crear nueva categoría
       const response = await api.post('/api/Categories', categoryData);
 
       if (response.data) {
@@ -374,10 +371,13 @@ const closeCategoryModal = () => {
 };
 
 const viewCategoryProducts = (category) => {
-  emit('add-alert', `Ver productos de la categoría "${category.name}" - Funcionalidad próximamente`, 'info');
+  emit('view-category-products', {
+    categoryId: category.id,
+    categoryName: category.name,
+    businessId: category.businessId
+  });
 };
 
-// Métodos para el manejo de la eliminación
 const confirmDelete = (category) => {
   itemToDelete.value = { ...category };
   showConfirmDelete.value = true;
@@ -395,7 +395,6 @@ const handleDelete = async () => {
   try {
     await api.delete(`/api/Categories/${itemToDelete.value.id}`);
 
-    // Eliminar de la lista local
     const index = props.categories.findIndex(c => c.id === itemToDelete.value.id);
     if (index !== -1) {
       props.categories.splice(index, 1);
@@ -413,7 +412,6 @@ const handleDelete = async () => {
   }
 };
 
-// Métodos de búsqueda y paginación
 const searchCategories = () => {
   categoryPage.value = 1;
 };
@@ -430,7 +428,6 @@ const nextCategoryPage = () => {
   }
 };
 
-// Utilidades
 const getBusinessName = (businessId) => {
   const business = props.businesses.find(b => b.id === businessId);
   return business ? business.name : 'N/A';
