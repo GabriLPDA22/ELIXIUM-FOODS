@@ -135,7 +135,7 @@
                 <button @click="toggleRestaurantStatus(restaurant)"
                   :class="restaurant.isOpen ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'">
                   <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </button>
@@ -156,7 +156,8 @@
     <!-- Paginación -->
     <div class="flex items-center justify-between">
       <div class="text-sm text-gray-700">
-        Página <span class="font-medium">{{ restaurantPage }}</span> de <span class="font-medium">{{ totalRestaurantPages }}</span>
+        Página <span class="font-medium">{{ restaurantPage }}</span> de <span class="font-medium">{{
+          totalRestaurantPages }}</span>
       </div>
       <div class="flex gap-2">
         <button @click="previousRestaurantPage" :disabled="restaurantPage === 1"
@@ -332,8 +333,7 @@
               class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancelar
             </button>
-            <button @click="handleDelete"
-              class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            <button @click="handleDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
               Eliminar
             </button>
           </div>
@@ -365,11 +365,15 @@ const props = defineProps({
   filterByBusinessId: {
     type: Number,
     default: null
+  },
+  restaurantToEdit: {
+    type: Object,
+    default: null
   }
 });
 
 // Emits
-const emit = defineEmits(['refresh', 'update', 'add-alert']);
+const emit = defineEmits(['refresh', 'update', 'add-alert', 'restaurant-edit-opened']);
 
 // Estados
 const restaurantSearch = ref('');
@@ -380,24 +384,6 @@ const restaurantsPerPage = 10;
 const showRestaurantModal = ref(false);
 const showConfirmDelete = ref(false);
 const itemToDelete = ref(null);
-
-// Estado para el nombre del negocio en el filtro activo
-const businessFilterName = computed(() => {
-  if (props.filterByBusinessId) {
-    const business = props.businesses.find(b => b.id === props.filterByBusinessId);
-    return business ? business.name : '';
-  }
-  return '';
-});
-
-// Sincronizar filtro de negocio con el prop filterByBusinessId
-watch(() => props.filterByBusinessId, (newVal) => {
-  if (newVal) {
-    businessFilter.value = newVal.toString();
-  } else {
-    businessFilter.value = '';
-  }
-}, { immediate: true });
 
 const editingRestaurant = reactive({
   id: null,
@@ -423,17 +409,22 @@ const editingRestaurant = reactive({
 });
 
 // Computed
+const businessFilterName = computed(() => {
+  if (props.filterByBusinessId) {
+    const business = props.businesses.find(b => b.id === props.filterByBusinessId);
+    return business ? business.name : '';
+  }
+  return '';
+});
+
 const filteredRestaurants = computed(() => {
   let filtered = [...props.restaurants];
 
-  // Primero aplicar filtro por negocio si viene desde el prop
   if (props.filterByBusinessId) {
     filtered = filtered.filter(restaurant =>
       restaurant.businessId === props.filterByBusinessId
     );
-  }
-  // Si no hay filtro desde el prop, usar el filtro del selector
-  else if (businessFilter.value) {
+  } else if (businessFilter.value) {
     filtered = filtered.filter(restaurant =>
       restaurant.businessId === parseInt(businessFilter.value)
     );
@@ -458,7 +449,6 @@ const filteredRestaurants = computed(() => {
 const totalRestaurantPages = computed(() => {
   let filtered = [...props.restaurants];
 
-  // Filtro por negocio
   if (props.filterByBusinessId) {
     filtered = filtered.filter(restaurant =>
       restaurant.businessId === props.filterByBusinessId
@@ -485,7 +475,6 @@ const totalRestaurantPages = computed(() => {
 
 // Métodos
 const addRestaurant = () => {
-  // Inicialización del BusinessId según el filtro activo
   const initialBusinessId = props.filterByBusinessId || (businessFilter.value ? parseInt(businessFilter.value) : null);
 
   Object.assign(editingRestaurant, {
@@ -514,27 +503,46 @@ const addRestaurant = () => {
 };
 
 const editRestaurant = (restaurant) => {
-  Object.assign(editingRestaurant, {
-    id: restaurant.id,
-    name: restaurant.name,
-    description: restaurant.description,
-    logoUrl: restaurant.logoUrl,
-    coverImageUrl: restaurant.coverImageUrl,
-    isOpen: restaurant.isOpen,
-    deliveryFee: restaurant.deliveryFee,
-    estimatedDeliveryTime: restaurant.estimatedDeliveryTime,
-    averageRating: restaurant.averageRating,
-    tipo: restaurant.tipo,
-    businessId: restaurant.businessId,
-    address: { ...restaurant.address }
-  });
-  showRestaurantModal.value = true;
+  try {
+    console.log('Editando restaurante:', restaurant);
+
+    const restaurantCopy = JSON.parse(JSON.stringify(restaurant));
+
+    Object.assign(editingRestaurant, {
+      id: restaurantCopy.id,
+      name: restaurantCopy.name || '',
+      description: restaurantCopy.description || '',
+      logoUrl: restaurantCopy.logoUrl || '',
+      coverImageUrl: restaurantCopy.coverImageUrl || '',
+      isOpen: restaurantCopy.isOpen !== undefined ? restaurantCopy.isOpen : true,
+      deliveryFee: restaurantCopy.deliveryFee || 2.50,
+      estimatedDeliveryTime: restaurantCopy.estimatedDeliveryTime || 30,
+      averageRating: restaurantCopy.averageRating || 0,
+      tipo: restaurantCopy.tipo || 1,
+      businessId: restaurantCopy.businessId || null,
+      address: restaurantCopy.address ? {
+        ...restaurantCopy.address
+      } : {
+        street: '',
+        number: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        phone: '',
+        isDefault: true
+      }
+    });
+
+    showRestaurantModal.value = true;
+  } catch (error) {
+    console.error('Error al editar restaurante:', error);
+    emit('add-alert', 'Error al cargar datos del restaurante', 'error');
+  }
 };
 
 const saveRestaurant = async () => {
   try {
     if (editingRestaurant.id) {
-      // Actualizar restaurante existente
       const restaurantData = {
         name: editingRestaurant.name,
         description: editingRestaurant.description,
@@ -547,10 +555,8 @@ const saveRestaurant = async () => {
         businessId: editingRestaurant.businessId
       };
 
-      // Actualizar el restaurante
       await api.put(`/api/Restaurants/${editingRestaurant.id}`, restaurantData);
 
-      // Actualizar en la lista local
       const index = props.restaurants.findIndex(r => r.id === editingRestaurant.id);
       if (index !== -1) {
         Object.assign(props.restaurants[index], restaurantData);
@@ -558,7 +564,6 @@ const saveRestaurant = async () => {
 
       emit('add-alert', 'Restaurante actualizado correctamente', 'success');
     } else {
-      // Crear nuevo restaurante
       const createRestaurantData = {
         name: editingRestaurant.name,
         description: editingRestaurant.description,
@@ -581,11 +586,9 @@ const saveRestaurant = async () => {
 
       const response = await api.post('/api/Restaurants', createRestaurantData);
 
-      // Si hay respuesta, añadir a la lista local
       if (response.data) {
         props.restaurants.push(response.data);
       } else {
-        // Para demostración/desarrollo, crear un objeto básico
         const newId = Math.max(0, ...props.restaurants.map(r => r.id)) + 1;
         props.restaurants.push({
           ...createRestaurantData,
@@ -600,7 +603,7 @@ const saveRestaurant = async () => {
     }
 
     showRestaurantModal.value = false;
-    emit('update'); // Solicitar recarga de datos
+    emit('update');
   } catch (error) {
     console.error('Error al guardar restaurante:', error);
     emit('add-alert', 'Error al guardar restaurante: ' + (error.response?.data?.message || error.message), 'error');
@@ -608,8 +611,6 @@ const saveRestaurant = async () => {
 };
 
 const viewRestaurant = (restaurant) => {
-  // Aquí podrías abrir un modal con los detalles completos del restaurante
-  // o redirigir a una página específica
   window.open(`/restaurant/${restaurant.id}`, '_blank');
 };
 
@@ -621,7 +622,6 @@ const toggleRestaurantStatus = async (restaurant) => {
       name: restaurant.name,
       description: restaurant.description,
       isOpen: restaurant.isOpen,
-      // Incluir otros campos necesarios para el backend
       deliveryFee: restaurant.deliveryFee,
       tipo: restaurant.tipo,
       businessId: restaurant.businessId
@@ -631,7 +631,6 @@ const toggleRestaurantStatus = async (restaurant) => {
     emit('update');
   } catch (error) {
     console.error('Error al cambiar estado del restaurante:', error);
-    // Revertir el cambio en caso de error
     restaurant.isOpen = !restaurant.isOpen;
     emit('add-alert', 'Error al cambiar estado del restaurante', 'error');
   }
@@ -641,7 +640,6 @@ const closeRestaurantModal = () => {
   showRestaurantModal.value = false;
 };
 
-// Métodos para el manejo de la eliminación
 const confirmDelete = (restaurant) => {
   itemToDelete.value = restaurant;
   showConfirmDelete.value = true;
@@ -658,7 +656,6 @@ const handleDelete = async () => {
   try {
     await api.delete(`/api/Restaurants/${itemToDelete.value.id}`);
 
-    // Eliminar de la lista local
     const index = props.restaurants.findIndex(r => r.id === itemToDelete.value.id);
     if (index !== -1) {
       props.restaurants.splice(index, 1);
@@ -666,11 +663,10 @@ const handleDelete = async () => {
 
     showConfirmDelete.value = false;
     emit('add-alert', 'Restaurante eliminado con éxito', 'success');
-    emit('update'); // Actualizar estadísticas
+    emit('update');
   } catch (error) {
     console.error('Error al eliminar restaurante:', error);
 
-    // Si hay un error en la API, al menos actualizar la interfaz para demostración
     const index = props.restaurants.findIndex(r => r.id === itemToDelete.value.id);
     if (index !== -1) {
       props.restaurants.splice(index, 1);
@@ -678,21 +674,18 @@ const handleDelete = async () => {
 
     showConfirmDelete.value = false;
     emit('add-alert', 'Restaurante eliminado con éxito', 'success');
-    emit('update'); // Actualizar estadísticas
+    emit('update');
   }
 };
 
-// Métodos para el filtro por negocio
 const clearBusinessFilter = () => {
   businessFilter.value = '';
-  // Informar al componente padre que se ha quitado el filtro
   emit('update');
 };
 
-// Métodos de paginación
 const searchRestaurants = async () => {
   restaurantPage.value = 1;
-  emit('refresh'); // Solicitar recarga al componente padre
+  emit('refresh');
 };
 
 const previousRestaurantPage = () => {
@@ -707,7 +700,6 @@ const nextRestaurantPage = () => {
   }
 };
 
-// Utilidades
 const formatDate = (date) => {
   if (!date) return 'N/A';
   return new Date(date).toLocaleDateString('es-ES');
@@ -715,14 +707,14 @@ const formatDate = (date) => {
 
 const getRestaurantTypeBadgeColor = (tipo) => {
   const colors = {
-    1: 'bg-red-100 text-red-800', // Hamburguesas
-    2: 'bg-yellow-100 text-yellow-800', // Pizza
-    3: 'bg-orange-100 text-orange-800', // Comida Rápida
-    4: 'bg-green-100 text-green-800', // Mexicana
-    5: 'bg-blue-100 text-blue-800', // China
-    6: 'bg-indigo-100 text-indigo-800', // Italiana
-    7: 'bg-pink-100 text-pink-800', // Postres
-    8: 'bg-purple-100 text-purple-800' // Saludable
+    1: 'bg-red-100 text-red-800',
+    2: 'bg-yellow-100 text-yellow-800',
+    3: 'bg-orange-100 text-orange-800',
+    4: 'bg-green-100 text-green-800',
+    5: 'bg-blue-100 text-blue-800',
+    6: 'bg-indigo-100 text-indigo-800',
+    7: 'bg-pink-100 text-pink-800',
+    8: 'bg-purple-100 text-purple-800'
   };
   return colors[tipo] || 'bg-gray-100 text-gray-800';
 };
@@ -741,10 +733,26 @@ const getRestaurantTypeName = (tipo) => {
   return types[tipo] || 'Otro';
 };
 
-// Método para obtener el nombre del negocio por ID
 const getBusinessName = (businessId) => {
   if (!businessId) return null;
   const business = props.businesses.find(b => b.id === businessId);
   return business ? business.name : null;
 };
+
+// Watchers
+watch(() => props.filterByBusinessId, (newVal) => {
+  if (newVal) {
+    businessFilter.value = newVal.toString();
+  } else {
+    businessFilter.value = '';
+  }
+}, { immediate: true });
+
+watch(() => props.restaurantToEdit, (newRestaurant) => {
+  if (newRestaurant) {
+    console.log('Recibido restaurante para editar:', newRestaurant);
+    editRestaurant(newRestaurant);
+    emit('restaurant-edit-opened');
+  }
+}, { immediate: true });
 </script>

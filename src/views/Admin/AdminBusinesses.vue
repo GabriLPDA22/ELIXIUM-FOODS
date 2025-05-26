@@ -1,3 +1,4 @@
+<!-- views/admin/AdminBusinesses.vue -->
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
@@ -207,11 +208,64 @@
             </div>
           </div>
 
+          <!-- 🆕 NUEVO: Campo de autocompletado para usuario -->
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">ID de Usuario Asignado:</label>
-            <input v-model.number="editingBusiness.userId" type="number" required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="ID del usuario a asignar">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Usuario Asignado:</label>
+            <div class="relative">
+              <input v-model="userSearchQuery" @input="searchUsers" @focus="showUserDropdown = true"
+                @blur="hideUserDropdownDelayed" type="text" placeholder="Buscar usuario por nombre o email..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                autocomplete="off">
+
+              <!-- Dropdown de usuarios -->
+              <div v-if="showUserDropdown && filteredUsers.length > 0"
+                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div v-for="user in filteredUsers" :key="user.id" @mousedown="selectUser(user)"
+                  class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ user.firstName }} {{ user.lastName }}
+                      </div>
+                      <div class="text-xs text-gray-500">{{ user.email }}</div>
+                    </div>
+                    <span class="px-2 py-1 text-xs rounded-full" :class="getRoleBadgeColor(user.role)">
+                      {{ user.role }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Usuario seleccionado -->
+              <div v-if="selectedUser" class="mt-2 p-3 bg-blue-50 rounded-md flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-blue-600 text-sm font-medium">
+                      {{ selectedUser.firstName.charAt(0) }}{{ selectedUser.lastName.charAt(0) }}
+                    </span>
+                  </div>
+                  <div class="ml-3">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ selectedUser.firstName }} {{ selectedUser.lastName }}
+                    </div>
+                    <div class="text-xs text-gray-500">{{ selectedUser.email }}</div>
+                  </div>
+                </div>
+                <button @click="clearSelectedUser" type="button" class="text-gray-400 hover:text-red-500">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Mensaje si no hay usuarios -->
+              <div v-if="showUserDropdown && userSearchQuery && filteredUsers.length === 0"
+                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-3">
+                <div class="text-sm text-gray-500 text-center">
+                  No se encontraron usuarios con "{{ userSearchQuery }}"
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="mb-6">
@@ -355,10 +409,11 @@
                       </button>
                       <button @click="unlinkRestaurant(restaurant)" class="text-red-600 hover:text-red-900">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zm-3-6l6-6m0 6l-6-6" />
                         </svg>
                       </button>
+
                     </div>
                   </td>
                 </tr>
@@ -378,7 +433,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { api } from '@/services/api';
 
 const props = defineProps({
@@ -401,8 +456,13 @@ const showBusinessRestaurantsModal = ref(false);
 const itemToDelete = ref(null);
 const selectedBusiness = ref(null);
 
-// Para el selector de usuarios en el modal
-// const assignableUsers = ref([]); // Descomenta y puebla esto con una llamada a la API
+// 🆕 Estados para autocompletado de usuarios
+const userSearchQuery = ref('');
+const availableUsers = ref([]);
+const filteredUsers = ref([]);
+const selectedUser = ref(null);
+const showUserDropdown = ref(false);
+let hideDropdownTimeout = null;
 
 const editingBusiness = reactive({
   id: null,
@@ -414,20 +474,68 @@ const editingBusiness = reactive({
   taxId: '',
   businessType: 'Restaurant',
   isActive: true,
-  userId: null // Añadido para el ID del usuario asignado
+  userId: null
 });
 
-// Poblar lista de usuarios asignables (ejemplo)
-// onMounted(async () => {
-//   try {
-//     // const response = await api.get('/api/Users?role=BusinessOwner'); // O la ruta/filtro que definas
-//     // assignableUsers.value = response.data;
-//   } catch (error) {
-//     console.error('Error fetching assignable users:', error);
-//     emit('add-alert', 'Error al cargar usuarios para asignar', 'error');
-//   }
-// });
+// Cargar usuarios disponibles al montar el componente
+onMounted(async () => {
+  await fetchAvailableUsers();
+});
 
+// 🆕 Función para cargar usuarios disponibles
+const fetchAvailableUsers = async () => {
+  try {
+    const response = await api.get('/api/Users');
+    availableUsers.value = response.data || [];
+  } catch (error) {
+    console.error('Error al cargar usuarios:', error);
+    emit('add-alert', 'Error al cargar usuarios', 'error');
+  }
+};
+
+// 🆕 Función para buscar usuarios mientras escribe
+const searchUsers = () => {
+  if (!userSearchQuery.value.trim()) {
+    filteredUsers.value = [];
+    return;
+  }
+
+  const query = userSearchQuery.value.toLowerCase();
+  filteredUsers.value = availableUsers.value.filter(user =>
+    user.firstName.toLowerCase().includes(query) ||
+    user.lastName.toLowerCase().includes(query) ||
+    user.email.toLowerCase().includes(query) ||
+    `${user.firstName} ${user.lastName}`.toLowerCase().includes(query)
+  ).slice(0, 10); // Limitar a 10 resultados
+};
+
+// 🆕 Función para seleccionar un usuario
+const selectUser = (user) => {
+  selectedUser.value = user;
+  editingBusiness.userId = user.id;
+  userSearchQuery.value = `${user.firstName} ${user.lastName}`;
+  showUserDropdown.value = false;
+};
+
+// 🆕 Función para limpiar usuario seleccionado
+const clearSelectedUser = () => {
+  selectedUser.value = null;
+  editingBusiness.userId = null;
+  userSearchQuery.value = '';
+  filteredUsers.value = [];
+};
+
+// 🆕 Función para ocultar dropdown con delay
+const hideUserDropdownDelayed = () => {
+  hideDropdownTimeout = setTimeout(() => {
+    showUserDropdown.value = false;
+  }, 200);
+};
+
+// Watch para actualizar la búsqueda en tiempo real
+watch(userSearchQuery, () => {
+  searchUsers();
+});
 
 const filteredBusinesses = computed(() => {
   let filtered = [...props.businesses];
@@ -478,8 +586,12 @@ const addBusiness = () => {
     taxId: '',
     businessType: 'Restaurant',
     isActive: true,
-    userId: null // Inicializar userId
+    userId: null
   });
+
+  // 🆕 Limpiar estado del autocompletado
+  clearSelectedUser();
+
   showBusinessModal.value = true;
 };
 
@@ -494,30 +606,24 @@ const editBusiness = (business) => {
     taxId: business.taxId || '',
     businessType: business.businessType || 'Restaurant',
     isActive: business.isActive !== false,
-    userId: business.userId || null // Asignar userId existente
+    userId: business.userId || null
   });
+
+  // 🆕 Si hay usuario asignado, buscarlo y seleccionarlo
+  if (business.userId) {
+    const user = availableUsers.value.find(u => u.id === business.userId);
+    if (user) {
+      selectUser(user);
+    }
+  } else {
+    clearSelectedUser();
+  }
+
   showBusinessModal.value = true;
 };
 
 const saveBusiness = async () => {
   try {
-    // Asegúrate de que userId es un número o null, no una cadena vacía si el input está vacío
-    const payloadUserId = editingBusiness.userId === '' ? null : Number(editingBusiness.userId);
-
-    if (!payloadUserId && editingBusiness.userId !== null) { // Si no es null y no se pudo convertir a número válido
-      emit('add-alert', 'ID de Usuario Asignado debe ser un número válido.', 'error');
-      return;
-    }
-
-    // Si tu backend ahora requiere UserId (no nullable), debes asegurar que payloadUserId no sea null.
-    // Por ejemplo, mostrando un error si no se selecciona/introduce un UserId.
-    // La lógica actual asume que el backend DTO (Create/Update) para UserId es `int` (no nullable).
-    if (payloadUserId === null || isNaN(payloadUserId)) {
-      emit('add-alert', 'Debe asignar un ID de Usuario válido.', 'error');
-      return;
-    }
-
-
     const businessData = {
       name: editingBusiness.name,
       description: editingBusiness.description,
@@ -527,31 +633,28 @@ const saveBusiness = async () => {
       taxId: editingBusiness.taxId,
       businessType: editingBusiness.businessType,
       isActive: editingBusiness.isActive,
-      userId: payloadUserId // Enviar userId
+      userId: editingBusiness.userId
     };
 
     if (editingBusiness.id) {
       await api.put(`/api/Business/${editingBusiness.id}`, businessData);
       const index = props.businesses.findIndex(b => b.id === editingBusiness.id);
       if (index !== -1) {
-        // Actualizar también el userEmail si lo tuvieras en la lista de usuarios asignables
-        const userToAssign = {}; // Busca el usuario en assignableUsers por ID para obtener su email si es necesario
-        Object.assign(props.businesses[index], businessData, { userEmail: userToAssign.email }); // Ejemplo
+        Object.assign(props.businesses[index], businessData);
+        // Añadir información del usuario para mostrar en la tabla
+        if (selectedUser.value) {
+          props.businesses[index].userEmail = selectedUser.value.email;
+        }
       }
       emit('add-alert', 'Negocio actualizado correctamente', 'success');
     } else {
       const response = await api.post('/api/Business', businessData);
       if (response.data) {
+        // Añadir información del usuario para mostrar en la tabla
+        if (selectedUser.value) {
+          response.data.userEmail = selectedUser.value.email;
+        }
         props.businesses.push(response.data);
-      } else {
-        const newId = Math.max(0, ...props.businesses.map(b => b.id)) + 1;
-        props.businesses.push({
-          ...businessData,
-          id: newId,
-          restaurants: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
       }
       emit('add-alert', 'Negocio creado correctamente', 'success');
     }
@@ -565,6 +668,7 @@ const saveBusiness = async () => {
 
 const closeBusinessModal = () => {
   showBusinessModal.value = false;
+  clearSelectedUser();
 };
 
 const toggleBusinessStatus = async (business) => {
@@ -579,9 +683,9 @@ const toggleBusinessStatus = async (business) => {
       taxId: business.taxId,
       businessType: business.businessType,
       isActive: newStatus,
-      userId: business.userId // Mantener el userId
+      userId: business.userId
     });
-    business.isActive = newStatus; // Actualizar localmente solo después del éxito
+    business.isActive = newStatus;
     emit('add-alert', `Negocio ${newStatus ? 'activado' : 'desactivado'} correctamente`, 'success');
   } catch (error) {
     console.error('Error al cambiar estado del negocio:', error);
@@ -730,5 +834,16 @@ const getRestaurantTypeName = (tipo) => {
     8: 'Saludable'
   };
   return types[tipo] || 'Otro';
+};
+
+const getRoleBadgeColor = (role) => {
+  const colors = {
+    'Admin': 'bg-blue-100 text-blue-800',
+    'Customer': 'bg-green-100 text-green-800',
+    'Restaurant': 'bg-purple-100 text-purple-800',
+    'DeliveryPerson': 'bg-yellow-100 text-yellow-800',
+    'Business': 'bg-orange-100 text-orange-800'
+  };
+  return colors[role] || 'bg-gray-100 text-gray-800';
 };
 </script>

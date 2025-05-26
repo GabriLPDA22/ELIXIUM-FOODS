@@ -154,11 +154,13 @@
             @add-alert="addAlert" @view-user-secret="handleViewUserSecret" @go-to-jwt-debug="handleGoToJWTDebug" />
 
           <AdminBusinesses v-if="activeTab === 'businesses'" :businesses="businesses" @refresh="refreshAllData"
-            @update="updateStats" @add-alert="addAlert" @view-restaurants="handleViewBusinessRestaurants" />
+            @update="updateStats" @add-alert="addAlert" @view-restaurants="handleViewBusinessRestaurants"
+            @edit-restaurant="handleEditRestaurant" />
 
           <AdminRestaurants v-if="activeTab === 'restaurants'" :restaurants="restaurants"
             :restaurantOwners="restaurantOwners" :businesses="businesses" :filterByBusinessId="activeFilterBusinessId"
-            @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert" />
+            :restaurantToEdit="restaurantToEdit" @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert"
+            @restaurant-edit-opened="restaurantToEdit = null" />
 
           <AdminCategories v-if="activeTab === 'categories'" :categories="categories" :businesses="businesses"
             @refresh="refreshAllData" @update="updateStats" @add-alert="addAlert" />
@@ -202,6 +204,7 @@ const refreshing = ref(false);
 const activeTab = ref('dashboard');
 const alerts = ref([]);
 const activeFilterBusinessId = ref(null);
+const restaurantToEdit = ref(null); // 🆕 NUEVO: Estado para el restaurante a editar
 
 // Datos principales
 const users = ref([]);
@@ -481,11 +484,20 @@ const refreshOrders = async () => {
 // Manejadores para interacción entre componentes
 const handleViewBusinessRestaurants = (data) => {
   activeFilterBusinessId.value = data.businessId;
+  restaurantToEdit.value = null; // 🆕 Limpiar restaurante a editar cuando se cambia de filtro
   activeTab.value = 'restaurants';
   addAlert(`Mostrando restaurantes de ${data.businessName}`, 'info');
 };
 
-// 🔧 NUEVOS MANEJADORES PARA JWT DEBUG
+// 🆕 NUEVO: Manejador para editar restaurante desde modal de negocio
+const handleEditRestaurant = (restaurant) => {
+  restaurantToEdit.value = restaurant;
+  activeFilterBusinessId.value = restaurant.businessId; // Establecer filtro por negocio si aplica
+  activeTab.value = 'restaurants';
+  addAlert(`Editando restaurante: ${restaurant.name}`, 'info');
+};
+
+// Manejadores para JWT Debug
 const handleViewUserSecret = (user) => {
   // Este manejador maneja cuando se hace clic en el ícono de clave secreta
   // pero se mantiene en el popup, no cambia de pestaña
