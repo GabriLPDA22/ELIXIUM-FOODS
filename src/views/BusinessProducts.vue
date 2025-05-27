@@ -834,6 +834,7 @@ import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { api } from '@/services/api';
+import { ImageService } from '@/services/imageService';
 
 interface Product {
   id?: number;
@@ -1179,24 +1180,34 @@ const toggleProductAvailability = async (product: Product) => {
   }
 };
 
-// Manejo de archivos
+// Manejo de archivos con ImageService
 const fileInput = ref(null);
 
 const triggerFileInput = () => {
   fileInput.value?.click();
 };
 
-const handleFileChange = (event: Event) => {
+const handleFileChange = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        imagePreview.value = e.target.result as string;
-        productForm.imageUrl = e.target.result as string;
-      }
-    };
-    reader.readAsDataURL(file);
+  if (!file) return;
+
+  // Validar imagen
+  const validation = ImageService.validateImage(file, 5 * 1024 * 1024); // 5MB máximo
+  if (!validation.valid) {
+    alert('Archivo no válido:\n' + validation.errors.join('\n'));
+    event.target.value = '';
+    return;
+  }
+
+  try {
+    // Convertir a base64 para preview
+    const base64 = await ImageService.fileToBase64(file);
+    imagePreview.value = base64;
+    productForm.imageUrl = base64;
+  } catch (error) {
+    console.error('Error procesando imagen:', error);
+    alert('Error al procesar la imagen');
+    event.target.value = '';
   }
 };
 
@@ -1208,7 +1219,7 @@ const removeImage = () => {
   }
 };
 
-// Formulario de productos
+// Formulario de productos con ImageService
 const submitProductForm = async () => {
   formSubmitting.value = true;
 
@@ -1217,16 +1228,44 @@ const submitProductForm = async () => {
       name: productForm.name,
       description: productForm.description,
       basePrice: productForm.basePrice,
-      imageUrl: productForm.imageUrl || '',
       isAvailable: productForm.isAvailable,
       categoryId: productForm.categoryId,
       businessId: business.value.id
     };
 
+    let productResponse;
+    let productId;
+
+    // Crear o actualizar el producto sin imagen primero
     if (showEditModal.value && productForm.id) {
-      await api.put(`/api/Products/${productForm.id}`, productData);
+      productResponse = await api.put(`/api/Products/${productForm.id}`, productData);
+      productId = productForm.id;
     } else {
-      await api.post('/api/Products', productData);
+      productResponse = await api.post('/api/Products', productData);
+      productId = productResponse.data.id;
+    }
+
+    // Si hay una imagen nueva, subirla usando ImageService
+    if (productForm.imageUrl && productForm.imageUrl.startsWith('data:')) {
+      try {
+        const imageResult = await ImageService.uploadBase64(
+          productForm.imageUrl, 
+          `product-${productId}`, 
+          'products'
+        );
+        
+        // Actualizar el producto con la URL de la imagen de S3
+        await api.put(`/api/Products/${productId}`, {
+          ...productData,
+          imageUrl: imageResult.imageUrl
+        });
+        
+        console.log('Imagen subida exitosamente a S3:', imageResult.imageUrl);
+        
+      } catch (imageError) {
+        console.error('Error subiendo imagen:', imageError);
+        alert('Producto guardado correctamente, pero hubo un error al subir la imagen. Puedes intentar subirla después editando el producto.');
+      }
     }
 
     await loadProducts();
@@ -1247,6 +1286,15 @@ const deleteProduct = async () => {
   deleteLoading.value = true;
 
   try {
+    // Eliminar imagen de S3 si existe
+    if (productToDelete.value.imageUrl) {
+      try {
+        await ImageService.delete(productToDelete.value.imageUrl);
+      } catch (imageError) {
+        console.warn('No se pudo eliminar la imagen:', imageError);
+      }
+    }
+
     await api.delete(`/api/Products/${productToDelete.value.id}`);
     await loadProducts();
     showDeleteModal.value = false;
@@ -1384,7 +1432,7 @@ const saveRestaurantAssignments = async () => {
   }
 };
 
-// Funciones de categorías (mantenemos las existentes)
+// Funciones de categorías
 const editCategory = (category: Category) => {
   showEditCategoryForm.value = true;
   showAddCategoryForm.value = false;
@@ -1502,6 +1550,7 @@ onMounted(async () => {
   }
 });
 </script>
+
 <style lang="scss" scoped>
 .business-products {
   // Variables CSS
