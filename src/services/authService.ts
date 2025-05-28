@@ -60,6 +60,193 @@ export const authService = {
     }
   },
 
+  // Solicitar restablecimiento de contraseña
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('Solicitando restablecimiento de contraseña para:', email)
+
+      const response = await api.post('/api/Auth/forgot-password', {
+        email: email.trim()
+      })
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          message: response.data.message || 'Se han enviado las instrucciones a tu correo electrónico.'
+        }
+      } else {
+        return {
+          success: false,
+          message: response.data?.message || 'Error al procesar la solicitud.'
+        }
+      }
+    } catch (error: any) {
+      console.error('Error en forgot password:', error)
+
+      // Manejar diferentes tipos de errores
+      if (error.response?.status === 404) {
+        return {
+          success: false,
+          message: 'No se encontró una cuenta con este correo electrónico.'
+        }
+      } else if (error.response?.status === 429) {
+        return {
+          success: false,
+          message: 'Demasiadas solicitudes. Intenta nuevamente en unos minutos.'
+        }
+      } else {
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Error de conexión. Verifica tu conexión a internet.'
+        }
+      }
+    }
+  },
+
+  // Restablecer contraseña con token - CORREGIDO con email
+  async resetPassword(token: string, email: string, newPassword: string, confirmPassword?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('Restableciendo contraseña con token:', token.substring(0, 10) + '...')
+      console.log('Email:', email)
+
+      // Validación básica del frontend
+      if (!token || !email || !newPassword) {
+        return {
+          success: false,
+          message: 'Todos los campos son requeridos.'
+        }
+      }
+
+      if (newPassword.length < 6) {
+        return {
+          success: false,
+          message: 'La contraseña debe tener al menos 6 caracteres.'
+        }
+      }
+
+      if (confirmPassword && newPassword !== confirmPassword) {
+        return {
+          success: false,
+          message: 'Las contraseñas no coinciden.'
+        }
+      }
+
+      const response = await api.post('/api/Auth/reset-password', {
+        token: token,
+        email: email,        // ← CAMPO AGREGADO
+        newPassword: newPassword
+      })
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          message: response.data.message || 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión.'
+        }
+      } else {
+        return {
+          success: false,
+          message: response.data?.message || 'Error al restablecer la contraseña.'
+        }
+      }
+    } catch (error: any) {
+      console.error('Error en reset password:', error)
+
+      if (error.response?.status === 400) {
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Token inválido o expirado.'
+        }
+      } else if (error.response?.status === 404) {
+        return {
+          success: false,
+          message: 'No se encontró una cuenta asociada a este enlace.'
+        }
+      } else {
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Error al restablecer la contraseña.'
+        }
+      }
+    }
+  },
+
+  // Extraer email de la URL de reset
+  extractEmailFromResetUrl(url?: string): string | null {
+    try {
+      const urlToCheck = url || window.location.href
+      const urlObj = new URL(urlToCheck)
+      const email = urlObj.searchParams.get('email')
+
+      console.log('Email extraído de URL:', email)
+      return email
+    } catch (error) {
+      console.error('Error extrayendo email de URL:', error)
+      return null
+    }
+  },
+
+  // Extraer token de la URL de reset
+  extractTokenFromResetUrl(url?: string): string | null {
+    try {
+      const urlToCheck = url || window.location.href
+      const urlObj = new URL(urlToCheck)
+      const token = urlObj.searchParams.get('token')
+
+      console.log('Token extraído de URL:', token?.substring(0, 10) + '...')
+      return token
+    } catch (error) {
+      console.error('Error extrayendo token de URL:', error)
+      return null
+    }
+  },
+
+  // Extraer ambos parámetros de la URL actual
+  extractResetParamsFromCurrentUrl(): { token: string | null; email: string | null } {
+    return {
+      token: this.extractTokenFromResetUrl(),
+      email: this.extractEmailFromResetUrl()
+    }
+  },
+
+  // Validar que los parámetros de reset sean válidos
+  validateResetParams(token: string | null, email: string | null): { isValid: boolean; message: string } {
+    if (!token) {
+      return {
+        isValid: false,
+        message: 'Token de restablecimiento no encontrado en la URL.'
+      }
+    }
+
+    if (!email) {
+      return {
+        isValid: false,
+        message: 'Email no encontrado en la URL de restablecimiento.'
+      }
+    }
+
+    // Validar formato de email básico
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return {
+        isValid: false,
+        message: 'El email en la URL no tiene un formato válido.'
+      }
+    }
+
+    // Validar que el token tenga una longitud mínima
+    if (token.length < 20) {
+      return {
+        isValid: false,
+        message: 'El token de restablecimiento parece ser inválido.'
+      }
+    }
+
+    return {
+      isValid: true,
+      message: 'Parámetros válidos.'
+    }
+  },
+
   // Depurar headers actuales de axios
   debugHeaders(): void {
     console.log('Headers de API configurados:', api.defaults.headers)
@@ -78,6 +265,21 @@ export const authService = {
     const token = localStorage.getItem('token')
     return token ? `Bearer ${token}` : null
   },
+
+  // Limpiar datos de autenticación
+  clearAuthData(): void {
+    localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
+    delete api.defaults.headers.common['Authorization']
+    console.log('Datos de autenticación limpiados')
+  },
+
+  // Verificar si hay datos de autenticación
+  hasAuthData(): boolean {
+    const token = localStorage.getItem('token')
+    const refreshToken = localStorage.getItem('refreshToken')
+    return !!(token && refreshToken)
+  }
 }
 
 export default authService
