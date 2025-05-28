@@ -283,12 +283,15 @@ const updateStats = () => {
 // Métodos de autorización
 const checkAuthorization = async () => {
   try {
-    if (!authStore.isAuthenticated()) {
+    // CORREGIDO: usar como computed, no como función
+    if (!authStore.isAuthenticated) {
       router.push('/login');
       return;
     }
 
-    if (!authStore.isAdmin()) {
+    // CORREGIDO: usar como computed, no como función
+    if (!authStore.isAdmin) {
+      console.log('Usuario no es admin. Rol actual:', authStore.user?.role);
       router.push('/unauthorized');
       return;
     }
@@ -301,6 +304,9 @@ const checkAuthorization = async () => {
         return;
       }
     }
+
+    console.log('✅ Autorización de admin verificada exitosamente');
+    console.log('Usuario admin:', authStore.user?.firstName, authStore.user?.lastName);
   } catch (error) {
     console.error('Error verificando autorización:', error);
     router.push('/unauthorized');

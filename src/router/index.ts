@@ -33,8 +33,8 @@ router.beforeEach(async (to, from, next) => {
 
   // Rutas para usuarios regulares
   if (requiresAuth) {
-    // Si la ruta requiere autenticación, verificar si el usuario está autenticado
-    if (!authStore.isAuthenticated()) {
+    // CORREGIDO: usar isAuthenticated como computed, no como función
+    if (!authStore.isAuthenticated) {
       // Redirigir al login con un parámetro de retorno
       next({
         name: 'login',
@@ -81,7 +81,8 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   // Rutas para guest de usuarios regulares
-  else if (isGuestOnly && authStore.isAuthenticated()) {
+  else if (isGuestOnly && authStore.isAuthenticated) {
+    // CORREGIDO: usar isAuthenticated como computed, no como función
     // Si la ruta es solo para visitantes (login, register) y el usuario ya está autenticado,
     // redirigir al inicio
     next({ name: 'home' })
