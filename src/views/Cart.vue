@@ -156,12 +156,13 @@
   </div>
 </template>
 
-<script setup lang="ts">
+// Cart.vue - <script setup lang="ts">
+
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
 import { useAuthStore } from '@/stores/auth';
-import type { CartItem } from '@/stores/cart';
+import type { CartItem } from '@/stores/cart'; // Asumiendo que CartItem se exporta desde cartStore o types
 
 const router = useRouter();
 const cartStore = useCartStore();
@@ -176,9 +177,9 @@ const promoSuccess = ref(false);
 // Computed properties
 const isEmpty = computed(() => cartStore.isEmpty);
 const cartItems = computed(() => cartStore.items);
-const restaurantId = computed(() => cartStore.restaurantId);
-const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
-const deliveryTime = ref(25);
+const restaurantId = computed(() => cartStore.restaurantId); // Asegúrate que cartStore exponga esto
+const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante'); // Asegúrate que cartStore exponga esto
+const deliveryTime = ref(cartStore.estimatedDeliveryTime || 25); // Obtener de cartStore si es posible
 
 // Calculate order values with safe number handling
 const subtotal = computed(() => {
@@ -187,9 +188,9 @@ const subtotal = computed(() => {
   }, 0);
 });
 
-const deliveryFee = ref(3.99);
+const deliveryFee = ref(cartStore.deliveryFee || 3.99); // Obtener de cartStore si es posible
 const taxRate = 0.16; // 16% IVA
-const tax = computed(() => subtotal.value * taxRate);
+const tax = computed(() => subtotal.value * taxRate); // Considerar si el descuento afecta al impuesto
 const total = computed(() => subtotal.value + deliveryFee.value + tax.value);
 
 // Restaurant initials for logo placeholder
@@ -207,7 +208,8 @@ const restaurantInitials = computed(() => {
 
 // Validation
 const canCheckout = computed(() => {
-  return !isEmpty.value && authStore.isAuthenticated() && subtotal.value > 0;
+  // Corregido: acceder a isAuthenticated como propiedad
+  return !isEmpty.value && authStore.isAuthenticated && subtotal.value > 0;
 });
 
 // Helper functions para manejar valores seguros
@@ -238,7 +240,7 @@ const decrementItem = async (itemId: number) => {
     if (currentQuantity > 1) {
       await cartStore.updateQuantity(itemId, currentQuantity - 1);
     } else {
-      removeItem(itemId);
+      removeItem(itemId); // Si es 1 y decrementa, se elimina
     }
   }
 };
@@ -256,7 +258,7 @@ const clearCart = () => {
 const applyPromoCode = async () => {
   const code = promoCode.value.trim();
   if (!code) {
-    promoMessage.value = 'Ingresa un código promocional';
+    promoMessage.value = 'Por favor, ingresa un código promocional.';
     promoSuccess.value = false;
     return;
   }
@@ -266,13 +268,24 @@ const applyPromoCode = async () => {
 
   try {
     // Simular validación de código promocional
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Reemplazar con llamada real al servicio si es necesario
+    // const result = await cartStore.applyPromoCode(code);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulación
 
-    // Por ahora solo simulamos que el código no es válido
-    promoMessage.value = 'Código promocional no válido';
-    promoSuccess.value = false;
+    // Ejemplo de simulación:
+    if (code.toUpperCase() === 'DESCUENTO10') {
+      promoMessage.value = '¡Descuento del 10% aplicado!';
+      promoSuccess.value = true;
+      // Aquí deberías actualizar el subtotal/total o aplicar el descuento en cartStore
+      // cartStore.setDiscount(subtotal.value * 0.10);
+    } else {
+      promoMessage.value = 'El código promocional ingresado no es válido.';
+      promoSuccess.value = false;
+      // cartStore.removeDiscount();
+    }
   } catch (error) {
-    promoMessage.value = 'Error al validar el código';
+    console.error('Error applying promo code:', error);
+    promoMessage.value = 'Ocurrió un error al validar el código.';
     promoSuccess.value = false;
   } finally {
     applyingPromo.value = false;
@@ -280,29 +293,38 @@ const applyPromoCode = async () => {
 };
 
 const proceedToCheckout = () => {
-  if (!authStore.isAuthenticated()) {
-    router.push('/login');
+  // Corregido: acceder a isAuthenticated como propiedad
+  if (!authStore.isAuthenticated) {
+    alert('Por favor, inicia sesión para continuar con tu pedido.');
+    router.push({ name: 'Login', query: { redirect: '/cart' } }); // Redirigir a login
     return;
   }
 
-  if (!canCheckout.value) {
+  if (!canCheckout.value) { // Usar la propiedad computada
+     if (isEmpty.value) {
+        alert('Tu carrito está vacío.');
+     } else if (subtotal.value <= 0) {
+        alert('El total de tu pedido debe ser mayor a cero.');
+     }
     return;
   }
-
   router.push('/checkout');
 };
 
 // Inicialización
 onMounted(async () => {
-  // Validar carrito si no está vacío
+  console.log("Cart.vue mounted. Auth state:", authStore.isAuthenticated);
+  // Validar carrito si no está vacío. Esto podría ser útil si los precios o disponibilidad cambian.
   if (!isEmpty.value) {
     try {
-      await cartStore.validateCart();
+      await cartStore.validateCart(); // Asegúrate que esta función exista y funcione en tu cartStore
     } catch (error) {
-      console.error('Error validating cart:', error);
+      console.error('Error validating cart on mount:', error);
+      // Podrías mostrar un mensaje al usuario si la validación falla
     }
   }
 });
+
 </script>
 
 <style lang="scss" scoped>

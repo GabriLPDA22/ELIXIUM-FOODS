@@ -44,6 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
 
   // Computed
+  // isAuthenticated es una propiedad computada, se accede a su valor directamente (ej: authStore.isAuthenticated)
   const isAuthenticated = computed(() => !!token.value && !!user.value)
 
   // NUEVO: Computed para verificar si es admin
@@ -81,10 +82,24 @@ export const useAuthStore = defineStore('auth', () => {
     if (savedToken && savedUser) {
       token.value = savedToken
       refreshToken.value = savedRefreshToken
-      user.value = JSON.parse(savedUser)
+      try {
+        user.value = JSON.parse(savedUser)
+      } catch (e) {
+        console.error("Error al parsear el usuario desde localStorage", e);
+        // Opcionalmente, limpiar los datos corruptos
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        user.value = null;
+        token.value = null;
+        refreshToken.value = null;
+      }
 
-      // Configurar header de autorización
-      api.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+
+      // Configurar header de autorización solo si el token es válido
+      if (token.value) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+      }
     }
   }
 
@@ -199,6 +214,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (!token.value) return false
 
       // Verificar token actual
+      // Asegúrate que authService.verifyToken() existe y funciona como esperas
       const isValid = await authService.verifyToken()
 
       if (isValid) {
@@ -206,13 +222,15 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // Si el token no es válido, intentar refrescar
+      // Asegúrate que authService.refreshToken() existe y funciona como esperas
       const refreshed = await authService.refreshToken()
 
       if (refreshed) {
-        // Actualizar el token en el store
+        // Actualizar el token en el store si authService.refreshToken() lo actualiza en localStorage
         const newToken = localStorage.getItem('token')
         if (newToken) {
           token.value = newToken
+          api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
         }
         return true
       }
@@ -238,6 +256,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (error) {
       console.error('Error revocando token:', error)
+      // No se relanza el error para asegurar que el logout local siempre ocurra
     } finally {
       // Limpiar estado local
       user.value = null
@@ -257,7 +276,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Refrescar token
   const refreshAuthToken = async (): Promise<boolean> => {
-    return await authService.refreshToken()
+    // Asegúrate que authService.refreshToken() existe, actualice el localStorage y devuelva un booleano
+    const refreshed = await authService.refreshToken();
+    if (refreshed) {
+        const newToken = localStorage.getItem('token');
+        if (newToken) {
+            token.value = newToken;
+            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        }
+    }
+    return refreshed;
   }
 
   // Inicializar al crear el store
@@ -273,7 +301,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Computed
     isAuthenticated,
-    isAdmin, // NUEVO: computed para verificar si es admin
+    isAdmin,
     userProfileImage,
     userInitials,
     isGoogleUser,
@@ -284,6 +312,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     checkAuth,
     refreshAuthToken,
-    initializeAuth
+    initializeAuth // Aunque se llama al crear, puede ser útil exponerla
   }
 })

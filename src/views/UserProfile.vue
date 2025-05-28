@@ -195,17 +195,17 @@ import { ref, reactive, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useOrderStore } from '@/stores/orderStore';
 import ProfileHeader from '@/components/feature/profile/ProfileHeader.vue';
-import UserInfo from '@/components/feature/profile/UserInfo.vue';
+import UserInfo from '@/components/feature/profile/UserInfo.vue'; // Componente que probablemente llama a /api/Users/me
 import AddressList from '@/components/feature/profile/AddressList.vue';
-import userService, { type UserProfile } from '@/services/userService';
-import { OrderStatus } from '@/services/orderService';
-import type { OrderResponse } from '@/services/orderService';
+import userService, { type UserProfile } from '@/services/userService'; // UserProfile podría tener más campos que User de authStore
+import { OrderStatus } from '@/services/orderService'; // Asegúrate que este enum/objeto exista
+import type { OrderResponse } from '@/services/orderService'; // Asegúrate que esta interfaz exista
 
 const authStore = useAuthStore();
 const orderStore = useOrderStore();
 
 // Estado
-const activeTab = ref('info');
+const activeTab = ref('info'); // Por defecto, mostrar la pestaña de información
 const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const passwordError = ref('');
@@ -239,6 +239,7 @@ const tabs = [
     id: 'orders',
     label: 'Pedidos',
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10 5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>'
+    // Otra opción de icono para pedidos: <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path>
   },
   {
     id: 'settings',
@@ -247,53 +248,67 @@ const tabs = [
   }
 ];
 
-// Información del usuario
+// Información del usuario (datos que UserInfo.vue podría llenar/usar)
 const userInfo = reactive<UserProfile>({
-  firstName: '',
-  lastName: '',
-  email: '',
-  phoneNumber: '',
-  birthdate: '',
+  id: authStore.user?.id || 0, // Inicializar con ID del authStore si existe
+  firstName: authStore.user?.firstName || '',
+  lastName: authStore.user?.lastName || '',
+  email: authStore.user?.email || '',
+  phoneNumber: (authStore.user as any)?.phoneNumber || '', // phoneNumber no está en la interfaz User de authStore
+  birthdate: '', // Estos campos probablemente los llena UserInfo.vue
   bio: '',
   dietaryPreferences: [],
-  photoURL: '',
+  photoURL: authStore.user?.photoURL || '', // Usar photoURL del authStore
 });
 
 // Métodos
 const loadUserData = () => {
-  // Cargar información básica del usuario desde el store
+  // Esta función ahora principalmente inicializa con datos del authStore.
+  // El componente UserInfo.vue es el que probablemente hace la llamada a /api/Auth/me
   if (authStore.user) {
+    userInfo.id = authStore.user.id;
     userInfo.firstName = authStore.user.firstName;
     userInfo.lastName = authStore.user.lastName;
     userInfo.email = authStore.user.email;
-    userInfo.phoneNumber = authStore.user.phoneNumber || '';
+    // El campo phoneNumber no está en la interfaz User de auth.ts.
+    // Si tu backend lo devuelve en el login/google-login y lo guardas en authStore.user, necesitas añadirlo a la interfaz User en auth.ts.
+    userInfo.phoneNumber = (authStore.user as any)?.phoneNumber || '';
+    userInfo.photoURL = authStore.user.photoURL || ''; // Usar la photoURL del authStore
   }
+  // Nota: La llamada a /api/Users/me (que debería ser /api/Auth/me)
+  // parece estar ocurriendo en UserInfo.vue según los logs.
 };
 
 const handleTabChange = async (tabId: string) => {
+  activeTab.value = tabId; // Asegurar que activeTab se actualice primero
   if (tabId === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
     await loadUserOrders();
   }
 };
 
 const loadUserOrders = async () => {
-  if (!authStore.isAuthenticated()) return;
+  // Corregido: acceder a isAuthenticated como propiedad
+  if (!authStore.isAuthenticated) {
+    console.log("Usuario no autenticado, no se cargarán los pedidos.");
+    return;
+  }
 
   try {
     loadingOrders.value = true;
     ordersError.value = '';
 
+    // Asumimos que fetchOrders usa el token del authStore (configurado en api.ts)
     await orderStore.fetchOrders();
-    userOrders.value = orderStore.orderHistory;
+    userOrders.value = orderStore.orderHistory; // Asumiendo que orderStore.orderHistory tiene los pedidos
   } catch (error: any) {
     console.error('Error loading user orders:', error);
-    ordersError.value = error.message || 'Error al cargar los pedidos';
+    ordersError.value = error.response?.data?.message || error.message || 'No se pudieron cargar los pedidos.';
   } finally {
     loadingOrders.value = false;
   }
 };
 
-const getOrderStatusClass = (status: OrderStatus): string => {
+const getOrderStatusClass = (status: OrderStatus | string): string => {
   switch (status) {
     case OrderStatus.DELIVERED:
       return 'order-status--delivered';
@@ -310,105 +325,141 @@ const getOrderStatusClass = (status: OrderStatus): string => {
   }
 };
 
-const getOrderStatusText = (status: OrderStatus): string => {
-  switch (status) {
-    case OrderStatus.PENDING:
-      return 'Pendiente';
-    case OrderStatus.ACCEPTED:
-      return 'Aceptado';
-    case OrderStatus.PREPARING:
-      return 'Preparando';
-    case OrderStatus.READY_FOR_PICKUP:
-      return 'Listo';
-    case OrderStatus.ON_THE_WAY:
-      return 'En camino';
-    case OrderStatus.DELIVERED:
-      return 'Entregado';
-    case OrderStatus.CANCELLED:
-      return 'Cancelado';
-    default:
-      return status;
+const getOrderStatusText = (status: OrderStatus | string): string => {
+  // Este mapeo puede ser más extenso o venir de una configuración
+  const statusMap: Record<string, string> = {
+    [OrderStatus.PENDING]: 'Pendiente',
+    [OrderStatus.ACCEPTED]: 'Aceptado',
+    [OrderStatus.PREPARING]: 'Preparando',
+    [OrderStatus.READY_FOR_PICKUP]: 'Listo para recoger',
+    [OrderStatus.ON_THE_WAY]: 'En camino',
+    [OrderStatus.DELIVERED]: 'Entregado',
+    [OrderStatus.CANCELLED]: 'Cancelado',
+  };
+  return statusMap[status] || status.toString();
+};
+
+const formatOrderDate = (dateString?: string): string => {
+  if (!dateString) return 'Fecha desconocida';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Fecha inválida'; // Comprobar si la fecha es válida
+
+    const now = new Date();
+    const diffTime = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffTime < 0) { // Si la fecha es futura (ej. pedido programado)
+        return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) +
+               ` a las ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    if (diffDays === 0) {
+      return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `Ayer, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays < 7) {
+      return `Hace ${diffDays} días`;
+    } else {
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        year: (now.getFullYear() !== date.getFullYear()) ? 'numeric' : undefined // Mostrar año solo si es diferente al actual
+      });
+    }
+  } catch (e) {
+      console.error("Error formateando fecha:", dateString, e);
+      return dateString; // Devolver original si hay error
   }
 };
 
-const formatOrderDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-  } else if (diffDays === 1) {
-    return `Ayer, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-  } else if (diffDays < 7) {
-    return `Hace ${diffDays} días`;
-  } else {
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      year: diffDays > 365 ? 'numeric' : undefined
-    });
-  }
-};
 
 const openEditProfileModal = () => {
-  activeTab.value = 'info';
-  setTimeout(() => {
-    document.querySelector('.profile-panel')?.scrollIntoView({ behavior: 'smooth' });
-  }, 100);
+  activeTab.value = 'info'; // Asegurarse que la pestaña de info esté activa
+  // Podrías usar un ref en el componente UserInfo y llamar un método para abrir su modal de edición si existe
+  // O emitir un evento que UserInfo escuche.
+  // Por ahora, esto solo cambia la pestaña. La edición real estaría en UserInfo.vue.
+  console.log("Intentando abrir modal de edición de perfil (lógica en UserInfo.vue)");
+  // Scroll a la sección si es necesario
+  // nextTick(() => {
+  //   document.querySelector('.profile-panel')?.scrollIntoView({ behavior: 'smooth' });
+  // });
 };
 
+// Esta función se llama cuando UserInfo.vue emite un evento 'update'
 const handleUserInfoUpdate = (updatedInfo: UserProfile) => {
-  Object.assign(userInfo, updatedInfo);
+  Object.assign(userInfo, updatedInfo); // Actualizar los datos locales
+  // También podrías querer actualizar authStore.user si los campos coinciden
+  if (authStore.user) {
+    authStore.user.firstName = updatedInfo.firstName;
+    authStore.user.lastName = updatedInfo.lastName;
+    authStore.user.email = updatedInfo.email; // Cuidado si el email se puede cambiar aquí
+    authStore.user.photoURL = updatedInfo.photoURL;
+    // Si 'phoneNumber' se añade a la interfaz User de auth.ts:
+    // authStore.user.phoneNumber = updatedInfo.phoneNumber;
+  }
 };
 
 const handleAddressesUpdate = () => {
-  console.log('Direcciones actualizadas');
+  // Esta función se llamaría si AddressList.vue emite un evento 'update'
+  console.log('Lista de direcciones actualizada (lógica en AddressList.vue)');
 };
 
 const changePassword = async () => {
   passwordError.value = '';
   passwordSuccess.value = '';
 
+  if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+    passwordError.value = 'Todos los campos de contraseña son requeridos.';
+    return;
+  }
+  if (passwordForm.newPassword.length < 8) {
+    passwordError.value = 'La nueva contraseña debe tener al menos 8 caracteres.';
+    return;
+  }
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    passwordError.value = 'Las contraseñas no coinciden';
+    passwordError.value = 'Las nuevas contraseñas no coinciden.';
     return;
   }
 
   passwordLoading.value = true;
 
   try {
-    const success = await userService.changePassword(
+    // userService.changePassword debería existir y estar implementado
+    const response = await userService.changePassword(
       passwordForm.currentPassword,
       passwordForm.newPassword
     );
 
-    if (success) {
-      passwordSuccess.value = 'Contraseña actualizada correctamente';
-
+    // Asumimos que userService.changePassword devuelve un objeto con `success` y `message` o lanza error
+    if (response && response.success) {
+      passwordSuccess.value = response.message || 'Contraseña actualizada correctamente.';
       passwordForm.currentPassword = '';
       passwordForm.newPassword = '';
       passwordForm.confirmPassword = '';
 
       setTimeout(() => {
         showPasswordModal.value = false;
-        passwordSuccess.value = '';
-      }, 2000);
+        passwordSuccess.value = ''; // Limpiar mensaje después de cerrar
+      }, 2500);
     } else {
-      passwordError.value = 'No se pudo actualizar la contraseña';
+      passwordError.value = response?.message || 'No se pudo actualizar la contraseña. Verifica tu contraseña actual.';
     }
   } catch (err: any) {
     console.error('Error al cambiar contraseña:', err);
-    passwordError.value = err.response?.data?.message || 'Error al cambiar la contraseña';
+    passwordError.value = err.response?.data?.message || 'Error al conectar con el servidor para cambiar la contraseña.';
   } finally {
     passwordLoading.value = false;
   }
 };
 
 // Inicialización
-onMounted(async () => {
-  loadUserData();
+onMounted(() => {
+  loadUserData(); // Cargar datos iniciales del authStore
+  // Si la pestaña por defecto es 'orders', cargar pedidos
+  if (activeTab.value === 'orders') {
+    loadUserOrders();
+  }
 });
 </script>
 

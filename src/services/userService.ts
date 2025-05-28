@@ -1,84 +1,197 @@
-// src/services/userService.ts
-import { api } from './api'
-import type { User, Address } from '@/types'
+import { api } from './api';
+import type { User, Address } from '@/types';
 
 export interface UserProfile {
-  firstName: string
-  lastName: string
-  email: string
-  phoneNumber: string
-  birthdate?: string
-  bio?: string
-  dietaryPreferences?: string[]
-  photoURL?: string
-  createdAt?: Date
+  id?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string | null;
+  birthdate?: string | null;
+  bio?: string | null;
+  dietaryPreferences?: string[];
+  photoURL?: string | null;
+  createdAt?: string;
 }
 
 export interface AddressRequest {
-  id?: number
-  name: string
-  street: string
-  number: string
-  interior: string
-  neighborhood: string
-  city: string
-  state: string
-  zipCode: string
-  phone: string
-  isDefault: boolean
+  id?: number;
+  name: string;
+  street: string;
+  number: string;
+  interior?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone: string;
+  isDefault: boolean;
+}
+
+interface AuthApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+interface ChangePasswordApiResponse {
+  success: boolean;
+  message: string;
 }
 
 export const userService = {
-  // Obtener perfil del usuario actual
-  async getCurrentUser(): Promise<User> {
-    const response = await api.get('/api/Users/me')
-    return response.data
+  async getCurrentUser(): Promise<UserProfile> {
+    try {
+      const response = await api.get<AuthApiResponse<UserProfile>>('/api/Auth/me');
+      if (response.data && response.data.success) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data?.message || 'Respuesta no exitosa del servidor para obtener perfil.');
+      }
+    } catch (error: any) {
+      console.error('Error en userService.getCurrentUser:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para obtener los datos del usuario.');
+    }
   },
 
-  // Actualizar información del usuario
-  async updateUserProfile(userData: Partial<UserProfile>): Promise<User> {
-    const response = await api.put('/api/Users/profile', userData)
-    return response.data
+  async updateUserProfile(userData: Partial<UserProfile>): Promise<UserProfile> {
+    try {
+      const response = await api.put<AuthApiResponse<UserProfile>>('/api/Auth/me', userData);
+      if (response.data && response.data.success) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data?.message || 'Error al actualizar el perfil.');
+      }
+    } catch (error: any) {
+      console.error('Error en userService.updateUserProfile:', error.response?.data || error.message);
+      const backendMessage = error.response?.data?.message ||
+                             (typeof error.response?.data === 'string' ? error.response.data : null) ||
+                             error.message;
+      throw new Error(backendMessage || 'No se pudo conectar con el servidor para actualizar el perfil.');
+    }
   },
 
-  // Cambiar la contraseña
-  async changePassword(currentPassword: string, newPassword: string): Promise<boolean> {
-    const response = await api.put('/api/Users/password', {
-      currentPassword,
-      newPassword,
-    })
-    return response.status === 204
+  async changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordApiResponse> {
+    try {
+      const response = await api.post<ChangePasswordApiResponse>('/api/Auth/change-password', {
+        currentPassword,
+        newPassword,
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en userService.changePassword:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para cambiar la contraseña.');
+    }
   },
 
-  // Obtener las direcciones del usuario
   async getUserAddresses(): Promise<Address[]> {
-    const response = await api.get('/api/Addresses')
-    return response.data
+    try {
+      const response = await api.get<Address[]>('/api/Addresses');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en userService.getUserAddresses:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para obtener las direcciones.');
+    }
   },
 
-  // Agregar una nueva dirección
   async addAddress(address: AddressRequest): Promise<Address> {
-    const response = await api.post('/api/Addresses', address)
-    return response.data
+    try {
+      const response = await api.post<Address>('/api/Addresses', address);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en userService.addAddress:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para agregar la dirección.');
+    }
   },
 
-  // Actualizar una dirección existente
   async updateAddress(id: number, address: AddressRequest): Promise<Address> {
-    const response = await api.put(`/api/Addresses/${id}`, address)
-    return response.data
+    try {
+      const response = await api.put<Address>(`/api/Addresses/${id}`, address);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en userService.updateAddress:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para actualizar la dirección.');
+    }
   },
 
-  // Eliminar una dirección
   async deleteAddress(id: number): Promise<boolean> {
-    const response = await api.delete(`/api/Addresses/${id}`)
-    return response.status === 204
+    try {
+      const response = await api.delete(`/api/Addresses/${id}`);
+      return response.status === 200 || response.status === 204;
+    } catch (error: any) {
+      console.error('Error en userService.deleteAddress:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para eliminar la dirección.');
+    }
   },
 
-  // Establecer dirección como predeterminada
   async setAddressAsDefault(id: number): Promise<boolean> {
-    const response = await api.put(`/api/Addresses/${id}/default`, {})
-    return response.status === 204
+    try {
+      const response = await api.put(`/api/Addresses/${id}/default`, {});
+      return response.status === 200 || response.status === 204;
+    } catch (error: any) {
+      console.error('Error en userService.setAddressAsDefault:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar con el servidor para establecer la dirección predeterminada.');
+    }
   },
+
+  async getUserPaymentMethods(): Promise<PaymentMethod[]> {
+    try {
+      const response = await api.get<PaymentMethod[]>('/api/PaymentMethods');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en userService.getUserPaymentMethods:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar para obtener los métodos de pago.');
+    }
+  },
+
+  async addPaymentMethod(paymentMethodData: PaymentMethodRequest): Promise<PaymentMethod> {
+    try {
+      const response = await api.post<PaymentMethod>('/api/PaymentMethods', paymentMethodData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en userService.addPaymentMethod:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar para agregar el método de pago.');
+    }
+  },
+
+  async deletePaymentMethod(id: number): Promise<boolean> {
+    try {
+      const response = await api.delete(`/api/PaymentMethods/${id}`);
+      return response.status === 200 || response.status === 204;
+    } catch (error: any) {
+      console.error('Error en userService.deletePaymentMethod:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar para eliminar el método de pago.');
+    }
+  },
+
+  async setPaymentMethodAsDefault(id: number): Promise<boolean> {
+    try {
+      const response = await api.put(`/api/PaymentMethods/${id}/default`, {});
+      return response.status === 200 || response.status === 204;
+    } catch (error: any) {
+      console.error('Error en userService.setPaymentMethodAsDefault:', error.response?.data || error.message);
+      throw error.response?.data || new Error('No se pudo conectar para establecer el método de pago predeterminado.');
+    }
+  }
+};
+
+export default userService;
+
+export interface PaymentMethod {
+  id: number;
+  type: 'card' | string;
+  cardholderName: string;
+  lastFourDigits: string;
+  expiryMonth: string;
+  expiryYear: string;
+  isDefault: boolean;
+  brand?: string;
 }
 
-export default userService
+export interface PaymentMethodRequest {
+  id?: number;
+  cardholderName: string;
+  cardNumber: string;
+  expiryDate: string;
+  isDefault: boolean;
+}
