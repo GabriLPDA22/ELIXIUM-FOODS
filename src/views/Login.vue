@@ -576,125 +576,125 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
 
     // Estilo completamente personalizado
     :global(.gsi-material-button) {
-      width: 100% !important;
-      height: 52px !important;
-      border-radius: 12px !important;
-      border: 2px solid transparent !important;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
-      backdrop-filter: blur(20px) !important;
-      position: relative !important;
-      overflow: hidden !important;
-      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) !important;
+      width: 100% ;
+      height: 52px ;
+      border-radius: 12px ;
+      border: 2px solid transparent ;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) ;
+      backdrop-filter: blur(20px) ;
+      position: relative ;
+      overflow: hidden ;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) ;
 
       // Gradiente de borde animado
       &::before {
-        content: '' !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        border-radius: 12px !important;
-        padding: 2px !important;
-        background: linear-gradient(45deg, $login-accent, $login-accent-orange, $login-primary, $login-accent) !important;
-        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-        mask-composite: exclude !important;
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-        -webkit-mask-composite: source-out !important;
-        opacity: 0 !important;
-        transition: opacity 0.3s ease !important;
+        content: '' ;
+        position: absolute ;
+        top: 0 ;
+        left: 0 ;
+        right: 0 ;
+        bottom: 0 ;
+        border-radius: 12px ;
+        padding: 2px ;
+        background: linear-gradient(45deg, $login-accent, $login-accent-orange, $login-primary, $login-accent) ;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) ;
+        mask-composite: exclude ;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) ;
+        -webkit-mask-composite: source-out ;
+        opacity: 0 ;
+        transition: opacity 0.3s ease ;
       }
 
       &:hover {
-        transform: translateY(-2px) scale(1.02) !important;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)) !important;
+        transform: translateY(-2px) scale(1.02) ;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)) ;
         box-shadow:
           0 10px 30px rgba(255, 200, 55, 0.3),
           0 5px 15px rgba(255, 128, 8, 0.2),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+          inset 0 1px 0 rgba(255, 255, 255, 0.2) ;
 
         &::before {
-          opacity: 1 !important;
+          opacity: 1 ;
         }
       }
 
       &:active {
-        transform: translateY(-1px) scale(1.01) !important;
-        transition: all 0.1s ease !important;
+        transform: translateY(-1px) scale(1.01) ;
+        transition: all 0.1s ease ;
       }
     }
 
     // Contenido del botón
     :global(.gsi-material-button .gsi-material-button-contents) {
-      height: 100% !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 14px !important;
-      padding: 0 24px !important;
-      position: relative !important;
-      z-index: 2 !important;
+      height: 100% ;
+      display: flex ;
+      align-items: center ;
+      justify-content: center ;
+      gap: 14px ;
+      padding: 0 24px ;
+      position: relative ;
+      z-index: 2 ;
     }
 
     // Ícono de Google más grande y con sombra
     :global(.gsi-material-button .gsi-material-button-icon) {
-      width: 22px !important;
-      height: 22px !important;
-      margin: 0 !important;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
-      transition: transform 0.3s ease !important;
+      width: 22px ;
+      height: 22px ;
+      margin: 0 ;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) ;
+      transition: transform 0.3s ease ;
     }
 
     :global(.gsi-material-button:hover .gsi-material-button-icon) {
-      transform: rotate(5deg) scale(1.05) !important;
+      transform: rotate(5deg) scale(1.05) ;
     }
 
     // Texto personalizado con efectos
     :global(.gsi-material-button .gsi-material-button-content-wrapper) {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      height: 100% !important;
+      display: flex ;
+      align-items: center ;
+      justify-content: center ;
+      height: 100% ;
     }
 
     :global(.gsi-material-button .gsi-material-button-content) {
-      color: white !important;
-      font-size: 16px !important;
-      font-weight: 600 !important;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-      text-transform: none !important;
-      letter-spacing: 0.5px !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-      position: relative !important;
+      color: white ;
+      font-size: 16px ;
+      font-weight: 600 ;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif ;
+      text-transform: none ;
+      letter-spacing: 0.5px ;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) ;
+      position: relative ;
 
       // Efecto de brillo en el texto
       &::after {
-        content: '' !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: -100% !important;
-        width: 100% !important;
-        height: 100% !important;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) !important;
-        transition: left 0.5s ease !important;
+        content: '' ;
+        position: absolute ;
+        top: 0 ;
+        left: -100% ;
+        width: 100% ;
+        height: 100% ;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) ;
+        transition: left 0.5s ease ;
       }
     }
 
     :global(.gsi-material-button:hover .gsi-material-button-content::after) {
-      left: 100% !important;
+      left: 100% ;
     }
 
     // Estados de accesibilidad mejorados
     :global(.gsi-material-button:focus) {
-      outline: none !important;
+      outline: none ;
       box-shadow:
         0 0 0 3px rgba(255, 200, 55, 0.5),
-        0 10px 30px rgba(255, 200, 55, 0.3) !important;
+        0 10px 30px rgba(255, 200, 55, 0.3) ;
     }
 
     // Pulso sutil en el botón
     :global(.gsi-material-button) {
-      animation: pulse-glow 3s ease-in-out infinite !important;
+      animation: pulse-glow 3s ease-in-out infinite ;
     }
 
     @keyframes pulse-glow {
@@ -708,24 +708,24 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
 
     // Efecto de partículas (opcional)
     :global(.gsi-material-button::after) {
-      content: '' !important;
-      position: absolute !important;
-      top: 50% !important;
-      left: 50% !important;
-      width: 0 !important;
-      height: 0 !important;
-      border-radius: 50% !important;
-      background: radial-gradient(circle, rgba(255, 200, 55, 0.3), transparent) !important;
-      transform: translate(-50%, -50%) !important;
-      transition: all 0.3s ease !important;
-      pointer-events: none !important;
-      z-index: 1 !important;
+      content: '' ;
+      position: absolute ;
+      top: 50% ;
+      left: 50% ;
+      width: 0 ;
+      height: 0 ;
+      border-radius: 50% ;
+      background: radial-gradient(circle, rgba(255, 200, 55, 0.3), transparent) ;
+      transform: translate(-50%, -50%) ;
+      transition: all 0.3s ease ;
+      pointer-events: none ;
+      z-index: 1 ;
     }
 
     :global(.gsi-material-button:hover::after) {
-      width: 200px !important;
-      height: 200px !important;
-      opacity: 0 !important;
+      width: 200px ;
+      height: 200px ;
+      opacity: 0 ;
     }
   }
 }
