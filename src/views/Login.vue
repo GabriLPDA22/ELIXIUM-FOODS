@@ -568,165 +568,105 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
   display: flex;
   justify-content: center;
 
-  // 🚀 NUEVO ESTILO PERSONALIZADO PARA GOOGLE
+  // 🎯 BOTÓN ELEGANTE QUE ENCAJA PERFECTO
   #google-signin-button {
     width: 100%;
     display: flex;
     justify-content: center;
 
-    // Estilo completamente personalizado
-    :global(.gsi-material-button) {
-      width: 100% ;
-      height: 52px ;
-      border-radius: 12px ;
-      border: 2px solid transparent ;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) ;
-      backdrop-filter: blur(20px) ;
-      position: relative ;
-      overflow: hidden ;
-      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) ;
+    // Contenedor principal del botón - ELEGANTE
+    :global(.nsm7Bb-HzV7m-LgbsSe) {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 100% !important;
+      height: 52px !important;
+      border-radius: 12px !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
+      backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 
+        0 4px 15px rgba(255, 200, 55, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+      transition: all 0.3s ease !important;
+      position: relative !important;
+      overflow: hidden !important;
+      cursor: pointer !important;
 
-      // Gradiente de borde animado
-      &::before {
-        content: '' ;
-        position: absolute ;
-        top: 0 ;
-        left: 0 ;
-        right: 0 ;
-        bottom: 0 ;
-        border-radius: 12px ;
-        padding: 2px ;
-        background: linear-gradient(45deg, $login-accent, $login-accent-orange, $login-primary, $login-accent) ;
-        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) ;
-        mask-composite: exclude ;
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) ;
-        -webkit-mask-composite: source-out ;
-        opacity: 0 ;
-        transition: opacity 0.3s ease ;
-      }
-
+      // Efecto sutil de hover
       &:hover {
-        transform: translateY(-2px) scale(1.02) ;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)) ;
-        box-shadow:
-          0 10px 30px rgba(255, 200, 55, 0.3),
-          0 5px 15px rgba(255, 128, 8, 0.2),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2) ;
-
-        &::before {
-          opacity: 1 ;
-        }
+        transform: translateY(-2px) !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)) !important;
+        border-color: rgba(255, 200, 55, 0.3) !important;
+        box-shadow: 
+          0 8px 25px rgba(255, 200, 55, 0.2),
+          0 4px 15px rgba(255, 128, 8, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
       }
 
       &:active {
-        transform: translateY(-1px) scale(1.01) ;
-        transition: all 0.1s ease ;
+        transform: translateY(-1px) !important;
       }
     }
 
-    // Contenido del botón
-    :global(.gsi-material-button .gsi-material-button-contents) {
-      height: 100% ;
-      display: flex ;
-      align-items: center ;
-      justify-content: center ;
-      gap: 14px ;
-      padding: 0 24px ;
-      position: relative ;
-      z-index: 2 ;
+    // Overlay/fondo del botón
+    :global(.nsm7Bb-HzV7m-LgbsSe-MJoBVe) {
+      border: none !important;
     }
 
-    // Ícono de Google más grande y con sombra
-    :global(.gsi-material-button .gsi-material-button-icon) {
-      width: 22px ;
-      height: 22px ;
-      margin: 0 ;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) ;
-      transition: transform 0.3s ease ;
+    // Contenedor del contenido
+    :global(.nsm7Bb-HzV7m-LgbsSe-bN97Pc-sM5MNb) {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 12px !important;
+      padding: 0 24px !important;
+      height: 100% !important;
+      width: 100% !important;
+      position: relative !important;
+      z-index: 2 !important;
     }
 
-    :global(.gsi-material-button:hover .gsi-material-button-icon) {
-      transform: rotate(5deg) scale(1.05) ;
+    // Contenedor del ícono
+    :global(.nsm7Bb-HzV7m-LgbsSe-Bz112c) {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 20px !important;
+      height: 20px !important;
+      transition: transform 0.2s ease !important;
     }
 
-    // Texto personalizado con efectos
-    :global(.gsi-material-button .gsi-material-button-content-wrapper) {
-      display: flex ;
-      align-items: center ;
-      justify-content: center ;
-      height: 100% ;
+    // SVG del ícono de Google
+    :global(.LgbsSe-Bz112c) {
+      width: 20px !important;
+      height: 20px !important;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+      transition: transform 0.2s ease !important;
     }
 
-    :global(.gsi-material-button .gsi-material-button-content) {
-      color: white ;
-      font-size: 16px ;
-      font-weight: 600 ;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif ;
-      text-transform: none ;
-      letter-spacing: 0.5px ;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) ;
-      position: relative ;
-
-      // Efecto de brillo en el texto
-      &::after {
-        content: '' ;
-        position: absolute ;
-        top: 0 ;
-        left: -100% ;
-        width: 100% ;
-        height: 100% ;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) ;
-        transition: left 0.5s ease ;
-      }
+    // Texto del botón
+    :global(.nsm7Bb-HzV7m-LgbsSe-BPrWId) {
+      color: white !important;
+      font-weight: 600 !important;
+      font-size: 16px !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+      letter-spacing: 0.3px !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
-    :global(.gsi-material-button:hover .gsi-material-button-content::after) {
-      left: 100% ;
+    // Efectos hover sutiles
+    :global(.nsm7Bb-HzV7m-LgbsSe:hover .nsm7Bb-HzV7m-LgbsSe-Bz112c) {
+      transform: scale(1.05) !important;
     }
 
-    // Estados de accesibilidad mejorados
-    :global(.gsi-material-button:focus) {
-      outline: none ;
-      box-shadow:
-        0 0 0 3px rgba(255, 200, 55, 0.5),
-        0 10px 30px rgba(255, 200, 55, 0.3) ;
+    :global(.nsm7Bb-HzV7m-LgbsSe:hover .LgbsSe-Bz112c) {
+      transform: scale(1.05) !important;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) brightness(1.1) !important;
     }
 
-    // Pulso sutil en el botón
-    :global(.gsi-material-button) {
-      animation: pulse-glow 3s ease-in-out infinite ;
-    }
-
-    @keyframes pulse-glow {
-      0%, 100% {
-        box-shadow: 0 2px 10px rgba(255, 200, 55, 0.1);
-      }
-      50% {
-        box-shadow: 0 2px 15px rgba(255, 200, 55, 0.2);
-      }
-    }
-
-    // Efecto de partículas (opcional)
-    :global(.gsi-material-button::after) {
-      content: '' ;
-      position: absolute ;
-      top: 50% ;
-      left: 50% ;
-      width: 0 ;
-      height: 0 ;
-      border-radius: 50% ;
-      background: radial-gradient(circle, rgba(255, 200, 55, 0.3), transparent) ;
-      transform: translate(-50%, -50%) ;
-      transition: all 0.3s ease ;
-      pointer-events: none ;
-      z-index: 1 ;
-    }
-
-    :global(.gsi-material-button:hover::after) {
-      width: 200px ;
-      height: 200px ;
-      opacity: 0 ;
-    }
   }
 }
 </style>
