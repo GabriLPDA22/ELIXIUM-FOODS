@@ -1,4 +1,4 @@
-<!-- src/views/Login.vue - VERSIÓN MÍNIMA -->
+<!-- src/views/Login.vue - ARREGLADO -->
 <template>
   <div class="login-view">
     <div class="login-background">
@@ -84,16 +84,8 @@
           </div>
 
           <div class="social-login">
-            <!-- Botón de Google personalizado -->
-            <button @click="handleGoogleLogin" class="google-login-button" :disabled="loading">
-              <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              <span>Continuar con Google</span>
-            </button>
+            <!-- 🚀 CAMBIO: Usar el botón oficial que funciona -->
+            <div id="google-signin-button"></div>
           </div>
 
           <div class="login-card__footer">
@@ -157,52 +149,67 @@ const loadGoogleScript = () => {
   });
 };
 
-// Inicializar Google OAuth
+// 🚀 ARREGLADO: Inicializar Google OAuth con FedCM desactivado
 const initializeGoogleAuth = () => {
   if (window.google) {
+    // ✅ CONFIGURACIÓN CORRECTA
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleCallback
+      callback: handleGoogleCallback,
+      // 🔥 ESTA LÍNEA ARREGLA TODO
+      use_fedcm_for_prompt: false
     });
+
+    // ✅ RENDERIZAR BOTÓN OFICIAL (como en la versión que funciona)
+    window.google.accounts.id.renderButton(
+      document.getElementById('google-signin-button'),
+      {
+        theme: 'outline',
+        size: 'large',
+        width: 300,
+        text: 'signin_with'
+      }
+    );
+
+    console.log('✅ Google Sign-In inicializado correctamente');
   }
 };
 
-// Manejar clic en botón de Google personalizado
-const handleGoogleLogin = () => {
-  if (window.google) {
-    window.google.accounts.id.prompt();
-  }
-};
-
-// Callback de Google
+// Callback de Google - MEJORADO
 const handleGoogleCallback = async (response: any) => {
   try {
     loading.value = true;
     error.value = '';
+    console.log('📨 Token de Google recibido');
 
     const loginSuccess = await authStore.loginWithGoogle(response.credential);
 
     if (loginSuccess) {
       successMessage.value = '¡Login con Google exitoso!';
+      console.log('✅ Login exitoso');
+
       setTimeout(() => {
         const returnUrl = route.query.returnUrl?.toString() || '/';
-        router.push(returnUrl);
-      }, 1000);
+        router.replace(returnUrl); // Redirigir a home
+      }, 1500);
     } else {
       error.value = authStore.error || 'Error en login con Google';
+      console.error('❌ Error en login:', authStore.error);
     }
   } catch (err: any) {
+    console.error('❌ Error procesando Google login:', err);
     error.value = err.message || 'Error procesando login con Google';
   } finally {
     loading.value = false;
   }
 };
 
-// Login normal
+// Login normal - MEJORADO
 const handleLogin = async () => {
   try {
     loading.value = true;
     error.value = '';
+    console.log('🔐 Iniciando login normal');
 
     const success = await authStore.login({
       email: loginForm.email,
@@ -211,37 +218,55 @@ const handleLogin = async () => {
 
     if (success) {
       successMessage.value = '¡Login exitoso!';
+      console.log('✅ Login normal exitoso');
+
       setTimeout(() => {
         const returnUrl = route.query.returnUrl?.toString() || '/';
-        router.push(returnUrl);
-      }, 1000);
+        router.replace(returnUrl); // Redirigir a home
+      }, 1500);
     } else {
       error.value = authStore.error || 'Credenciales inválidas';
+      console.error('❌ Error en login:', authStore.error);
     }
   } catch (err: any) {
+    console.error('❌ Error en login:', err);
     error.value = err.message || 'Error en el login';
   } finally {
     loading.value = false;
   }
 };
 
-// Inicializar al montar
+// Inicializar - MEJORADO
 onMounted(async () => {
-  // Si ya está autenticado, redirigir
+  console.log('🔄 Inicializando Login...');
+
+  // Verificar si ya está autenticado
   if (authStore.isAuthenticated) {
+    console.log('👤 Usuario ya autenticado, redirigiendo...');
     const returnUrl = route.query.returnUrl?.toString() || '/';
-    router.push(returnUrl);
+    router.replace(returnUrl);
     return;
   }
 
-  // Cargar Google OAuth
-  await loadGoogleScript();
-  setTimeout(initializeGoogleAuth, 100);
+  try {
+    // Cargar Google OAuth
+    console.log('📦 Cargando Google Sign-In...');
+    await loadGoogleScript();
+
+    // Dar tiempo para que se cargue
+    setTimeout(() => {
+      initializeGoogleAuth();
+    }, 200);
+
+  } catch (initError) {
+    console.error('❌ Error en inicialización:', initError);
+    error.value = 'Error inicializando Google Sign-In';
+  }
 });
 </script>
 
 <style lang="scss" scoped>
-// Variables - Colores consistentes con HeroSection
+// Variables - COLORES NARANJA/AMARILLO ORIGINALES
 $login-primary: #FF416C;
 $login-primary-light: #FF4B2B;
 $login-accent: #FFC837;
@@ -542,46 +567,166 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
   width: 100%;
   display: flex;
   justify-content: center;
-}
 
-// Botón de Google personalizado
-.google-login-button {
-  width: 100%;
-  padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  color: white;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  // 🚀 NUEVO ESTILO PERSONALIZADO PARA GOOGLE
+  #google-signin-button {
+    width: 100%;
+    display: flex;
+    justify-content: center;
 
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: $login-accent;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 200, 55, 0.15);
-  }
+    // Estilo completamente personalizado
+    :global(.gsi-material-button) {
+      width: 100% !important;
+      height: 52px !important;
+      border-radius: 12px !important;
+      border: 2px solid transparent !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
+      backdrop-filter: blur(20px) !important;
+      position: relative !important;
+      overflow: hidden !important;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) !important;
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
+      // Gradiente de borde animado
+      &::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        border-radius: 12px !important;
+        padding: 2px !important;
+        background: linear-gradient(45deg, $login-accent, $login-accent-orange, $login-primary, $login-accent) !important;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+        mask-composite: exclude !important;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+        -webkit-mask-composite: source-out !important;
+        opacity: 0 !important;
+        transition: opacity 0.3s ease !important;
+      }
 
-  .google-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
+      &:hover {
+        transform: translateY(-2px) scale(1.02) !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)) !important;
+        box-shadow:
+          0 10px 30px rgba(255, 200, 55, 0.3),
+          0 5px 15px rgba(255, 128, 8, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 
-  span {
-    font-weight: 500;
+        &::before {
+          opacity: 1 !important;
+        }
+      }
+
+      &:active {
+        transform: translateY(-1px) scale(1.01) !important;
+        transition: all 0.1s ease !important;
+      }
+    }
+
+    // Contenido del botón
+    :global(.gsi-material-button .gsi-material-button-contents) {
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 14px !important;
+      padding: 0 24px !important;
+      position: relative !important;
+      z-index: 2 !important;
+    }
+
+    // Ícono de Google más grande y con sombra
+    :global(.gsi-material-button .gsi-material-button-icon) {
+      width: 22px !important;
+      height: 22px !important;
+      margin: 0 !important;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+      transition: transform 0.3s ease !important;
+    }
+
+    :global(.gsi-material-button:hover .gsi-material-button-icon) {
+      transform: rotate(5deg) scale(1.05) !important;
+    }
+
+    // Texto personalizado con efectos
+    :global(.gsi-material-button .gsi-material-button-content-wrapper) {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      height: 100% !important;
+    }
+
+    :global(.gsi-material-button .gsi-material-button-content) {
+      color: white !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      text-transform: none !important;
+      letter-spacing: 0.5px !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+      position: relative !important;
+
+      // Efecto de brillo en el texto
+      &::after {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: -100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) !important;
+        transition: left 0.5s ease !important;
+      }
+    }
+
+    :global(.gsi-material-button:hover .gsi-material-button-content::after) {
+      left: 100% !important;
+    }
+
+    // Estados de accesibilidad mejorados
+    :global(.gsi-material-button:focus) {
+      outline: none !important;
+      box-shadow:
+        0 0 0 3px rgba(255, 200, 55, 0.5),
+        0 10px 30px rgba(255, 200, 55, 0.3) !important;
+    }
+
+    // Pulso sutil en el botón
+    :global(.gsi-material-button) {
+      animation: pulse-glow 3s ease-in-out infinite !important;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 2px 10px rgba(255, 200, 55, 0.1);
+      }
+      50% {
+        box-shadow: 0 2px 15px rgba(255, 200, 55, 0.2);
+      }
+    }
+
+    // Efecto de partículas (opcional)
+    :global(.gsi-material-button::after) {
+      content: '' !important;
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      width: 0 !important;
+      height: 0 !important;
+      border-radius: 50% !important;
+      background: radial-gradient(circle, rgba(255, 200, 55, 0.3), transparent) !important;
+      transform: translate(-50%, -50%) !important;
+      transition: all 0.3s ease !important;
+      pointer-events: none !important;
+      z-index: 1 !important;
+    }
+
+    :global(.gsi-material-button:hover::after) {
+      width: 200px !important;
+      height: 200px !important;
+      opacity: 0 !important;
+    }
   }
 }
 </style>
