@@ -1519,7 +1519,7 @@ const submitQuickCategory = async () => {
 
 // Inicialización
 onMounted(async () => {
-  if (!authStore.isAuthenticated()) {
+  if (!authStore.isAuthenticated) {
     try {
       const isAuth = await authStore.checkAuth();
       if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {

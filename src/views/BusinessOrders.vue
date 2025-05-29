@@ -721,7 +721,7 @@ const updateStatus = async (order: any, newStatus: string) => {
 
 // Lifecycle hooks
 onMounted(async () => {
-  if (!authStore.isAuthenticated()) {
+  if (!authStore.isAuthenticated) {
     return
   }
 

@@ -241,10 +241,13 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
-// Variables
+// Variables - Colores consistentes con HeroSection
 $login-primary: #FF416C;
-$login-primary-light: #FF6B9D;
-$login-primary-gradient: linear-gradient(#eb3963 0%, rgb(175, 85, 85) 100%);
+$login-primary-light: #FF4B2B;
+$login-accent: #FFC837;
+$login-accent-orange: #FF8008;
+$login-primary-gradient: linear-gradient(135deg, #FF416C, #FF4B2B);
+$login-accent-gradient: linear-gradient(to right, #FFC837, #FF8008);
 $login-card-bg: rgba(30, 41, 59, 0.95);
 
 .login-view {
@@ -322,7 +325,11 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
     font-size: 28px;
     font-weight: 700;
     margin-bottom: 8px;
-    color: $login-primary;
+    background: $login-accent-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
   }
 
   &__subtitle {
@@ -342,12 +349,15 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
   }
 
   &__register-link {
-    color: $login-primary;
+    background: $login-accent-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
     font-weight: 600;
     text-decoration: none;
 
     &:hover {
-      color: $login-primary-light;
+      filter: brightness(1.1);
       text-decoration: underline;
     }
   }
@@ -399,11 +409,11 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
 
   &__forgot {
     font-size: 12px;
-    color: #ff6b77;
+    color: $login-accent;
     text-decoration: none;
 
     &:hover {
-      color: $login-primary;
+      color: $login-accent-orange;
       text-decoration: underline;
     }
   }
@@ -434,8 +444,8 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
 
     &:focus {
       outline: none;
-      border-color: $login-primary;
-      box-shadow: 0 0 0 2px rgba($login-primary, 0.2);
+      border-color: $login-accent;
+      box-shadow: 0 0 0 2px rgba(255, 200, 55, 0.2);
       background: rgba(255, 255, 255, 0.08);
     }
 
@@ -459,8 +469,8 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
     border-radius: 4px;
 
     &:hover {
-      color: white;
-      background: rgba($login-primary, 0.15);
+      color: $login-accent;
+      background: rgba(255, 200, 55, 0.15);
     }
   }
 
@@ -481,7 +491,8 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba($login-primary, 0.3);
+      box-shadow: 0 10px 25px rgba(255, 65, 108, 0.4);
+      filter: brightness(1.05);
     }
 
     &:disabled {
@@ -552,9 +563,9 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
 
   &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: $login-accent;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(255, 200, 55, 0.15);
   }
 
   &:disabled {
