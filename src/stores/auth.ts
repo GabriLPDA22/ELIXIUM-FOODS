@@ -11,6 +11,8 @@ export interface User {
   role: string
   phoneNumber?: string
   businessId?: number
+  photoURL?: string
+  googleId?: string
 }
 
 export interface RegisterData {
@@ -38,6 +40,8 @@ export interface AuthResponse {
   lastName?: string
   role?: string
   businessId?: number
+  photoURL?: string
+  googleId?: string
 }
 
 // Configurar axios
@@ -63,9 +67,100 @@ export const useAuthStore = defineStore('auth', {
     isBusiness: (state) => state.user?.role === 'Business',
     isCustomer: (state) => state.user?.role === 'Customer',
     isDeliveryPerson: (state) => state.user?.role === 'DeliveryPerson',
+
+    userInitials: (state) => {
+      if (!state.user) return 'U'
+      const firstName = state.user.firstName || 'U'
+      const lastName = state.user.lastName || ''
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+    },
+
+    userProfileImage: (state) => {
+      return state.user?.photoURL || null
+    },
+
+    isGoogleUser: (state) => !!state.user?.googleId,
   },
 
   actions: {
+    // =================== FUNCIÓN PARA GUARDAR DATOS COMPLETOS ===================
+    saveAuthData(authData: AuthResponse) {
+      console.log('💾 Guardando datos de autenticación:', authData)
+
+      // Guardar tokens
+      this.token = authData.token!
+      this.refreshToken = authData.refreshToken || null
+
+      // Crear objeto usuario completo
+      this.user = {
+        id: authData.userId!,
+        email: authData.email!,
+        firstName: authData.firstName!,
+        lastName: authData.lastName!,
+        role: authData.role!,
+        businessId: authData.businessId,
+        photoURL: authData.photoURL,
+        googleId: authData.googleId,
+      }
+
+      // ✅ GUARDAR TODO EN LOCALSTORAGE
+      localStorage.setItem('authToken', this.token)
+      localStorage.setItem('user', JSON.stringify(this.user))
+
+      if (this.refreshToken) {
+        localStorage.setItem('refreshToken', this.refreshToken)
+      }
+
+      // Marcar como autenticado
+      this.isAuthenticated = true
+
+      // Configurar axios
+      this.setupAxiosDefaults()
+
+      console.log('✅ Usuario guardado:', this.user)
+      console.log('✅ Es Admin:', this.isAdmin)
+    },
+
+    // =================== FUNCIÓN PARA INICIALIZAR DESDE LOCALSTORAGE ===================
+    initializeFromStorage() {
+      const savedToken = localStorage.getItem('authToken')
+      const savedUser = localStorage.getItem('user')
+      const savedRefreshToken = localStorage.getItem('refreshToken')
+
+      if (savedToken && savedUser) {
+        try {
+          this.token = savedToken
+          this.refreshToken = savedRefreshToken
+          this.user = JSON.parse(savedUser)
+          this.isAuthenticated = true
+          this.setupAxiosDefaults()
+
+          console.log('🔄 Estado restaurado desde localStorage:', this.user)
+          console.log('🔄 Es Admin:', this.isAdmin)
+        } catch (error) {
+          console.error('❌ Error parseando usuario desde localStorage:', error)
+          this.clearAuthData()
+        }
+      }
+    },
+
+    // =================== FUNCIÓN PARA LIMPIAR DATOS ===================
+    clearAuthData() {
+      this.user = null
+      this.token = null
+      this.refreshToken = null
+      this.isAuthenticated = false
+      this.error = null
+
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('user')
+      localStorage.removeItem('refreshToken')
+
+      delete axios.defaults.headers.common['Authorization']
+
+      console.log('🧹 Datos de autenticación limpiados')
+    },
+
     async register(registerData: RegisterData): Promise<boolean> {
       this.loading = true
       this.error = null
@@ -81,26 +176,7 @@ export const useAuthStore = defineStore('auth', {
         })
 
         if (response.data.success && response.data.token) {
-          this.token = response.data.token
-          this.refreshToken = response.data.refreshToken || null
-
-          localStorage.setItem('authToken', this.token)
-          if (this.refreshToken) {
-            localStorage.setItem('refreshToken', this.refreshToken)
-          }
-
-          this.user = {
-            id: response.data.userId!,
-            email: response.data.email!,
-            firstName: response.data.firstName!,
-            lastName: response.data.lastName!,
-            role: response.data.role!,
-            phoneNumber: registerData.phoneNumber,
-            businessId: response.data.businessId,
-          }
-
-          this.isAuthenticated = true
-          this.setupAxiosDefaults()
+          this.saveAuthData(response.data)
           return true
         } else {
           this.error = response.data.message || 'Error en el registro'
@@ -133,25 +209,7 @@ export const useAuthStore = defineStore('auth', {
         })
 
         if (response.data.success && response.data.token) {
-          this.token = response.data.token
-          this.refreshToken = response.data.refreshToken || null
-
-          localStorage.setItem('authToken', this.token)
-          if (this.refreshToken) {
-            localStorage.setItem('refreshToken', this.refreshToken)
-          }
-
-          this.user = {
-            id: response.data.userId!,
-            email: response.data.email!,
-            firstName: response.data.firstName!,
-            lastName: response.data.lastName!,
-            role: response.data.role!,
-            businessId: response.data.businessId,
-          }
-
-          this.isAuthenticated = true
-          this.setupAxiosDefaults()
+          this.saveAuthData(response.data)
           return true
         } else {
           this.error = response.data.message || 'Credenciales incorrectas'
@@ -171,7 +229,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // 🔥 AQUÍ ESTÁ LA FUNCIÓN QUE FALTABA!
     async loginWithGoogle(googleToken: string): Promise<boolean> {
       this.loading = true
       this.error = null
@@ -186,27 +243,12 @@ export const useAuthStore = defineStore('auth', {
         console.log('📥 Respuesta del backend:', response.data)
 
         if (response.data.success && response.data.token) {
-          this.token = response.data.token
-          this.refreshToken = response.data.refreshToken || null
-
-          localStorage.setItem('authToken', this.token)
-          if (this.refreshToken) {
-            localStorage.setItem('refreshToken', this.refreshToken)
-          }
-
-          this.user = {
-            id: response.data.userId!,
-            email: response.data.email!,
-            firstName: response.data.firstName!,
-            lastName: response.data.lastName!,
-            role: response.data.role!,
-            businessId: response.data.businessId,
-          }
-
-          this.isAuthenticated = true
-          this.setupAxiosDefaults()
+          // ✅ USAR LA FUNCIÓN DE GUARDAR DATOS
+          this.saveAuthData(response.data)
 
           console.log('✅ Login con Google exitoso!')
+          console.log('✅ Usuario logueado:', this.user)
+          console.log('✅ Es Admin:', this.isAdmin)
           return true
         } else {
           this.error = response.data.message || 'Error en login con Google'
@@ -237,18 +279,9 @@ export const useAuthStore = defineStore('auth', {
           })
         }
       } catch (error) {
-        // Ignorar errores del logout en servidor
+        console.error('⚠️ Error en logout del servidor:', error)
       } finally {
-        this.user = null
-        this.token = null
-        this.refreshToken = null
-        this.isAuthenticated = false
-        this.error = null
-
-        localStorage.removeItem('authToken')
-        localStorage.removeItem('refreshToken')
-
-        delete axios.defaults.headers.common['Authorization']
+        this.clearAuthData()
       }
     },
 
@@ -256,6 +289,7 @@ export const useAuthStore = defineStore('auth', {
       const token = localStorage.getItem('authToken')
 
       if (!token) {
+        console.log('❌ No hay token')
         return false
       }
 
@@ -269,9 +303,12 @@ export const useAuthStore = defineStore('auth', {
           this.token = token
           this.isAuthenticated = true
           this.setupAxiosDefaults()
+
+          console.log('✅ Auth verificada:', this.user)
           return true
         }
       } catch (error) {
+        console.error('❌ Error verificando auth:', error)
         this.logout()
       }
 
@@ -286,6 +323,19 @@ export const useAuthStore = defineStore('auth', {
 
     clearError() {
       this.error = null
+    },
+
+    updateUserProfile(updates: Partial<User>) {
+      if (this.user) {
+        this.user = { ...this.user, ...updates }
+        localStorage.setItem('user', JSON.stringify(this.user))
+        console.log('👤 Perfil de usuario actualizado')
+      }
+    },
+
+    // =================== INICIALIZAR (llamar desde main.ts) ===================
+    initializeAuth() {
+      this.initializeFromStorage()
     },
   },
 })
