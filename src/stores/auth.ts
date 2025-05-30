@@ -171,6 +171,64 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    // 🔥 AQUÍ ESTÁ LA FUNCIÓN QUE FALTABA!
+    async loginWithGoogle(googleToken: string): Promise<boolean> {
+      this.loading = true
+      this.error = null
+
+      try {
+        console.log('🚀 Enviando token de Google al backend...')
+
+        const response = await axios.post<AuthResponse>('/auth/google-login', {
+          idToken: googleToken
+        })
+
+        console.log('📥 Respuesta del backend:', response.data)
+
+        if (response.data.success && response.data.token) {
+          this.token = response.data.token
+          this.refreshToken = response.data.refreshToken || null
+
+          localStorage.setItem('authToken', this.token)
+          if (this.refreshToken) {
+            localStorage.setItem('refreshToken', this.refreshToken)
+          }
+
+          this.user = {
+            id: response.data.userId!,
+            email: response.data.email!,
+            firstName: response.data.firstName!,
+            lastName: response.data.lastName!,
+            role: response.data.role!,
+            businessId: response.data.businessId,
+          }
+
+          this.isAuthenticated = true
+          this.setupAxiosDefaults()
+
+          console.log('✅ Login con Google exitoso!')
+          return true
+        } else {
+          this.error = response.data.message || 'Error en login con Google'
+          console.error('❌ Error en respuesta:', this.error)
+          return false
+        }
+      } catch (error: any) {
+        console.error('💥 Error en login con Google:', error)
+
+        if (error.response?.data?.message) {
+          this.error = error.response.data.message
+        } else if (error.response?.status === 400) {
+          this.error = 'Token de Google inválido'
+        } else {
+          this.error = 'Error de conexión con el servidor'
+        }
+        return false
+      } finally {
+        this.loading = false
+      }
+    },
+
     async logout() {
       try {
         if (this.token) {
@@ -210,29 +268,6 @@ export const useAuthStore = defineStore('auth', {
           this.user = response.data.data
           this.token = token
           this.isAuthenticated = true
-          this.setupAxiosDefaults()
-          return true
-        }
-      } catch (error) {
-        this.logout()
-      }
-
-      return false
-    },
-
-    async refreshAuthToken(): Promise<boolean> {
-      if (!this.refreshToken) {
-        return false
-      }
-
-      try {
-        const response = await axios.post<AuthResponse>('/auth/refresh-token', {
-          refreshToken: this.refreshToken,
-        })
-
-        if (response.data.success && response.data.token) {
-          this.token = response.data.token
-          localStorage.setItem('authToken', this.token)
           this.setupAxiosDefaults()
           return true
         }
