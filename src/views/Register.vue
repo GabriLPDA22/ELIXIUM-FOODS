@@ -19,110 +19,103 @@
           </div>
 
           <form @submit.prevent="handleRegister" class="register-form">
-            <div v-if="error" class="register-form__alert">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
+            <div v-if="error" class="alert alert--error">
               <span>{{ error }}</span>
             </div>
 
-            <div v-if="successMessage" class="register-form__success">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
+            <div v-if="successMessage" class="alert alert--success">
               <span>{{ successMessage }}</span>
             </div>
 
             <div class="register-form__row">
               <div class="register-form__group">
                 <label for="firstName" class="register-form__label">Nombre</label>
-                <div class="register-form__input-wrapper">
-                  <svg class="register-form__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                  <input v-model="registerForm.firstName" type="text" id="firstName" class="register-form__input" placeholder="Nombre" required />
-                </div>
+                <input
+                  v-model="registerForm.firstName"
+                  type="text"
+                  id="firstName"
+                  class="register-form__input"
+                  placeholder="Tu nombre"
+                  required
+                />
               </div>
 
               <div class="register-form__group">
                 <label for="lastName" class="register-form__label">Apellido</label>
-                <div class="register-form__input-wrapper">
-                  <svg class="register-form__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                  <input v-model="registerForm.lastName" type="text" id="lastName" class="register-form__input" placeholder="Apellido" required />
-                </div>
+                <input
+                  v-model="registerForm.lastName"
+                  type="text"
+                  id="lastName"
+                  class="register-form__input"
+                  placeholder="Tu apellido"
+                  required
+                />
               </div>
             </div>
 
             <div class="register-form__group">
               <label for="email" class="register-form__label">Email</label>
-              <div class="register-form__input-wrapper">
-                <svg class="register-form__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                  <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-                <input v-model="registerForm.email" type="email" id="email" class="register-form__input" placeholder="tu@email.com" required />
-              </div>
+              <input
+                v-model="registerForm.email"
+                type="email"
+                id="email"
+                class="register-form__input"
+                placeholder="tu@email.com"
+                required
+              />
             </div>
 
             <div class="register-form__group">
               <label for="phoneNumber" class="register-form__label">Teléfono</label>
-              <div class="register-form__input-wrapper">
-                <svg class="register-form__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                </svg>
-                <input v-model="registerForm.phoneNumber" type="tel" id="phoneNumber" class="register-form__input" placeholder="+34 612 345 678" required />
-              </div>
+              <input
+                v-model="registerForm.phoneNumber"
+                type="tel"
+                id="phoneNumber"
+                class="register-form__input"
+                placeholder="+34 612 345 678"
+                required
+              />
             </div>
 
             <div class="register-form__group">
               <label for="password" class="register-form__label">Contraseña</label>
-              <div class="register-form__input-wrapper">
-                <svg class="register-form__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                <input v-model="registerForm.password" :type="showPassword ? 'text' : 'password'" id="password" class="register-form__input" placeholder="••••••••" required />
-                <button type="button" class="register-form__toggle-password" @click="togglePassword" :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                  <svg v-if="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                  <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                  </svg>
-                </button>
-              </div>
+              <input
+                v-model="registerForm.password"
+                type="password"
+                id="password"
+                class="register-form__input"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
             </div>
 
             <div class="register-form__group">
               <label for="confirmPassword" class="register-form__label">Confirmar Contraseña</label>
-              <div class="register-form__input-wrapper">
-                <svg class="register-form__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                <input v-model="confirmPassword" :type="showPassword ? 'text' : 'password'" id="confirmPassword" class="register-form__input" placeholder="••••••••" required />
-              </div>
+              <input
+                v-model="confirmPassword"
+                type="password"
+                id="confirmPassword"
+                class="register-form__input"
+                placeholder="••••••••"
+                required
+              />
             </div>
 
             <div class="register-form__group register-form__group--checkbox">
               <label class="register-form__checkbox">
                 <input type="checkbox" v-model="agreeTerms" required />
                 <span class="register-form__checkbox-mark"></span>
-                <span>He leído y acepto los <a href="/terms-and-conditions" target="_blank" class="register-form__link">Términos y Condiciones</a> y la <a href="/privacy-policy" target="_blank" class="register-form__link">Política de Privacidad</a></span>
+                <span>Acepto los términos y condiciones</span>
               </label>
             </div>
 
             <div class="register-form__submit">
-              <button type="submit" class="register-form__button" :disabled="loading || !agreeTerms">
+              <button
+                type="submit"
+                class="register-form__button"
+                :disabled="loading || !isFormValid"
+              >
                 <div v-if="loading" class="register-form__spinner"></div>
                 <span v-else>Crear Cuenta</span>
               </button>
@@ -142,48 +135,61 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { ref, reactive, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter();
-const authStore = useAuthStore();
+const router = useRouter()
+const authStore = useAuthStore()
 
-// Estado para el formulario
 const registerForm = reactive({
   firstName: '',
   lastName: '',
   email: '',
   phoneNumber: '',
   password: '',
-  role: 'Customer' // Valor por defecto
-});
+  role: 'Customer'
+})
 
-const confirmPassword = ref('');
-const showPassword = ref(false);
-const loading = ref(false);
-const error = ref('');
-const successMessage = ref('');
-const agreeTerms = ref(false);
+const confirmPassword = ref('')
+const loading = ref(false)
+const error = ref('')
+const successMessage = ref('')
+const agreeTerms = ref(false)
 
-// Mostrar u ocultar la contraseña
-const togglePassword = () => {
-  showPassword.value = !showPassword.value;
-};
+const isFormValid = computed(() => {
+  return registerForm.firstName &&
+         registerForm.lastName &&
+         registerForm.email &&
+         registerForm.phoneNumber &&
+         registerForm.password &&
+         registerForm.password === confirmPassword.value &&
+         agreeTerms.value
+})
 
-// Manejar el registro
 const handleRegister = async () => {
-  // Validar que las contraseñas coincidan
+  error.value = ''
+  successMessage.value = ''
+  authStore.clearError()
+
   if (registerForm.password !== confirmPassword.value) {
-    error.value = 'Las contraseñas no coinciden';
-    return;
+    error.value = 'Las contraseñas no coinciden'
+    return
+  }
+
+  if (registerForm.password.length < 6) {
+    error.value = 'La contraseña debe tener al menos 6 caracteres'
+    return
+  }
+
+  if (!agreeTerms.value) {
+    error.value = 'Debes aceptar los términos y condiciones'
+    return
   }
 
   try {
-    loading.value = true;
-    error.value = '';
+    loading.value = true
 
-    // Llamada a la API para registro
     const success = await authStore.register({
       email: registerForm.email,
       password: registerForm.password,
@@ -191,46 +197,41 @@ const handleRegister = async () => {
       lastName: registerForm.lastName,
       phoneNumber: registerForm.phoneNumber,
       role: registerForm.role
-    });
+    })
 
     if (success) {
-      successMessage.value = '¡Registro exitoso! Redirigiendo...';
+      successMessage.value = '¡Registro exitoso! Redirigiendo...'
 
-      // Redirigir después de un breve momento
       setTimeout(() => {
-        router.push('/');
-      }, 2000);
+        router.push('/')
+      }, 2000)
     } else {
-      error.value = authStore.error || 'Error en el registro. Por favor, inténtalo de nuevo.';
+      error.value = authStore.error || 'Error en el registro'
     }
   } catch (err: any) {
-    console.error('Error de registro:', err);
-    error.value = err.message || 'Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.';
+    error.value = 'Error inesperado. Por favor, inténtalo de nuevo.'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 </script>
 
 <style lang="scss" scoped>
-// Variables - Colores consistentes con Login.vue
-$register-primary: #FF416C;
-$register-primary-light: #FF4B2B;
-$register-accent: #FFC837;
-$register-accent-orange: #FF8008;
-$register-primary-gradient: linear-gradient(135deg, #FF416C, #FF4B2B);
-$register-accent-gradient: linear-gradient(to right, #FFC837, #FF8008);
-$register-card-bg: rgba(30, 41, 59, 0.95);
+$primary: #FF416C;
+$primary-light: #FF4B2B;
+$accent: #FFC837;
+$accent-orange: #FF8008;
+$card-bg: rgba(30, 41, 59, 0.95);
 
 .register-view {
-  background: $register-primary-gradient;
+  background: linear-gradient(135deg, $primary, $primary-light);
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 0;
+  padding: 2rem 0;
   position: relative;
   overflow: hidden;
-  min-height: 100vh;
 }
 
 .register-background {
@@ -258,13 +259,6 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
   }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-  25% { transform: translateY(-12px) rotate(30deg) scale(1.02); }
-  50% { transform: translateY(-25px) rotate(60deg) scale(1); }
-  75% { transform: translateY(-12px) rotate(90deg) scale(0.98); }
-}
-
 .register-content {
   position: relative;
   z-index: 20;
@@ -274,54 +268,53 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 1rem;
   }
 }
 
 .register-card {
   width: 100%;
   max-width: 500px;
-  background: $register-card-bg;
+  background: $card-bg;
   backdrop-filter: blur(20px);
   border-radius: 16px;
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-  padding: 32px;
+  padding: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
 
   &__header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 2rem;
   }
 
   &__title {
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 700;
-    margin-bottom: 8px;
-    background: $register-accent-gradient;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(to right, $accent, $accent-orange);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    text-shadow: none;
   }
 
   &__subtitle {
     color: rgba(255, 255, 255, 0.7);
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   &__footer {
     text-align: center;
-    margin-top: 24px;
+    margin-top: 2rem;
   }
 
   &__login {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: rgba(255, 255, 255, 0.7);
     margin: 0;
   }
 
   &__login-link {
-    background: $register-accent-gradient;
+    background: linear-gradient(to right, $accent, $accent-orange);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -329,57 +322,48 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
     text-decoration: none;
 
     &:hover {
-      filter: brightness(1.1);
       text-decoration: underline;
     }
   }
 }
 
-.register-form {
-  &__alert {
+.alert {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+
+  &--error {
     background: rgba(239, 68, 68, 0.15);
     color: #ef4444;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
     border: 1px solid rgba(239, 68, 68, 0.3);
   }
 
-  &__success {
+  &--success {
     background: rgba(34, 197, 94, 0.15);
     color: #22c55e;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
     border: 1px solid rgba(34, 197, 94, 0.3);
   }
+}
 
+.register-form {
   &__row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 1rem;
 
     @media (max-width: 576px) {
       grid-template-columns: 1fr;
-      gap: 0;
     }
   }
 
   &__group {
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
 
     &--checkbox {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
+      gap: 0.75rem;
     }
   }
 
@@ -387,37 +371,23 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
     display: block;
     font-weight: 500;
     color: white;
-    margin-bottom: 6px;
-    font-size: 14px;
-  }
-
-  &__input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  &__icon {
-    position: absolute;
-    left: 16px;
-    color: rgba(255, 255, 255, 0.5);
-    z-index: 2;
-    width: 18px;
-    height: 18px;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
   }
 
   &__input {
     width: 100%;
-    padding: 14px 20px 14px 48px;
+    padding: 0.875rem 1.25rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 1rem;
     background: rgba(255, 255, 255, 0.05);
     color: white;
+    transition: all 0.3s ease;
 
     &:focus {
       outline: none;
-      border-color: $register-accent;
+      border-color: $accent;
       box-shadow: 0 0 0 2px rgba(255, 200, 55, 0.2);
       background: rgba(255, 255, 255, 0.08);
     }
@@ -427,45 +397,14 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
     }
   }
 
-  &__toggle-password {
-    position: absolute;
-    right: 16px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: rgba(255, 255, 255, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    padding: 4px;
-    border-radius: 4px;
-
-    &:hover {
-      color: $register-accent;
-      background: rgba(255, 200, 55, 0.15);
-    }
-  }
-
-  &__link {
-    color: $register-accent;
-    text-decoration: none;
-    transition: color 0.3s ease;
-
-    &:hover {
-      color: $register-accent-orange;
-      text-decoration: underline;
-    }
-  }
-
   &__checkbox {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: 0.75rem;
     cursor: pointer;
     user-select: none;
     color: rgba(255, 255, 255, 0.7);
-    font-size: 14px;
+    font-size: 0.875rem;
     line-height: 1.4;
 
     input {
@@ -476,8 +415,8 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
       width: 0;
 
       &:checked ~ .register-form__checkbox-mark {
-        background-color: $register-accent;
-        border-color: $register-accent;
+        background-color: $accent;
+        border-color: $accent;
 
         &:after {
           display: block;
@@ -513,13 +452,13 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
 
   &__button {
     width: 100%;
-    padding: 14px 20px;
-    background: $register-primary-gradient;
+    padding: 0.875rem 1.25rem;
+    background: linear-gradient(135deg, $primary, $primary-light);
     color: white;
     border: none;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -529,7 +468,6 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
     &:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 10px 25px rgba(255, 65, 108, 0.4);
-      filter: brightness(1.05);
     }
 
     &:disabled {
@@ -549,7 +487,21 @@ $register-card-bg: rgba(30, 41, 59, 0.95);
   }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+  25% { transform: translateY(-12px) rotate(30deg) scale(1.02); }
+  50% { transform: translateY(-25px) rotate(60deg) scale(1); }
+  75% { transform: translateY(-12px) rotate(90deg) scale(0.98); }
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .register-card {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
 }
 </style>
