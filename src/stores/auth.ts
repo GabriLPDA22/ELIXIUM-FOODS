@@ -1,42 +1,38 @@
 // src/stores/auth.ts
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { api } from '@/services/api'
+import authService from '@/services/authService'
 
-// Interfaces
 export interface User {
   id: number
   email: string
   firstName: string
   lastName: string
   role: string
-  phoneNumber?: string
+  businessId?: number
+  photoURL?: string
+  googleId?: string
 }
 
-export interface LoginRequest {
+export interface LoginCredentials {
   email: string
   password: string
 }
 
-export interface RegisterRequest {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-  phoneNumber: string
-  role?: string
-}
-
-export interface AuthResponse {
+export interface GoogleLoginResponse {
   success: boolean
   message: string
-  token?: string
-  refreshToken?: string
-  userId?: number
-  email?: string
-  firstName?: string
-  lastName?: string
-  role?: string
+  token: string
+  refreshToken: string
+  userId: number
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  businessId?: number
+  photoURL?: string
+  googleId?: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -47,257 +43,253 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Getters
-  const isAuthenticated = () => !!token.value
-  const isAdmin = () => user.value?.role === 'Admin'
-  const isRestaurant = () => user.value?.role === 'Restaurant'
-  const isDeliveryPerson = () => user.value?.role === 'DeliveryPerson'
-  const isCustomer = () => user.value?.role === 'Customer'
+  // Computed
+  // isAuthenticated es una propiedad computada, se accede a su valor directamente (ej: authStore.isAuthenticated)
+  const isAuthenticated = computed(() => !!token.value && !!user.value)
 
-  // Acciones
-  const initialize = () => {
-    // Cargar token y usuario desde localStorage al iniciar
+  // NUEVO: Computed para verificar si es admin
+  const isAdmin = computed(() => {
+    return user.value?.role === 'Admin'
+  })
+
+  // Computed para la foto de perfil
+  const userProfileImage = computed(() => {
+    if (user.value?.photoURL) {
+      return user.value.photoURL
+    }
+    return null
+  })
+
+  // Computed para las iniciales del usuario
+  const userInitials = computed(() => {
+    if (!user.value) return 'U'
+
+    const firstName = user.value.firstName || 'U'
+    const lastName = user.value.lastName || ''
+
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  })
+
+  // Computed para verificar si es usuario de Google
+  const isGoogleUser = computed(() => !!user.value?.googleId)
+
+  // Inicializar estado desde localStorage
+  const initializeAuth = () => {
     const savedToken = localStorage.getItem('token')
     const savedRefreshToken = localStorage.getItem('refreshToken')
     const savedUser = localStorage.getItem('user')
 
-    if (savedToken) {
+    if (savedToken && savedUser) {
       token.value = savedToken
-
-      // Verificar que el token tenga formato JWT válido
-      const isValidJwtFormat = savedToken.split('.').length === 3
-
-      if (!isValidJwtFormat) {
-        console.warn('⚠️ El token almacenado no tiene formato JWT válido.')
-      }
-
-      // Configurar token en las cabeceras por defecto
-      if (api.defaults.headers) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
-      }
-    }
-
-    if (savedRefreshToken) {
       refreshToken.value = savedRefreshToken
-    }
-
-    if (savedUser) {
       try {
         user.value = JSON.parse(savedUser)
-      } catch (err) {
-        console.error('Error parsing user from localStorage:', err)
-        user.value = null
+      } catch (e) {
+        console.error("Error al parsear el usuario desde localStorage", e);
+        // Opcionalmente, limpiar los datos corruptos
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        user.value = null;
+        token.value = null;
+        refreshToken.value = null;
+      }
+
+
+      // Configurar header de autorización solo si el token es válido
+      if (token.value) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
       }
     }
   }
 
-  const login = async (credentials: LoginRequest): Promise<boolean> => {
-    loading.value = true
-    error.value = null
+  // Guardar datos de autenticación
+  const saveAuthData = (authData: {
+    token: string
+    refreshToken: string
+    user: User
+  }) => {
+    token.value = authData.token
+    refreshToken.value = authData.refreshToken
+    user.value = authData.user
 
+    // Guardar en localStorage
+    localStorage.setItem('token', authData.token)
+    localStorage.setItem('refreshToken', authData.refreshToken)
+    localStorage.setItem('user', JSON.stringify(authData.user))
+
+    // Configurar header de autorización
+    api.defaults.headers.common['Authorization'] = `Bearer ${authData.token}`
+  }
+
+  // Login normal
+  const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      const response = await api.post<AuthResponse>('/api/Auth/login', credentials)
-      const data = response.data
+      loading.value = true
+      error.value = null
 
-      if (data.success && data.token) {
-        // Verificar que el token tenga formato JWT válido
-        const isValidJwtFormat = data.token.split('.').length === 3
+      const response = await api.post('/api/Auth/login', credentials)
 
-        if (!isValidJwtFormat) {
-          console.warn('⚠️ El servidor devolvió un token que no tiene formato JWT válido.')
+      if (response.data?.success) {
+        const userData: User = {
+          id: response.data.userId,
+          email: response.data.email,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          role: response.data.role,
+          businessId: response.data.businessId,
+          photoURL: response.data.photoURL,
+          googleId: response.data.googleId
         }
 
-        // Guardar token JWT
-        token.value = data.token
-        localStorage.setItem('token', data.token)
+        saveAuthData({
+          token: response.data.token,
+          refreshToken: response.data.refreshToken,
+          user: userData
+        })
 
-        // Configurar token en las cabeceras por defecto
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-
-        // Guardar refresh token por separado
-        if (data.refreshToken) {
-          refreshToken.value = data.refreshToken
-          localStorage.setItem('refreshToken', data.refreshToken)
-        }
-
-        // Guardar información del usuario
-        user.value = {
-          id: data.userId!,
-          email: data.email!,
-          firstName: data.firstName!,
-          lastName: data.lastName!,
-          role: data.role!,
-        }
-        localStorage.setItem('user', JSON.stringify(user.value))
-
-        console.log('Login exitoso')
-        console.log(`JWT guardado: ${data.token.substring(0, 20)}...`)
-        if (data.refreshToken) {
-          console.log(`RefreshToken guardado: ${data.refreshToken.substring(0, 20)}...`)
-        }
-
+        console.log('Login exitoso:', userData)
         return true
       } else {
-        error.value = data.message || 'Error en la autenticación'
+        error.value = response.data?.message || 'Error de autenticación'
         return false
       }
     } catch (err: any) {
-      console.error('Login error:', err)
-      error.value = err.response?.data?.message || 'Error en la conexión con el servidor'
+      console.error('Error en login:', err)
+      error.value = err.response?.data?.message || 'Error de conexión'
       return false
     } finally {
       loading.value = false
     }
   }
 
-  const register = async (userData: RegisterRequest): Promise<boolean> => {
-    loading.value = true
-    error.value = null
-
+  // Login con Google
+  const loginWithGoogle = async (googleToken: string): Promise<boolean> => {
     try {
-      const response = await api.post<AuthResponse>('/api/Auth/register', userData)
-      const data = response.data
+      loading.value = true
+      error.value = null
 
-      if (data.success && data.token) {
-        // Verificar que el token tenga formato JWT válido
-        const isValidJwtFormat = data.token.split('.').length === 3
+      console.log('Enviando token de Google al backend:', googleToken.substring(0, 50) + '...')
 
-        if (!isValidJwtFormat) {
-          console.warn('⚠️ El servidor devolvió un token que no tiene formato JWT válido.')
-        }
-
-        // Guardar token JWT
-        token.value = data.token
-        localStorage.setItem('token', data.token)
-
-        // Configurar token en las cabeceras por defecto
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-
-        // Guardar refresh token por separado
-        if (data.refreshToken) {
-          refreshToken.value = data.refreshToken
-          localStorage.setItem('refreshToken', data.refreshToken)
-        }
-
-        // Guardar información del usuario
-        user.value = {
-          id: data.userId!,
-          email: data.email!,
-          firstName: data.firstName!,
-          lastName: data.lastName!,
-          role: data.role!,
-        }
-        localStorage.setItem('user', JSON.stringify(user.value))
-
-        console.log('Registro exitoso')
-        console.log(`JWT guardado: ${data.token.substring(0, 20)}...`)
-        if (data.refreshToken) {
-          console.log(`RefreshToken guardado: ${data.refreshToken.substring(0, 20)}...`)
-        }
-
-        return true
-      } else {
-        error.value = data.message || 'Error en el registro'
-        return false
-      }
-    } catch (err: any) {
-      console.error('Register error:', err)
-      error.value = err.response?.data?.message || 'Error en la conexión con el servidor'
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const refreshAccessToken = async (): Promise<boolean> => {
-    if (!refreshToken.value) {
-      console.warn('No hay refresh token disponible')
-      return false
-    }
-
-    try {
-      const response = await api.post<AuthResponse>('/api/Auth/refresh-token', {
-        refreshToken: refreshToken.value
+      const response = await api.post('/api/Auth/google-login', {
+        idToken: googleToken
       })
 
-      if (response.data.success && response.data.token) {
-        // Actualizar tokens
-        token.value = response.data.token
-        localStorage.setItem('token', response.data.token)
-
-        if (response.data.refreshToken) {
-          refreshToken.value = response.data.refreshToken
-          localStorage.setItem('refreshToken', response.data.refreshToken)
+      if (response.data?.success) {
+        const userData: User = {
+          id: response.data.userId,
+          email: response.data.email,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          role: response.data.role,
+          businessId: response.data.businessId,
+          photoURL: response.data.photoURL,
+          googleId: response.data.googleId
         }
 
-        // Actualizar header de autorización
-        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
+        saveAuthData({
+          token: response.data.token,
+          refreshToken: response.data.refreshToken,
+          user: userData
+        })
 
-        console.log('Token refrescado exitosamente')
+        console.log('Login con Google exitoso:', userData)
+        return true
+      } else {
+        error.value = response.data?.message || 'Error de autenticación con Google'
+        return false
+      }
+    } catch (err: any) {
+      console.error('Error en login con Google:', err)
+      error.value = err.response?.data?.message || 'Error de conexión con Google'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Verificar autenticación
+  const checkAuth = async (): Promise<boolean> => {
+    try {
+      if (!token.value) return false
+
+      // Verificar token actual
+      // Asegúrate que authService.verifyToken() existe y funciona como esperas
+      const isValid = await authService.verifyToken()
+
+      if (isValid) {
         return true
       }
 
+      // Si el token no es válido, intentar refrescar
+      // Asegúrate que authService.refreshToken() existe y funciona como esperas
+      const refreshed = await authService.refreshToken()
+
+      if (refreshed) {
+        // Actualizar el token en el store si authService.refreshToken() lo actualiza en localStorage
+        const newToken = localStorage.getItem('token')
+        if (newToken) {
+          token.value = newToken
+          api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+        }
+        return true
+      }
+
+      // Si no se puede refrescar, cerrar sesión
+      await logout()
       return false
-    } catch (err) {
-      console.error('Error al refrescar token:', err)
-      // Si hay error al refrescar, limpiar la sesión
-      logout()
+    } catch (error) {
+      console.error('Error verificando autenticación:', error)
+      await logout()
       return false
     }
   }
 
-  const logout = () => {
-    // Limpiar datos de autenticación
-    user.value = null
-    token.value = null
-    refreshToken.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('user')
+  // Logout
+  const logout = async () => {
+    try {
+      // Intentar revocar el token en el servidor
+      if (refreshToken.value) {
+        await api.post('/api/Auth/revoke-token', {
+          refreshToken: refreshToken.value
+        })
+      }
+    } catch (error) {
+      console.error('Error revocando token:', error)
+      // No se relanza el error para asegurar que el logout local siempre ocurra
+    } finally {
+      // Limpiar estado local
+      user.value = null
+      token.value = null
+      refreshToken.value = null
+      error.value = null
 
-    // Eliminar token de las cabeceras
-    if (api.defaults.headers) {
+      // Limpiar localStorage
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
+
+      // Limpiar header de autorización
       delete api.defaults.headers.common['Authorization']
     }
   }
 
-  const checkAuth = async (): Promise<boolean> => {
-    // Si no hay token, no estamos autenticados
-    if (!token.value) return false
-
-    try {
-      // Verificar si el token sigue siendo válido haciendo una petición al endpoint de usuario actual
-      const response = await api.get('/api/Users/me')
-      if (response.status === 200) {
-        // Actualizar información del usuario si es necesario
-        user.value = response.data
-        localStorage.setItem('user', JSON.stringify(user.value))
-        return true
-      } else {
-        // Si hay un error pero tenemos refresh token, intentar refrescar
-        if (refreshToken.value) {
-          return await refreshAccessToken()
+  // Refrescar token
+  const refreshAuthToken = async (): Promise<boolean> => {
+    // Asegúrate que authService.refreshToken() existe, actualice el localStorage y devuelva un booleano
+    const refreshed = await authService.refreshToken();
+    if (refreshed) {
+        const newToken = localStorage.getItem('token');
+        if (newToken) {
+            token.value = newToken;
+            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         }
-
-        // Si no hay refresh token o falló el refresco, hacer logout
-        logout()
-        return false
-      }
-    } catch (err) {
-      console.error('Auth check error:', err)
-
-      // Si hay un error pero tenemos refresh token, intentar refrescar
-      if (refreshToken.value) {
-        return await refreshAccessToken()
-      }
-
-      logout()
-      return false
     }
+    return refreshed;
   }
 
   // Inicializar al crear el store
-  initialize()
+  initializeAuth()
 
   return {
     // Estado
@@ -307,18 +299,19 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
 
-    // Getters
+    // Computed
     isAuthenticated,
     isAdmin,
-    isRestaurant,
-    isDeliveryPerson,
-    isCustomer,
+    userProfileImage,
+    userInitials,
+    isGoogleUser,
 
     // Acciones
     login,
-    register,
+    loginWithGoogle,
     logout,
     checkAuth,
-    refreshAccessToken
+    refreshAuthToken,
+    initializeAuth // Aunque se llama al crear, puede ser útil exponerla
   }
 })

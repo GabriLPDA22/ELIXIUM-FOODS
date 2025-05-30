@@ -785,7 +785,7 @@ watch(chartPeriod, async () => {
 onMounted(async () => {
   isComponentMounted.value = true
   
-  if (!authStore.isAuthenticated()) {
+  if (!authStore.isAuthenticated) {
     const isAuth = await authStore.checkAuth()
     if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
       router.push('/login')

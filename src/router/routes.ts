@@ -82,6 +82,26 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ForgotPassword.vue'),
     meta: { guest: true },
   },
+  // NUEVA RUTA: Reset Password
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/views/ResetPassword.vue'),
+    meta: { guest: true },
+  },
+  // NUEVAS RUTAS: Términos y Privacidad
+  {
+    path: '/terms-and-conditions',
+    name: 'terms-and-conditions',
+    component: () => import('@/views/TermsAndConditions.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/privacy-policy',
+    name: 'privacy-policy',
+    component: () => import('@/views/PrivacyPolicy.vue'),
+    meta: { requiresAuth: false },
+  },
   {
     path: '/unauthorized',
     name: 'unauthorized',

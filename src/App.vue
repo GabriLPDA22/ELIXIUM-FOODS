@@ -97,7 +97,6 @@ body {
     &__content {
         flex: 1;
         margin-top: 70px; // Altura del header
-        min-height: calc(100vh - 70px); // Asegura que cubra el espacio restante
     }
 }
 

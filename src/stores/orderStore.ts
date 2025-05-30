@@ -288,7 +288,7 @@ export const useOrderStore = defineStore('orders', () => {
       const authStore = useAuthStore()
 
       // Solo cargar pedidos si el usuario está autenticado
-      if (authStore.isAuthenticated()) {
+      if (authStore.isAuthenticated) {
         console.log('🔄 Inicializando store de pedidos...')
         await fetchOrders()
       } else {

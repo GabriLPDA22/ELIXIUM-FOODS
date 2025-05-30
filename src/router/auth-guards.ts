@@ -11,8 +11,8 @@ export const requireAuth = async (
 ) => {
   const authStore = useAuthStore()
 
-  // Verificar si el usuario está autenticado
-  if (!authStore.isAuthenticated()) {
+  // CORREGIDO: usar isAuthenticated como computed, no como función
+  if (!authStore.isAuthenticated) {
     // Intentar verificar la autenticación con el backend
     const isAuthenticated = await authStore.checkAuth()
     if (!isAuthenticated) {
@@ -69,7 +69,8 @@ export const redirectIfAuthenticated = (
 ) => {
   const authStore = useAuthStore()
 
-  if (authStore.isAuthenticated()) {
+  // CORREGIDO: usar isAuthenticated como computed, no como función
+  if (authStore.isAuthenticated) {
     return next({ name: 'home' }) // Redirigir a home si ya está autenticado
   }
 

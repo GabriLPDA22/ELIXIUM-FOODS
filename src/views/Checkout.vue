@@ -561,7 +561,8 @@
   </div>
 </template>
 
-<script setup lang="ts">
+// Checkout.vue - <script setup lang="ts">
+
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
@@ -647,7 +648,7 @@ const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() => cartStore.items);
 const subtotal = computed(() => cartStore.totalAmount);
-const deliveryFee = ref(0);
+const deliveryFee = ref(0); // Inicializar o obtener de forma más robusta
 const taxRate = 0.16;
 const tax = computed(() => (subtotal.value - promoDiscount.value) * taxRate);
 const total = computed(() => subtotal.value - promoDiscount.value + deliveryFee.value + tax.value);
@@ -667,7 +668,7 @@ const maxDate = computed(() => {
 const canProceedToPayment = computed(() => {
   if (!selectedAddress.value) return false;
   if (deliveryType.value === 'scheduled') {
-    return scheduledDate.value && scheduledTime.value;
+    return !!(scheduledDate.value && scheduledTime.value); // Usar !! para convertir a booleano explícitamente
   }
   return true;
 });
@@ -679,13 +680,16 @@ const goToStep = (step: number) => {
 
 const selectAddress = async (addressId: number) => {
   selectedAddress.value = addressId;
-  if (restaurantId.value) {
+  if (restaurantId.value && addressId) { // Asegurar que addressId también sea válido
     try {
       const fee = await orderService.getDeliveryFee(restaurantId.value, addressId);
       deliveryFee.value = fee;
     } catch (error) {
+      console.error('Error fetching delivery fee:', error);
       deliveryFee.value = 3.99; // Tarifa de respaldo
     }
+  } else {
+    deliveryFee.value = 0; // Resetear si no hay restaurante o dirección
   }
 };
 
@@ -708,15 +712,15 @@ const formatAddress = (address: Address | null) => {
 
 const getPaymentMethodDescription = (method: any) => {
   if (!method) return '';
-  if (method.type === 'card') {
+  if (method.type === 'card' && method.name && typeof method.name === 'string') {
     return `Termina en ${method.name.slice(-4)}`;
   }
-  return method.type;
+  return method.type || 'Método desconocido';
 };
 
 const formatScheduledDelivery = () => {
   if (!scheduledDate.value || !scheduledTime.value) return '';
-  const date = new Date(scheduledDate.value);
+  const date = new Date(scheduledDate.value + 'T00:00:00'); // Asegurar que se interprete como fecha local
   const today = new Date();
   today.setHours(0,0,0,0);
 
@@ -760,9 +764,11 @@ const applyPromoCode = async () => {
     } else {
       alert(result.message || 'Código promocional inválido');
       promoCode.value = '';
+      promoDiscount.value = 0; // Asegurar reseteo del descuento
     }
   } catch (error) {
     alert('Error al validar el código promocional');
+    promoDiscount.value = 0; // Asegurar reseteo del descuento
   } finally {
     validatingPromo.value = false;
   }
@@ -775,25 +781,30 @@ const removePromoCode = () => {
 
 const placeOrder = async () => {
   if (!selectedAddress.value || !selectedPaymentMethod.value) {
-    alert('Por favor completa todos los campos requeridos');
+    alert('Por favor selecciona una dirección de entrega y un método de pago.');
     return;
   }
+  if (!restaurantId.value) {
+    alert('Error: No se ha identificado el restaurante. Por favor, vuelve a intentarlo.');
+    return;
+  }
+
   placingOrder.value = true;
 
   try {
     const orderRequest = {
-      restaurantId: restaurantId.value!,
+      restaurantId: restaurantId.value,
       deliveryAddressId: selectedAddress.value,
       items: cartItems.value.map(item => ({
-        productId: item.productId,
+        productId: item.productId || item.id, // Usar productId si existe, sino id
         quantity: item.quantity,
         name: item.name,
         price: item.price
       })),
-      paymentMethod: getSelectedPaymentMethod()?.type || 'card',
+      paymentMethod: getSelectedPaymentMethod()?.type || 'card', // Podría ser más robusto
       deliveryInstructions: deliveryInstructions.value || undefined,
-      promoCode: promoCode.value || undefined,
-      scheduledDeliveryTime: deliveryType.value === 'scheduled'
+      promoCode: promoCode.value.trim() || undefined,
+      scheduledDeliveryTime: deliveryType.value === 'scheduled' && scheduledDate.value && scheduledTime.value
         ? `${scheduledDate.value}T${scheduledTime.value}:00`
         : undefined
     };
@@ -808,10 +819,11 @@ const placeOrder = async () => {
     const selectedVideo = deliveryGifFiles[randomIndex];
     randomDeliveryGifUrl.value = getVideoUrl(selectedVideo);
 
-    goToStep(3);
+    goToStep(3); // Ir a la pantalla de confirmación
 
   } catch (error: any) {
-    alert(error.message || 'Error al procesar el pedido');
+    console.error('Error placing order:', error);
+    alert(error.response?.data?.message || error.message || 'Error al procesar el pedido');
   } finally {
     placingOrder.value = false;
   }
@@ -827,6 +839,7 @@ const loadAddresses = async () => {
     } else if (addresses.value.length > 0) {
       await selectAddress(addresses.value[0].id);
     }
+    // Mover la carga de slots aquí para asegurar que selectedAddress esté seteado
     if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
       await loadAvailableTimeSlots();
     }
@@ -838,38 +851,64 @@ const loadAddresses = async () => {
 };
 
 const loadPaymentMethods = async () => {
-  loadingPaymentMethods.value = false;
-  paymentMethods.value = [
-    { id: 1, type: 'card', name: 'Tarjeta **** 1234', isDefault: true }
-  ];
-  const defaultPayment = paymentMethods.value.find(pm => pm.isDefault);
-  if (defaultPayment) {
-    selectedPaymentMethod.value = defaultPayment.id;
-  } else if (paymentMethods.value.length > 0) {
-     selectedPaymentMethod.value = paymentMethods.value[0].id;
+  loadingPaymentMethods.value = true; // Iniciar carga
+  try {
+    // Simulación, reemplazar con llamada real si es necesario
+    // paymentMethods.value = await userService.getUserPaymentMethods();
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay
+    paymentMethods.value = [
+      { id: 1, type: 'card', name: 'Tarjeta **** 1234', isDefault: true }
+      // { id: 2, type: 'paypal', name: 'PayPal (user@example.com)' }
+    ];
+    const defaultPayment = paymentMethods.value.find(pm => pm.isDefault);
+    if (defaultPayment) {
+      selectedPaymentMethod.value = defaultPayment.id;
+    } else if (paymentMethods.value.length > 0) {
+      selectedPaymentMethod.value = paymentMethods.value[0].id;
+    }
+  } catch (error) {
+    console.error('Error loading payment methods:', error);
+  } finally {
+    loadingPaymentMethods.value = false;
   }
 };
 
 const loadAvailableTimeSlots = async () => {
-  if (!restaurantId.value || !selectedAddress.value) return;
+  if (!restaurantId.value || !selectedAddress.value || !scheduledDate.value) return; // Asegurar que la fecha también esté
   try {
-    const times = await orderService.getAvailableDeliveryTimes(restaurantId.value, selectedAddress.value);
+    // Aquí deberías pasar scheduledDate.value a tu servicio
+    const times = await orderService.getAvailableDeliveryTimes(restaurantId.value, selectedAddress.value, scheduledDate.value);
     availableTimeSlots.value = times;
+    // Si la hora seleccionada ya no está disponible, resetearla
+    if (scheduledTime.value && !times.includes(scheduledTime.value)) {
+        scheduledTime.value = '';
+    }
   } catch (error) {
+    console.warn('Error loading available time slots, using fallback:', error);
     const slots = [];
     const now = new Date();
-    const currentHour = now.getHours();
-    for (let hour = Math.max(11, currentHour + 1); hour <= 22; hour++) {
+    // Considerar la fecha seleccionada para los slots, no solo la hora actual
+    const selectedDay = new Date(scheduledDate.value + 'T00:00:00');
+    const isToday = selectedDay.toDateString() === now.toDateString();
+    let startHour = 11; // Hora de inicio por defecto
+    if (isToday) {
+        startHour = Math.max(startHour, now.getHours() + 1); // Al menos una hora desde ahora si es hoy
+    }
+
+    for (let hour = startHour; hour <= 22; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
       slots.push(`${hour.toString().padStart(2, '0')}:30`);
     }
     availableTimeSlots.value = slots;
+    if (scheduledTime.value && !slots.includes(scheduledTime.value)) {
+        scheduledTime.value = '';
+    }
   }
 };
 
 const saveNewAddress = async () => {
-  if (!newAddress.value.name || !newAddress.value.street || !newAddress.value.city) {
-    alert('Por favor completa los campos obligatorios');
+  if (!newAddress.value.name || !newAddress.value.street || !newAddress.value.city || !newAddress.value.zipCode) {
+    alert('Por favor completa los campos obligatorios (Nombre, Calle, Ciudad, Código Postal).');
     return;
   }
   savingAddress.value = true;
@@ -878,7 +917,7 @@ const saveNewAddress = async () => {
     const savedAddress = await userService.addAddress(addressData);
     addresses.value.push(savedAddress);
     if (newAddress.value.isDefault || addresses.value.length === 1) {
-      await selectAddress(savedAddress.id);
+      await selectAddress(savedAddress.id); // Asegurar que se seleccione y se calcule la tarifa de envío
     }
     newAddress.value = { name: '', street: '', number: '', interior: '', neighborhood: '', city: '', state: '', zipCode: '', phone: '', isDefault: false };
     showAddAddressModal.value = false;
@@ -893,18 +932,20 @@ const saveNewAddress = async () => {
 
 const saveNewPayment = async () => {
   if (!newPayment.value.cardNumber || !newPayment.value.expiryDate || !newPayment.value.cvv || !newPayment.value.cardholderName) {
-    alert('Por favor completa todos los campos');
+    alert('Por favor completa todos los campos del método de pago.');
     return;
   }
   savingPayment.value = true;
   try {
+    // Simulación, reemplazar con lógica real de guardado (NO guardar CVV)
     await new Promise(resolve => setTimeout(resolve, 1000));
     const newId = paymentMethods.value.length > 0 ? Math.max(...paymentMethods.value.map(pm => pm.id)) + 1 : 1;
     const newMethodData = {
       id: newId,
       type: 'card',
-      name: `Tarjeta **** ${newPayment.value.cardNumber.slice(-4)}`,
+      name: `Tarjeta **** ${newPayment.value.cardNumber.slice(-4)}`, // No guardar número completo
       isDefault: newPayment.value.isDefault
+      // No almacenar CVV ni fecha de expiración completa si no es necesario y seguro
     };
     paymentMethods.value.push(newMethodData);
     if (newPayment.value.isDefault || paymentMethods.value.length === 1) {
@@ -912,7 +953,7 @@ const saveNewPayment = async () => {
     }
     newPayment.value = { cardNumber: '', expiryDate: '', cvv: '', cardholderName: '', isDefault: false };
     showAddPaymentModal.value = false;
-    alert('Método de pago agregado exitosamente');
+    alert('Método de pago agregado exitosamente (simulado)');
   } catch (error) {
     console.error('Error saving payment method:', error);
     alert('Error al guardar el método de pago');
@@ -923,33 +964,49 @@ const saveNewPayment = async () => {
 
 const formatCardNumber = (event: Event) => {
   const input = event.target as HTMLInputElement;
-  let value = input.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
-  const formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-  if (formattedValue !== input.value) {
+  let value = input.value.replace(/\s+/g, '').replace(/[^0-9]/gi, ''); // Eliminar espacios y no dígitos
+  const parts = [];
+  for (let i = 0; i < value.length; i += 4) {
+    parts.push(value.substring(i, i + 4));
+  }
+  const formattedValue = parts.join(' ');
+  if (formattedValue !== input.value) { // Evitar bucle infinito de actualización
     newPayment.value.cardNumber = formattedValue;
+  } else if (value.length > 19) { // Limitar a 16 dígitos + 3 espacios
+     newPayment.value.cardNumber = formattedValue.substring(0, 19);
+  } else {
+     newPayment.value.cardNumber = formattedValue;
   }
 };
 
-watch([deliveryType, scheduledDate, selectedAddress], () => {
+
+// Watchers
+watch([deliveryType, scheduledDate, selectedAddress], async () => { // Hacerlo async
   if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
-    loadAvailableTimeSlots();
+    await loadAvailableTimeSlots();
   }
 });
 
+// Lifecycle hooks
 onMounted(async () => {
   if (cartStore.isEmpty) {
-    router.push('/cart');
+    alert('Tu carrito está vacío. Serás redirigido.');
+    router.push('/cart'); // O a la página de restaurantes
     return;
   }
-  if (!authStore.isAuthenticated()) {
+  // Corregido: acceder a isAuthenticated como propiedad
+  if (!authStore.isAuthenticated) {
+    alert('Por favor, inicia sesión para continuar.');
     router.push('/login?redirect=/checkout');
     return;
   }
+  // Cargar direcciones y métodos de pago en paralelo
   await Promise.all([
     loadAddresses(),
     loadPaymentMethods()
   ]);
 });
+
 </script>
 
 <style lang="scss" scoped>

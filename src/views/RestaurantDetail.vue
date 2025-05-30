@@ -358,7 +358,7 @@ const fetchRestaurantData = async () => {
 
       console.log(`✅ Producto procesado "${processedProduct.name}":`, {
         precioOriginal: product.price,
-        precioFinal: processedProduct.price,
+        precioFinal: processedProduct.price, // Será el mismo que el original si product.price existe
         disponible: processedProduct.isAvailable
       });
 
@@ -397,22 +397,22 @@ const addToCart = async (item: MenuItem) => {
   const realPrice = getProductPrice(item);
 
   if (realPrice <= 0) {
-    alert('Este producto no tiene un precio válido');
+    alert('Este producto no tiene un precio válido o no está disponible.'); // Mensaje más claro
     console.error('❌ Producto sin precio válido:', item);
     return;
   }
 
   console.log(`✅ Usando precio real: $${realPrice}`);
 
-  // Verificar disponibilidad
-  if (item.isAvailable === false) {
-    alert('Este producto no está disponible');
+  // Verificar disponibilidad (aunque getProductPrice ya podría implicar esto si precio es 0)
+  if (item.isAvailable === false) { // Chequeo explícito
+    alert('Este producto no está disponible en este momento.');
     return;
   }
 
   // Verificar cambio de restaurante
   if (cartStore.restaurantId && cartStore.restaurantId !== restaurantId.value) {
-    if (confirm(`Tu carrito contiene elementos de otro restaurante. ¿Deseas vaciarlo para pedir de ${restaurant.value?.name}?`)) {
+    if (confirm(`Tu carrito contiene elementos de "${cartStore.restaurantName}". ¿Deseas vaciarlo para pedir de "${restaurant.value?.name}"?`)) {
       cartStore.clearCart()
     } else {
       return
@@ -421,34 +421,35 @@ const addToCart = async (item: MenuItem) => {
 
   // Crear item con el precio REAL
   const cartItem = {
-    id: item.id,
+    id: item.id, // Usar el ID del producto como ID del item en el carrito para unicidad
     productId: item.id,
     name: item.name || 'Producto',
-    price: realPrice, // PRECIO REAL - NO FALLBACK
+    price: realPrice, // PRECIO REAL
     imageUrl: item.imageUrl || '',
-    restaurantId: restaurantId.value || 0,
+    restaurantId: restaurantId.value || 0, // Asegurar que restaurantId.value no sea null
     restaurantName: restaurant.value?.name || '',
     categoryId: item.categoryId || 0,
-    isAvailable: true,
+    isAvailable: true, // Si llega aquí, está disponible para agregar
     description: item.description || '',
-    businessId: restaurantId.value || 0,
+    businessId: restaurant.value?.businessId || restaurantId.value || 0, // Usar businessId del restaurante si existe
     businessName: restaurant.value?.name || '',
     quantity: 1
   }
 
-  console.log('🛒 CartItem con precio real:', cartItem);
+  console.log('🛒 CartItem a agregar:', cartItem);
 
   try {
+    // addToCart en cartStore podría necesitar el restaurantId explícitamente si no lo deduce del item
     const success = await cartStore.addToCart(cartItem, 1);
     if (success) {
-      console.log('✅ Agregado exitosamente con precio:', realPrice);
+      console.log('✅ Agregado exitosamente al carrito:', item.name);
     } else {
-      console.error('❌ Error del store:', cartStore.error);
-      alert(cartStore.error || 'Error al agregar');
+      console.error('❌ Error del store al agregar al carrito:', cartStore.error);
+      alert(cartStore.error || 'No se pudo agregar el producto al carrito.');
     }
-  } catch (error) {
-    console.error('❌ Exception:', error);
-    alert('Error al agregar el producto');
+  } catch (exceptionError) { // Renombrar para evitar conflicto con la variable 'error' del estado
+    console.error('❌ Excepción al agregar al carrito:', exceptionError);
+    alert('Ocurrió un error al agregar el producto al carrito.');
   }
 }
 
@@ -466,6 +467,7 @@ const decrementItem = async (itemId: number) => {
     if (currentQuantity > 1) {
       await cartStore.updateQuantity(itemId, currentQuantity - 1)
     } else {
+      // Si la cantidad es 1 y se decrementa, eliminar el item
       cartStore.removeItem(itemId)
     }
   }
@@ -482,15 +484,19 @@ const clearCart = () => {
 }
 
 const proceedToCheckout = () => {
-  if (!authStore.isAuthenticated()) {
-    router.push('/login');
+  // Accede a isAuthenticated como una propiedad, no como una función
+  if (!authStore.isAuthenticated) {
+    alert('Por favor, inicia sesión para continuar con tu pedido.'); // Mensaje al usuario
+    router.push('/login'); // Redirigir a login
     return;
   }
 
   if (cartItems.value.length === 0) {
-    return;
+    alert('Tu carrito está vacío. Agrega productos antes de continuar.'); // Mensaje al usuario
+    return; // No hacer nada si el carrito está vacío
   }
 
+  // Si está autenticado y el carrito no está vacío, proceder al checkout
   router.push('/checkout');
 }
 
@@ -501,8 +507,11 @@ const scrollToCategory = (categoryId: string | number) => {
   nextTick(() => {
     const section = document.getElementById(`category-${categoryId}`)
     if (section) {
-      const navHeight = document.querySelector('.category-nav')?.clientHeight || 0
-      const topOffset = section.getBoundingClientRect().top + window.pageYOffset - navHeight - 20
+      const navElement = document.querySelector('.category-nav') as HTMLElement | null;
+      const navHeight = navElement ? navElement.clientHeight : 0;
+      // Considerar también el offset del header principal si es sticky
+      const headerOffset = (document.querySelector('header.main-header') as HTMLElement | null)?.clientHeight || 0;
+      const topOffset = section.getBoundingClientRect().top + window.pageYOffset - navHeight - headerOffset - 20; // Ajuste adicional de 20px
 
       window.scrollTo({
         top: topOffset,
@@ -516,8 +525,9 @@ const scrollToCategory = (categoryId: string | number) => {
 const setupIntersectionObserver = () => {
   if (!('IntersectionObserver' in window)) return
 
-  const navElement = document.querySelector('.category-nav')
-  const navHeight = navElement ? navElement.clientHeight : 0
+  const navElement = document.querySelector('.category-nav') as HTMLElement | null;
+  const navHeight = navElement ? navElement.clientHeight : 0;
+  const headerOffset = (document.querySelector('header.main-header') as HTMLElement | null)?.clientHeight || 0;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -527,31 +537,54 @@ const setupIntersectionObserver = () => {
       }
     })
   }, {
-    rootMargin: `-${navHeight + 10}px 0px -50% 0px`,
-    threshold: 0
+    rootMargin: `-${navHeight + headerOffset + 10}px 0px -50% 0px`, // Ajustar el rootMargin
+    threshold: 0 // Detectar apenas entre en la zona
   })
 
-  const sections = document.querySelectorAll('.menu-section')
-  sections.forEach(section => observer.observe(section))
+  // Re-seleccionar las secciones dentro de nextTick o después de que se rendericen
+  nextTick(() => {
+    const sections = document.querySelectorAll('.menu-section');
+    if (sections.length > 0) {
+        sections.forEach(section => observer.observe(section as HTMLElement));
+    } else {
+        console.warn("No se encontraron .menu-section para el IntersectionObserver");
+    }
+  });
 }
 
 // Handler para cambio de ruta
 watch(() => route.params.id, (newId, oldId) => {
-  if (newId !== oldId) {
+  if (newId && newId !== oldId) { // Asegurar que newId exista
     fetchRestaurantData()
+    // Re-inicializar el observer si el restaurante cambia y las secciones se regeneran
+    nextTick(() => {
+        if (document.querySelectorAll('.menu-section').length > 0) {
+            setupIntersectionObserver();
+        }
+    });
   }
-}, { immediate: false })
+}, { immediate: false }) // immediate: false para que no se ejecute al montar si onMounted ya lo hace
 
 // Inicialización
 onMounted(async () => {
-  console.log('🚀 Montando componente RestaurantDetail');
+  console.log('🚀 Montando componente RestaurantDetail para ID:', route.params.id);
   await fetchRestaurantData()
 
-  nextTick(() => {
-    if (document.querySelectorAll('.menu-section').length > 0) {
-      setupIntersectionObserver()
-    }
-  })
+  // El IntersectionObserver se configura mejor después de que los datos están cargados y el DOM actualizado
+  //  watch(menuCategories, (newCategories) => { // Observar cuando las categorías (y por ende las secciones) cambian
+  //    if (newCategories.length > 0) {
+  //      nextTick(() => {
+  //        setupIntersectionObserver();
+  //      });
+  //    }
+  //  }, { deep: true });
+
+  // O, si prefieres llamarlo una vez después de fetchRestaurantData:
+  if (menuCategories.value.length > 0) {
+       nextTick(() => {
+           setupIntersectionObserver();
+       });
+   }
 })
 </script>
 
