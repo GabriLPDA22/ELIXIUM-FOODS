@@ -13,7 +13,6 @@
 
             <div class="u-header__logo">
                 <router-link to="/" class="u-header__logo-link">
-                    <span class="u-header__logo-icon">🍽️</span>
                     <span class="u-header__logo-text">Elixium Foods</span>
                 </router-link>
             </div>
@@ -28,7 +27,6 @@
                 </div>
 
                 <div class="u-header__nav-logo">
-                    <span class="u-header__logo-icon">🍽️</span>
                     <span class="u-header__logo-text">Elixium Foods</span>
                 </div>
 

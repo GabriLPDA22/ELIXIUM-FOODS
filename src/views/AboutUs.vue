@@ -155,7 +155,7 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="../../public/images/Abuelo.jpg" 
+                  src="../../images/Abuelo.jpg" 
                   alt="CEO" 
                 />
               </div>
@@ -168,7 +168,7 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="../../public/images/BigBoss.jpg" 
+                  src="../../images/BigBoss.jpg" 
                   alt="BIG BOSS" 
                 />
               </div>
@@ -181,7 +181,7 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img 
-                  src="../../public/images/Claudia.png" 
+                  src="../../images/Claudia.png" 
                   alt="COO" 
                 />
               </div>
