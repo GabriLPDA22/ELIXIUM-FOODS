@@ -22,7 +22,7 @@
     </div>
 
     <template v-else-if="restaurant">
-      <!-- Hero section limpio con solo la foto -->
+      <!-- Hero section limpio -->
       <section class="restaurant-hero" :style="{ backgroundImage: `url(${restaurant.coverImageUrl})` }">
         <div class="restaurant-hero__overlay"></div>
         
@@ -99,13 +99,19 @@
       </section>
 
       <!-- Ofertas activas del restaurante -->
-      <section v-if="activeOffers.length > 0" class="offers-section">
+      <section class="offers-section">
         <div class="container">
           <h2 class="offers-section__title">🔥 Ofertas especiales</h2>
-          <div class="offers-grid">
+          
+          <!-- Debug info solo si no hay ofertas -->
+          <div v-if="!activeOffers.length" class="offers-debug">
+            <p class="offers-debug__text">🔍 No hay ofertas activas para este restaurante</p>
+          </div>
+          
+          <div v-if="activeOffers.length > 0" class="offers-grid">
             <div v-for="offer in activeOffers" :key="offer.id" class="offer-card">
               <div class="offer-card__badge">
-                <span v-if="offer.discountType === 'percentage'">{{ offer.discountValue }}% OFF</span>
+                <span v-if="offer.discountType === '%'">{{ offer.discountValue }}% OFF</span>
                 <span v-else>${{ offer.discountValue }} OFF</span>
               </div>
               <div class="offer-card__content">
@@ -114,7 +120,7 @@
                 <div class="offer-card__conditions">
                   <span v-if="offer.minimumOrderAmount > 0">Pedido mín: ${{ offer.minimumOrderAmount }}</span>
                   <span v-if="offer.minimumQuantity > 1">Cant. mín: {{ offer.minimumQuantity }}</span>
-                  <span v-if="offer.usageLimit > 0">{{ offer.remainingUses }} usos disponibles</span>
+                  <span v-if="offer.usageLimit > 0">{{ Math.max(0, offer.usageLimit - offer.usageCount) }} usos disponibles</span>
                 </div>
               </div>
               <div class="offer-card__product" v-if="offer.productName">
@@ -122,10 +128,15 @@
               </div>
             </div>
           </div>
+          
+          <!-- Fallback cuando no hay ofertas -->
+          <div v-else class="offers-empty">
+            <p class="offers-empty__text">Pronto tendremos ofertas especiales para ti 🎁</p>
+          </div>
         </div>
       </section>
 
-      <!-- Category filters que filtran en lugar de hacer scroll -->
+      <!-- Category filters -->
       <section class="category-filters">
         <div class="container">
           <div class="category-filters__wrapper">
@@ -149,7 +160,7 @@
         </div>
       </section>
 
-      <!-- Main content con menú filtrado y cart sidebar -->
+      <!-- Main content -->
       <section class="restaurant-content">
         <div class="container">
           <div class="restaurant-content__wrapper">
@@ -164,18 +175,42 @@
                 </div>
 
                 <div class="menu-items">
-                  <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item">
+                  <div v-for="item in filteredMenuItems" :key="item.id" 
+                       :class="['menu-item', { 'menu-item--has-offer': getApplicableOffer(item) }]">
                     <div class="menu-item__content">
-                      <div class="menu-item__header">
+                                              <div class="menu-item__header">
                         <h3 class="menu-item__name">{{ item.name || 'Producto' }}</h3>
                         <div class="menu-item__price-wrapper">
-                          <span class="menu-item__price">
+                          <!-- Mostrar precio original y con descuento -->
+                          <div v-if="getApplicableOffer(item)" class="menu-item__price-with-offer">
+                            <div class="menu-item__offer-badge">
+                              <span v-if="getApplicableOffer(item)?.discountType === '%'">
+                                {{ getApplicableOffer(item)?.discountValue }}% OFF
+                              </span>
+                              <span v-else>
+                                ${{ getApplicableOffer(item)?.discountValue }} OFF
+                              </span>
+                            </div>
+                            <span class="menu-item__price-original">${{ getProductPrice(item).toFixed(2) }}</span>
+                            <span class="menu-item__price-discounted">
+                              ${{ calculateDiscountedPrice(item).toFixed(2) }}
+                            </span>
+                          </div>
+                          <span v-else class="menu-item__price">
                             ${{ getProductPrice(item) > 0 ? getProductPrice(item).toFixed(2) : 'N/A' }}
                           </span>
                         </div>
                       </div>
                       
                       <p v-if="item.description" class="menu-item__description">{{ item.description }}</p>
+                      
+                      <!-- Mostrar ofertas aplicables -->
+                      <div v-if="getApplicableOffer(item)" class="menu-item__offer-info">
+                        <div class="menu-item__offer-details">
+                          <span class="menu-item__offer-name">🎉 {{ getApplicableOffer(item)?.name }}</span>
+                          <span class="menu-item__offer-desc">{{ getApplicableOffer(item)?.description }}</span>
+                        </div>
+                      </div>
                       
                       <div class="menu-item__tags" v-if="item.isVegetarian || item.isSpicy || item.isNew">
                         <span v-if="item.isVegetarian" class="menu-item__tag menu-item__tag--vegetarian">🌱 Vegetariano</span>
@@ -210,7 +245,7 @@
               </div>
             </div>
 
-            <!-- Cart sidebar elegante y estático -->
+            <!-- Cart sidebar optimizado -->
             <div class="cart-sidebar">
               <div class="cart">
                 <div class="cart__header">
@@ -219,15 +254,15 @@
                       <span class="cart__title-icon">🛒</span>
                       Tu pedido
                     </h2>
-                    <button v-if="cartItems.length > 0" class="cart__clear" @click="clearCart">
+                    <button v-if="localCartItems.length > 0" class="cart__clear" @click="clearCart">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v4a2 2 0 0 1 2 2v2"></path>
                       </svg>
                     </button>
                   </div>
                   
-                  <div v-if="cartItems.length > 0" class="cart__restaurant-info">
+                  <div v-if="localCartItems.length > 0" class="cart__restaurant-info">
                     <div class="cart__restaurant-logo">{{ restaurant.name[0] }}</div>
                     <div class="cart__restaurant-details">
                       <span class="cart__restaurant-name">{{ restaurant.name }}</span>
@@ -236,7 +271,7 @@
                   </div>
                 </div>
 
-                <div v-if="cartItems.length === 0" class="cart__empty">
+                <div v-if="localCartItems.length === 0" class="cart__empty">
                   <div class="cart__empty-icon">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                       <circle cx="9" cy="21" r="1"></circle>
@@ -250,7 +285,7 @@
 
                 <div v-else class="cart__content">
                   <div class="cart__items">
-                    <div v-for="(item, index) in cartItems" :key="item.id" class="cart-item">
+                    <div v-for="item in localCartItems" :key="item.id" class="cart-item">
                       <div class="cart-item__quantity-controls">
                         <button class="cart-item__quantity-btn cart-item__quantity-btn--minus" @click="decrementItem(item.id)">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -268,11 +303,20 @@
 
                       <div class="cart-item__details">
                         <h4 class="cart-item__name">{{ item.name || 'Producto' }}</h4>
+                        <!-- Mostrar oferta aplicada en el carrito -->
+                        <div v-if="item.appliedOffer" class="cart-item__offer-applied">
+                          <span class="cart-item__offer-tag">
+                            {{ item.appliedOffer.discountType === '%' ? 
+                                `${item.appliedOffer.discountValue}% OFF` : 
+                                `${item.appliedOffer.discountValue} OFF` }}
+                          </span>
+                          <span class="cart-item__offer-name">{{ item.appliedOffer.name }}</span>
+                        </div>
                         <div class="cart-item__actions">
                           <button class="cart-item__remove" @click="removeItem(item.id)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v4a2 2 0 0 1 2 2v2"></path>
                             </svg>
                             Eliminar
                           </button>
@@ -280,7 +324,11 @@
                       </div>
 
                       <div class="cart-item__price-info">
-                        <div class="cart-item__unit-price">${{ safeNumber(item.price, 0).toFixed(2) }}</div>
+                        <div v-if="item.appliedOffer" class="cart-item__price-with-discount">
+                          <div class="cart-item__original-price">${{ item.originalPrice.toFixed(2) }}</div>
+                          <div class="cart-item__discounted-price">${{ item.price.toFixed(2) }}</div>
+                        </div>
+                        <div v-else class="cart-item__unit-price">${{ safeNumber(item.price, 0).toFixed(2) }}</div>
                         <div class="cart-item__total-price">${{ (safeNumber(item.price, 0) * safeNumber(item.quantity, 0)).toFixed(2) }}</div>
                       </div>
                     </div>
@@ -289,7 +337,11 @@
                   <div class="cart__summary">
                     <div class="cart__summary-row">
                       <span>Subtotal</span>
-                      <span>${{ subtotal.toFixed(2) }}</span>
+                      <span>${{ cartTotals.subtotal.toFixed(2) }}</span>
+                    </div>
+                    <div v-if="cartTotals.totalSavings > 0" class="cart__summary-row cart__summary-row--savings">
+                      <span>🎉 Ahorros por ofertas</span>
+                      <span>-${{ cartTotals.totalSavings.toFixed(2) }}</span>
                     </div>
                     <div class="cart__summary-row">
                       <span>Costo de envío</span>
@@ -300,13 +352,13 @@
                     </div>
                     <div class="cart__summary-row cart__summary-row--total">
                       <span>Total</span>
-                      <span>${{ total.toFixed(2) }}</span>
+                      <span>${{ cartTotals.total.toFixed(2) }}</span>
                     </div>
                   </div>
 
-                  <button class="cart__checkout-btn" @click="proceedToCheckout" :disabled="cartItems.length === 0">
+                  <button class="cart__checkout-btn" @click="proceedToCheckout" :disabled="localCartItems.length === 0">
                     <span class="cart__checkout-icon">🚀</span>
-                    <span>{{ cartItems.length > 0 ? 'Realizar pedido' : 'Agrega productos' }}</span>
+                    <span>{{ localCartItems.length > 0 ? 'Realizar pedido' : 'Agrega productos' }}</span>
                   </button>
                 </div>
               </div>
@@ -333,11 +385,50 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuItem } from '@/services/restaurantService'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
+
+// Interfaces
+interface ProductOffer {
+  id: number
+  name: string
+  description: string
+  discountType: '%' | 'fixed'
+  discountValue: number
+  minimumOrderAmount: number
+  minimumQuantity: number
+  startDate: string
+  endDate: string
+  usageLimit: number
+  usageCount: number
+  status: string
+  restaurantId: number
+  restaurantName: string
+  productId: number
+  productName: string
+  productImageUrl: string
+}
+
+interface LocalCartItem {
+  id: number
+  productId: number
+  name: string
+  price: number
+  originalPrice: number
+  imageUrl: string
+  restaurantId: number
+  restaurantName: string
+  categoryId: number
+  isAvailable: boolean
+  description: string
+  businessId: number
+  businessName: string
+  quantity: number
+  appliedOffer?: ProductOffer
+}
 
 // Router y route
 const route = useRoute()
@@ -347,15 +438,18 @@ const router = useRouter()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 
-// Estado
+// Estado principal
 const loading = ref(true)
 const error = ref<string | null>(null)
 const restaurantId = ref<number | null>(null)
 const restaurant = ref<RestaurantDetail | null>(null)
 const menuItems = ref<MenuItem[]>([])
 const menuCategories = ref<MenuCategory[]>([])
-const selectedCategoryFilter = ref<string | number>('all') // Para filtrar, no para scroll
-const activeOffers = ref<any[]>([]) // Para las ofertas activas
+const selectedCategoryFilter = ref<string | number>('all')
+const activeOffers = ref<ProductOffer[]>([])
+
+// Estado local del carrito (evitar llamadas constantes)
+const localCartItems = ref<LocalCartItem[]>([])
 
 // Helper function for safe numbers
 const safeNumber = (value: any, defaultValue: number = 0): number => {
@@ -381,7 +475,65 @@ const getProductPrice = (product: any): number => {
   return 0;
 };
 
-// Computed para productos filtrados
+// Función para obtener oferta aplicable a un producto
+const getApplicableOffer = (product: MenuItem): ProductOffer | null => {
+  if (!activeOffers.value.length) {
+    return null;
+  }
+  
+  const currentSubtotal = cartTotals.value.subtotal;
+  
+  // Buscar ofertas para este producto específico
+  const productOffers = activeOffers.value.filter(offer => {
+    const matchesProduct = offer.productId === product.id;
+    const meetsMinimumAmount = currentSubtotal >= offer.minimumOrderAmount;
+    const isActive = offer.status === 'active';
+    
+    return matchesProduct && meetsMinimumAmount && isActive;
+  });
+  
+  if (!productOffers.length) return null;
+  
+  // Devolver la mejor oferta (mayor descuento)
+  const bestOffer = productOffers.reduce((best, current) => {
+    const bestDiscount = best.discountType === '%' ? 
+      (getProductPrice(product) * best.discountValue / 100) : 
+      best.discountValue;
+      
+    const currentDiscount = current.discountType === '%' ? 
+      (getProductPrice(product) * current.discountValue / 100) : 
+      current.discountValue;
+      
+    return currentDiscount > bestDiscount ? current : best;
+  });
+  
+  return bestOffer;
+};
+
+// Función para calcular precio con descuento
+const calculateDiscountedPrice = (product: MenuItem): number => {
+  const offer = getApplicableOffer(product);
+  const originalPrice = getProductPrice(product);
+  
+  if (!offer) {
+    console.log(`💵 Precio sin oferta para ${product.name}: ${originalPrice}`);
+    return originalPrice;
+  }
+  
+  let discountedPrice: number;
+  
+  if (offer.discountType === '%') {
+    discountedPrice = originalPrice * (1 - offer.discountValue / 100);
+    console.log(`🎯 Descuento porcentual ${offer.discountValue}%: ${originalPrice} → ${discountedPrice.toFixed(2)}`);
+  } else {
+    discountedPrice = Math.max(0, originalPrice - offer.discountValue);
+    console.log(`💰 Descuento fijo ${offer.discountValue}: ${originalPrice} → ${discountedPrice.toFixed(2)}`);
+  }
+  
+  return discountedPrice;
+};
+
+// Productos filtrados
 const filteredMenuItems = computed(() => {
   if (selectedCategoryFilter.value === 'all') {
     return menuItems.value;
@@ -390,6 +542,29 @@ const filteredMenuItems = computed(() => {
   return menuItems.value.filter(item => {
     return item.categoryId === selectedCategoryFilter.value;
   });
+});
+
+// Totales del carrito calculados localmente
+const cartTotals = computed(() => {
+  const subtotal = localCartItems.value.reduce((sum, item) => {
+    return sum + (item.price * item.quantity);
+  }, 0);
+  
+  const originalSubtotal = localCartItems.value.reduce((sum, item) => {
+    return sum + (item.originalPrice * item.quantity);
+  }, 0);
+  
+  const totalSavings = originalSubtotal - subtotal;
+  const deliveryFee = restaurant.value ? safeNumber(restaurant.value.deliveryFee) : 0;
+  const total = subtotal + deliveryFee;
+  
+  return {
+    subtotal,
+    originalSubtotal,
+    totalSavings,
+    deliveryFee,
+    total
+  };
 });
 
 // Función para obtener el nombre de la categoría seleccionada
@@ -403,44 +578,43 @@ const filterByCategory = (categoryId: string | number) => {
   selectedCategoryFilter.value = categoryId;
 };
 
-// Computed properties del carrito
-const cartItems = computed(() => {
-  return cartStore.items.filter(item => item.restaurantId === restaurantId.value)
-})
-
-const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => {
-    const price = safeNumber(item.price);
-    const quantity = safeNumber(item.quantity);
-    return sum + (price * quantity);
-  }, 0);
-});
-
-const total = computed(() => {
-  const deliveryFee = restaurant.value ? safeNumber(restaurant.value.deliveryFee) : 0;
-  return subtotal.value + deliveryFee;
-});
-
 // Función para cargar ofertas activas del restaurante
-const fetchActiveOffers = async () => {
+const fetchActiveOffers = async (): Promise<void> => {
   if (!restaurantId.value) return;
   
   try {
-    // Llamada a la API para obtener ofertas activas
-    const response = await fetch(`/api/restaurants/${restaurantId.value}/offers/active`);
+    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
+    
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    };
+    
+    // Agregar token si está disponible
+    if (authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
+    });
+    
     if (response.ok) {
       const offers = await response.json();
-      activeOffers.value = offers;
-      console.log('✅ Ofertas activas cargadas:', offers);
+      activeOffers.value = offers || [];
+    } else {
+      console.warn('⚠️ Error del servidor:', response.status);
+      activeOffers.value = [];
     }
   } catch (error) {
-    console.error('❌ Error cargando ofertas:', error);
-    // No mostramos error al usuario, simplemente no mostramos ofertas
+    console.error('❌ Error de red:', error);
+    activeOffers.value = [];
   }
 };
 
 // Cargar datos del restaurante
-const fetchRestaurantData = async () => {
+const fetchRestaurantData = async (): Promise<void> => {
   loading.value = true
   error.value = null
 
@@ -457,26 +631,31 @@ const fetchRestaurantData = async () => {
       throw new Error('ID de restaurante inválido')
     }
 
-    const restaurantData = await restaurantService.getRestaurantById(id)
-    restaurant.value = restaurantData
+    // Cargar restaurante y productos en paralelo
+    const [restaurantData, products] = await Promise.all([
+      restaurantService.getRestaurantById(id),
+      restaurantService.getProductsByRestaurant(id)
+    ]);
+    
+    restaurant.value = restaurantData;
 
-    const products = await restaurantService.getProductsByRestaurant(id)
-
-    menuItems.value = products.map((product, index) => {
-      const processedProduct = {
+    menuItems.value = products.map((product) => {
+      return {
         ...product,
         name: product.name || 'Producto sin nombre',
         description: product.description || '',
         imageUrl: product.imageUrl || '',
         isAvailable: product.isAvailable !== false
       };
-      return processedProduct;
     });
 
-    menuCategories.value = restaurantService.organizeProductsByCategory(menuItems.value)
+    menuCategories.value = restaurantService.organizeProductsByCategory(menuItems.value);
 
-    // Cargar ofertas activas después de cargar el restaurante
+    // Cargar ofertas después de tener los productos
     await fetchActiveOffers();
+    
+    // Sincronizar carrito local con el store inicial
+    syncLocalCart();
 
   } catch (err: any) {
     console.error('❌ Error al cargar el restaurante:', err)
@@ -487,8 +666,46 @@ const fetchRestaurantData = async () => {
   }
 }
 
-// Función para agregar al carrito
-const addToCart = async (item: MenuItem) => {
+// Sincronizar carrito local con el store
+const syncLocalCart = (): void => {
+  const storeItems = cartStore.items.filter(item => item.restaurantId === restaurantId.value);
+  
+  localCartItems.value = storeItems.map(item => {
+    const product = menuItems.value.find(p => p.id === item.id);
+    const originalPrice = product ? getProductPrice(product) : item.price;
+    const offer = product ? getApplicableOffer(product) : null;
+    const finalPrice = offer ? calculateDiscountedPrice(product!) : originalPrice;
+    
+    return {
+      ...item,
+      originalPrice,
+      price: finalPrice,
+      appliedOffer: offer || undefined
+    };
+  });
+};
+
+// Recalcular precios cuando cambien las ofertas o cantidades
+const recalculateCartPrices = (): void => {
+  localCartItems.value = localCartItems.value.map(item => {
+    const product = menuItems.value.find(p => p.id === item.productId);
+    if (!product) return item;
+    
+    const originalPrice = getProductPrice(product);
+    const offer = getApplicableOffer(product);
+    const finalPrice = offer ? calculateDiscountedPrice(product) : originalPrice;
+    
+    return {
+      ...item,
+      originalPrice,
+      price: finalPrice,
+      appliedOffer: offer || undefined
+    };
+  });
+};
+
+// Función para agregar al carrito (optimizada)
+const addToCart = async (item: MenuItem): Promise<void> => {
   if (!item || !item.id) {
     console.error('❌ Item inválido');
     return;
@@ -506,83 +723,144 @@ const addToCart = async (item: MenuItem) => {
     return;
   }
 
+  // Verificar si es de otro restaurante
   if (cartStore.restaurantId && cartStore.restaurantId !== restaurantId.value) {
     if (confirm(`Tu carrito contiene elementos de "${cartStore.restaurantName}". ¿Deseas vaciarlo para pedir de "${restaurant.value?.name}"?`)) {
-      cartStore.clearCart()
+      await cartStore.clearCart();
+      localCartItems.value = [];
     } else {
-      return
+      return;
     }
   }
 
-  const cartItem = {
+  // Calcular precio con ofertas
+  const offer = getApplicableOffer(item);
+  const finalPrice = offer ? calculateDiscountedPrice(item) : realPrice;
+
+  // Verificar si el item ya existe en el carrito local
+  const existingItemIndex = localCartItems.value.findIndex(cartItem => cartItem.id === item.id);
+  
+  if (existingItemIndex !== -1) {
+    // Incrementar cantidad
+    localCartItems.value[existingItemIndex].quantity += 1;
+  } else {
+    // Agregar nuevo item
+    const newCartItem: LocalCartItem = {
+      id: item.id,
+      productId: item.id,
+      name: item.name || 'Producto',
+      price: finalPrice,
+      originalPrice: realPrice,
+      imageUrl: item.imageUrl || '',
+      restaurantId: restaurantId.value || 0,
+      restaurantName: restaurant.value?.name || '',
+      categoryId: item.categoryId || 0,
+      isAvailable: true,
+      description: item.description || '',
+      businessId: restaurant.value?.businessId || restaurantId.value || 0,
+      businessName: restaurant.value?.name || '',
+      quantity: 1,
+      appliedOffer: offer || undefined
+    };
+    
+    localCartItems.value.push(newCartItem);
+  }
+  
+  // Recalcular precios después de agregar
+  recalculateCartPrices();
+  
+  // Sincronizar con el store (sin await para evitar lentitud)
+  syncToStore();
+};
+
+// Función para sincronizar al store (llamada sin await)
+const syncToStore = (): void => {
+  // Convertir items locales al formato del store
+  const storeItems = localCartItems.value.map(item => ({
     id: item.id,
-    productId: item.id,
-    name: item.name || 'Producto',
-    price: realPrice,
-    imageUrl: item.imageUrl || '',
-    restaurantId: restaurantId.value || 0,
-    restaurantName: restaurant.value?.name || '',
-    categoryId: item.categoryId || 0,
-    isAvailable: true,
-    description: item.description || '',
-    businessId: restaurant.value?.businessId || restaurantId.value || 0,
-    businessName: restaurant.value?.name || '',
-    quantity: 1
-  }
+    productId: item.productId,
+    name: item.name,
+    price: item.price, // Usar precio con descuento
+    imageUrl: item.imageUrl,
+    restaurantId: item.restaurantId,
+    restaurantName: item.restaurantName,
+    categoryId: item.categoryId,
+    isAvailable: item.isAvailable,
+    description: item.description,
+    businessId: item.businessId,
+    businessName: item.businessName,
+    quantity: item.quantity
+  }));
+  
+  // Actualizar store sin esperar
+  cartStore.$patch({
+    items: storeItems,
+    restaurantId: restaurantId.value,
+    restaurantName: restaurant.value?.name || ''
+  });
+};
 
-  try {
-    const success = await cartStore.addToCart(cartItem, 1);
-    if (!success) {
-      alert(cartStore.error || 'No se pudo agregar el producto al carrito.');
-    }
-  } catch (exceptionError) {
-    alert('Ocurrió un error al agregar el producto al carrito.');
+const incrementItem = (itemId: number): void => {
+  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId);
+  if (itemIndex !== -1) {
+    localCartItems.value[itemIndex].quantity += 1;
+    recalculateCartPrices();
+    syncToStore();
   }
-}
+};
 
-const incrementItem = async (itemId: number) => {
-  const item = cartItems.value.find(item => item.id === itemId)
-  if (item) {
-    await cartStore.updateQuantity(itemId, safeNumber(item.quantity) + 1)
-  }
-}
-
-const decrementItem = async (itemId: number) => {
-  const item = cartItems.value.find(item => item.id === itemId)
-  if (item) {
-    const currentQuantity = safeNumber(item.quantity);
-    if (currentQuantity > 1) {
-      await cartStore.updateQuantity(itemId, currentQuantity - 1)
+const decrementItem = (itemId: number): void => {
+  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId);
+  if (itemIndex !== -1) {
+    if (localCartItems.value[itemIndex].quantity > 1) {
+      localCartItems.value[itemIndex].quantity -= 1;
+      recalculateCartPrices();
+      syncToStore();
     } else {
-      cartStore.removeItem(itemId)
+      removeItem(itemId);
     }
   }
-}
+};
 
-const removeItem = (itemId: number) => {
-  cartStore.removeItem(itemId)
-}
-
-const clearCart = () => {
-  if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
-    cartStore.clearCart()
+const removeItem = (itemId: number): void => {
+  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId);
+  if (itemIndex !== -1) {
+    localCartItems.value.splice(itemIndex, 1);
+    recalculateCartPrices();
+    syncToStore();
   }
-}
+};
 
-const proceedToCheckout = () => {
+const clearCart = (): void => {
+  if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
+    localCartItems.value = [];
+    cartStore.clearCart();
+  }
+};
+
+const proceedToCheckout = (): void => {
   if (!authStore.isAuthenticated) {
     alert('Por favor, inicia sesión para continuar con tu pedido.');
     router.push('/login');
     return;
   }
 
-  if (cartItems.value.length === 0) {
+  if (localCartItems.value.length === 0) {
     alert('Tu carrito está vacío. Agrega productos antes de continuar.');
     return;
   }
 
+  // Sincronizar una última vez antes del checkout
+  syncToStore();
   router.push('/checkout');
-}
+};
+
+// Watcher para recalcular cuando cambien las ofertas
+watch(activeOffers, () => {
+  if (localCartItems.value.length > 0) {
+    recalculateCartPrices();
+  }
+}, { deep: true });
 
 // Handler para cambio de ruta
 watch(() => route.params.id, (newId, oldId) => {
@@ -668,7 +946,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Hero section limpio - solo foto
+// Hero section limpio
 .restaurant-hero {
   position: relative;
   background-size: cover;
@@ -902,6 +1180,39 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
+// Debug section para ofertas
+.offers-debug {
+  background: rgba(100, 116, 139, 0.1);
+  border: 2px solid rgba(100, 116, 139, 0.3);
+  border-radius: 15px;
+  padding: 1.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+
+  &__text {
+    color: $text-secondary;
+    font-weight: 600;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+  }
+}
+
+// Sección vacía de ofertas
+.offers-empty {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(100, 116, 139, 0.05);
+  border-radius: 15px;
+  border: 2px dashed rgba(100, 116, 139, 0.2);
+
+  &__text {
+    color: $text-secondary;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+  }
+}
+
 .offers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -996,7 +1307,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Category filters elegantes (que filtran en lugar de scroll)
+// Category filters elegantes
 .category-filters {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
   backdrop-filter: blur(20px);
@@ -1117,7 +1428,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Menu items con hover sutil y border naranja grueso
+// Menu items con ofertas visibles
 .menu-items {
   display: grid;
   gap: 1.5rem;
@@ -1139,9 +1450,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   &:hover {
     transform: translateY(-2px);
     box-shadow: $shadow-medium;
-    // Fondo casi blanco con un pelin de color transparente
     background: rgba(255, 248, 245, 0.95);
-    // Border grueso con gradiente naranja
     border: 4px solid;
     border-image: linear-gradient(135deg, #FF8A00, #FFC837, #FF6B35) 1;
 
@@ -1154,8 +1463,8 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
       transform: scale(1.03);
     }
 
-    // Los precios se mantienen visibles con mejor contraste
-    .menu-item__price {
+    .menu-item__price,
+    .menu-item__price-discounted {
       text-shadow: 0 2px 8px rgba(255, 138, 0, 0.3);
       transform: scale(1.02);
     }
@@ -1185,6 +1494,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 
   &__price-wrapper {
     flex-shrink: 0;
+    text-align: right;
   }
 
   &__price {
@@ -1197,11 +1507,86 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: $transition;
   }
 
+  // Precios con ofertas - MÁS VISIBLES
+  &__price-with-offer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  &__offer-badge {
+    background: $success-gradient;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: $shadow-soft;
+    position: absolute;
+    top: -15px;
+    right: -10px;
+    transform: rotate(-8deg);
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+
+    @keyframes pulse {
+      0%, 100% { transform: rotate(-8deg) scale(1); }
+      50% { transform: rotate(-8deg) scale(1.05); }
+    }
+  }
+
+  &__price-original {
+    font-size: 1rem;
+    color: $text-secondary;
+    text-decoration: line-through;
+    font-weight: 500;
+    margin-top: 20px; // Espacio para el badge
+  }
+
+  &__price-discounted {
+    font-size: 1.6rem;
+    font-weight: 900;
+    background: $success-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: $transition;
+    text-shadow: 0 2px 8px rgba(6, 193, 103, 0.3);
+  }
+
   &__description {
     color: $text-secondary;
     line-height: 1.6;
     margin: 0;
     flex: 1;
+  }
+
+  // Información de ofertas
+  &__offer-info {
+    background: linear-gradient(135deg, rgba(6, 193, 103, 0.05), rgba(4, 166, 83, 0.05));
+    border: 1px solid rgba(6, 193, 103, 0.2);
+    border-radius: 12px;
+    padding: 0.75rem;
+  }
+
+  &__offer-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__offer-name {
+    font-weight: 700;
+    color: #059669;
+    font-size: 0.85rem;
+  }
+
+  &__offer-desc {
+    color: $text-secondary;
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
 
   &__tags {
@@ -1299,6 +1684,37 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     }
   }
 
+  &--has-offer {
+    border: 3px solid;
+    border-image: $success-gradient 1;
+    background: linear-gradient(135deg, rgba(6, 193, 103, 0.02), rgba(4, 166, 83, 0.05));
+    position: relative;
+
+    &::before {
+      content: '🎉';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      background: $success-gradient;
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      border: 3px solid white;
+      box-shadow: $shadow-medium;
+      z-index: 2;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(6, 193, 103, 0.05), rgba(4, 166, 83, 0.08));
+      border-width: 4px;
+    }
+  }
+
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 1rem;
@@ -1310,7 +1726,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Cart sidebar elegante y estático (sin animaciones molestas)
+// Cart sidebar optimizado
 .cart-sidebar {
   position: sticky;
   top: 120px;
@@ -1474,6 +1890,11 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     font-size: 0.9rem;
     color: $text-secondary;
 
+    &--savings {
+      color: #059669;
+      font-weight: 700;
+    }
+
     &--total {
       font-size: 1.2rem;
       font-weight: 800;
@@ -1526,7 +1947,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Cart items elegantes y estáticos
+// Cart items con ofertas aplicadas
 .cart-item {
   display: flex;
   align-items: center;
@@ -1595,6 +2016,29 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     font-size: 0.95rem;
   }
 
+  // Oferta aplicada en el carrito
+  &__offer-applied {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__offer-tag {
+    background: $success-gradient;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  &__offer-name {
+    color: #059669;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
   &__actions {
     margin-top: 0.25rem;
   }
@@ -1620,6 +2064,25 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 
   &__price-info {
     text-align: right;
+  }
+
+  &__price-with-discount {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+
+  &__original-price {
+    font-size: 0.75rem;
+    color: $text-secondary;
+    text-decoration: line-through;
+  }
+
+  &__discounted-price {
+    font-weight: 700;
+    color: #059669;
+    font-size: 0.9rem;
   }
 
   &__unit-price {
@@ -1722,7 +2185,8 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
       font-size: 1.1rem;
     }
     
-    &__price {
+    &__price,
+    &__price-discounted {
       font-size: 1.2rem;
     }
   }
