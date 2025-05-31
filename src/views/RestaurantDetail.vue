@@ -1568,6 +1568,8 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   &__empty-icon {
     color: $text-secondary;
     margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
   }
 
   &__empty-title {
