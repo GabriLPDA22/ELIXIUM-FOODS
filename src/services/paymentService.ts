@@ -1,315 +1,208 @@
 // src/services/paymentService.ts
-import { api } from '@/services/api'
-
-export enum PaymentStatus {
-  PENDING = 'Pending',
-  PROCESSING = 'Processing',
-  COMPLETED = 'Completed',
-  FAILED = 'Failed',
-  REFUNDED = 'Refunded',
-  CANCELLED = 'Cancelled'
-}
+import api from './api';
 
 export enum PaymentMethod {
   CARD = 'card',
   PAYPAL = 'paypal',
-  CASH = 'cash',
-  WALLET = 'wallet'
+  WALLET = 'wallet',
+  CASH = 'cash'
 }
 
 export interface PaymentMethodInfo {
-  id: number
-  type: PaymentMethod
-  name: string
-  cardType?: 'visa' | 'mastercard' | 'amex' | 'generic'
-  last4?: string
-  expiryMonth?: number
-  expiryYear?: number
-  isDefault: boolean
-  createdAt: string
+  id: number;
+  name: string;
+  type: PaymentMethod;
+  cardType?: string;
+  last4?: string;
+  expiryMonth?: number;
+  expiryYear?: number;
+  isDefault: boolean;
+  createdAt: string;
 }
 
-export interface PaymentRequest {
-  orderId: number
-  paymentMethodId: number
-  amount: number
-}
-
-export interface PaymentResponse {
-  id: number
-  orderId: number
-  amount: number
-  status: PaymentStatus
-  paymentMethod: PaymentMethod
-  transactionId?: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface RefundRequest {
-  paymentId: number
-  amount?: number // Si no se especifica, se reembolsa el total
-  reason: string
-}
-
-export interface RefundResponse {
-  id: number
-  paymentId: number
-  amount: number
-  status: PaymentStatus
-  reason: string
-  createdAt: string
+export interface CreatePaymentMethodRequest {
+  name: string;
+  type: string;
+  cardNumber?: string;
+  expiryDate?: string;
+  cvv?: string;
+  cardholderName?: string;
+  paypalEmail?: string;
+  isDefault: boolean;
 }
 
 class PaymentService {
-  /**
-   * Obtener métodos de pago del usuario
-   */
+  private basePath = '/api/payment-methods';
+
   async getUserPaymentMethods(): Promise<PaymentMethodInfo[]> {
     try {
-      const response = await api.get('/api/PaymentMethods')
-      return response.data
+      // Simulación de datos - reemplazar con llamada real al backend
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve([
+            {
+              id: 1,
+              name: 'Tarjeta personal',
+              type: PaymentMethod.CARD,
+              cardType: 'visa',
+              last4: '1234',
+              expiryMonth: 12,
+              expiryYear: 2025,
+              isDefault: true,
+              createdAt: '2024-01-15T10:00:00Z'
+            },
+            {
+              id: 2,
+              name: 'PayPal personal',
+              type: PaymentMethod.PAYPAL,
+              isDefault: false,
+              createdAt: '2024-02-20T14:30:00Z'
+            }
+          ]);
+        }, 1000);
+      });
+
+      // Implementación real comentada:
+      /*
+      const response = await api.get(this.basePath);
+      return response.data;
+      */
     } catch (error) {
-      console.error('Error fetching payment methods:', error)
-
-      // Datos simulados para desarrollo
-      return this.generateMockPaymentMethods()
+      console.error('Error fetching payment methods:', error);
+      throw new Error('No se pudieron cargar los métodos de pago');
     }
   }
 
-  /**
-   * Añadir nuevo método de pago
-   */
-  async addPaymentMethod(paymentMethodData: any): Promise<PaymentMethodInfo> {
+  async addPaymentMethod(data: CreatePaymentMethodRequest): Promise<PaymentMethodInfo> {
     try {
-      const response = await api.post('/api/PaymentMethods', paymentMethodData)
-      return response.data
-    } catch (error: any) {
-      console.error('Error adding payment method:', error)
-      throw new Error(error.response?.data?.message || 'Error al añadir método de pago')
-    }
-  }
+      // Simulación - reemplazar con llamada real
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const newMethod: PaymentMethodInfo = {
+            id: Date.now(),
+            name: data.name,
+            type: data.type as PaymentMethod,
+            cardType: data.cardNumber ? this.detectCardType(data.cardNumber) : undefined,
+            last4: data.cardNumber ? data.cardNumber.slice(-4) : undefined,
+            expiryMonth: data.expiryDate ? parseInt(data.expiryDate.split('/')[0]) : undefined,
+            expiryYear: data.expiryDate ? parseInt('20' + data.expiryDate.split('/')[1]) : undefined,
+            isDefault: data.isDefault,
+            createdAt: new Date().toISOString()
+          };
+          resolve(newMethod);
+        }, 1000);
+      });
 
-  /**
-   * Eliminar método de pago
-   */
-  async deletePaymentMethod(paymentMethodId: number): Promise<boolean> {
-    try {
-      await api.delete(`/api/PaymentMethods/${paymentMethodId}`)
-      return true
+      // Implementación real comentada:
+      /*
+      const response = await api.post(this.basePath, data);
+      return response.data;
+      */
     } catch (error) {
-      console.error('Error deleting payment method:', error)
-      return false
+      console.error('Error adding payment method:', error);
+      throw new Error('No se pudo agregar el método de pago');
     }
   }
 
-  /**
-   * Establecer método de pago como predeterminado
-   */
-  async setDefaultPaymentMethod(paymentMethodId: number): Promise<boolean> {
+  async setDefaultPaymentMethod(id: number): Promise<boolean> {
     try {
-      await api.put(`/api/PaymentMethods/${paymentMethodId}/default`)
-      return true
+      // Simulación - reemplazar con llamada real
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(true);
+        }, 500);
+      });
+
+      // Implementación real comentada:
+      /*
+      await api.patch(`${this.basePath}/${id}/default`);
+      return true;
+      */
     } catch (error) {
-      console.error('Error setting default payment method:', error)
-      return false
+      console.error('Error setting default payment method:', error);
+      return false;
     }
   }
 
-  /**
-   * Procesar pago
-   */
-  async processPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
+  async deletePaymentMethod(id: number): Promise<boolean> {
     try {
-      const response = await api.post('/api/Payments', paymentRequest)
-      return response.data
-    } catch (error: any) {
-      console.error('Error processing payment:', error)
-      throw new Error(error.response?.data?.message || 'Error al procesar el pago')
-    }
-  }
+      // Simulación - reemplazar con llamada real
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(true);
+        }, 1000);
+      });
 
-  /**
-   * Obtener información de un pago
-   */
-  async getPaymentById(paymentId: number): Promise<PaymentResponse> {
-    try {
-      const response = await api.get(`/api/Payments/${paymentId}`)
-      return response.data
+      // Implementación real comentada:
+      /*
+      await api.delete(`${this.basePath}/${id}`);
+      return true;
+      */
     } catch (error) {
-      console.error('Error fetching payment:', error)
-      throw new Error('Error al obtener información del pago')
+      console.error('Error deleting payment method:', error);
+      return false;
     }
   }
 
-  /**
-   * Obtener pagos de un pedido
-   */
-  async getPaymentsByOrder(orderId: number): Promise<PaymentResponse[]> {
-    try {
-      const response = await api.get(`/api/Orders/${orderId}/payments`)
-      return response.data
-    } catch (error) {
-      console.error('Error fetching order payments:', error)
-      return []
-    }
-  }
-
-  /**
-   * Reembolsar pago
-   */
-  async refundPayment(refundRequest: RefundRequest): Promise<RefundResponse> {
-    try {
-      const response = await api.post('/api/Payments/refund', refundRequest)
-      return response.data
-    } catch (error: any) {
-      console.error('Error processing refund:', error)
-      throw new Error(error.response?.data?.message || 'Error al procesar el reembolso')
-    }
-  }
-
-  /**
-   * Obtener historial de pagos del usuario
-   */
-  async getUserPaymentHistory(): Promise<PaymentResponse[]> {
-    try {
-      const response = await api.get('/api/Payments/user')
-      return response.data
-    } catch (error) {
-      console.error('Error fetching payment history:', error)
-      return []
-    }
-  }
-
-  /**
-   * Validar método de pago
-   */
-  async validatePaymentMethod(paymentMethodId: number): Promise<boolean> {
-    try {
-      const response = await api.post(`/api/PaymentMethods/${paymentMethodId}/validate`)
-      return response.data.isValid
-    } catch (error) {
-      console.error('Error validating payment method:', error)
-      return false
-    }
-  }
-
-  /**
-   * Calcular fees de pago
-   */
-  async calculatePaymentFees(amount: number, paymentMethod: PaymentMethod): Promise<number> {
-    try {
-      const response = await api.get(`/api/Payments/fees?amount=${amount}&method=${paymentMethod}`)
-      return response.data.fees
-    } catch (error) {
-      console.error('Error calculating payment fees:', error)
-
-      // Fees simulados
-      switch (paymentMethod) {
-        case PaymentMethod.CARD:
-          return amount * 0.029 // 2.9%
-        case PaymentMethod.PAYPAL:
-          return amount * 0.034 // 3.4%
-        default:
-          return 0
-      }
-    }
-  }
-
-  /**
-   * Generar métodos de pago simulados para desarrollo
-   */
-  private generateMockPaymentMethods(): PaymentMethodInfo[] {
-    return [
-      {
-        id: 1,
-        type: PaymentMethod.CARD,
-        name: '**** 1234',
-        cardType: 'visa',
-        last4: '1234',
-        expiryMonth: 12,
-        expiryYear: 2028,
-        isDefault: true,
-        createdAt: '2024-01-01T00:00:00Z'
-      },
-      {
-        id: 2,
-        type: PaymentMethod.CARD,
-        name: '**** 5678',
-        cardType: 'mastercard',
-        last4: '5678',
-        expiryMonth: 8,
-        expiryYear: 2027,
-        isDefault: false,
-        createdAt: '2024-01-15T00:00:00Z'
-      },
-      {
-        id: 3,
-        type: PaymentMethod.PAYPAL,
-        name: 'PayPal (usuario@email.com)',
-        isDefault: false,
-        createdAt: '2024-02-01T00:00:00Z'
-      }
-    ]
-  }
-
-  /**
-   * Obtener el nombre amigable del tipo de tarjeta
-   */
-  getCardTypeName(cardType: string): string {
-    switch (cardType) {
-      case 'visa':
-        return 'Visa'
-      case 'mastercard':
-        return 'Mastercard'
-      case 'amex':
-        return 'American Express'
-      default:
-        return 'Tarjeta'
-    }
-  }
-
-  /**
-   * Obtener el texto del estado de pago
-   */
-  getPaymentStatusText(status: PaymentStatus): string {
-    switch (status) {
-      case PaymentStatus.PENDING:
-        return 'Pendiente'
-      case PaymentStatus.PROCESSING:
-        return 'Procesando'
-      case PaymentStatus.COMPLETED:
-        return 'Completado'
-      case PaymentStatus.FAILED:
-        return 'Fallido'
-      case PaymentStatus.REFUNDED:
-        return 'Reembolsado'
-      case PaymentStatus.CANCELLED:
-        return 'Cancelado'
-      default:
-        return status
-    }
-  }
-
-  /**
-   * Formatear número de tarjeta
-   */
   formatCardNumber(cardNumber: string): string {
-    return cardNumber.replace(/(.{4})/g, '$1 ').trim()
+    // Remover espacios y caracteres no numéricos
+    const cleaned = cardNumber.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+
+    // Formatear en grupos de 4
+    const groups = cleaned.match(/.{1,4}/g) || [];
+    return groups.join(' ').slice(0, 19); // Máximo 16 dígitos + 3 espacios
   }
 
-  /**
-   * Detectar tipo de tarjeta por número
-   */
-  detectCardType(cardNumber: string): 'visa' | 'mastercard' | 'amex' | 'generic' {
-    const number = cardNumber.replace(/\s/g, '')
+  detectCardType(cardNumber: string): string {
+    const cleaned = cardNumber.replace(/\s+/g, '');
 
-    if (number.startsWith('4')) return 'visa'
-    if (number.startsWith('5') || number.startsWith('2')) return 'mastercard'
-    if (number.startsWith('3')) return 'amex'
+    if (cleaned.match(/^4[0-9]{12}(?:[0-9]{3})?$/)) {
+      return 'visa';
+    } else if (cleaned.match(/^5[1-5][0-9]{14}$/)) {
+      return 'mastercard';
+    } else if (cleaned.match(/^3[47][0-9]{13}$/)) {
+      return 'amex';
+    }
 
-    return 'generic'
+    return 'generic';
+  }
+
+  getCardTypeName(cardType: string): string {
+    const types: Record<string, string> = {
+      visa: 'Visa',
+      mastercard: 'Mastercard',
+      amex: 'American Express',
+      generic: 'Tarjeta'
+    };
+    return types[cardType] || 'Tarjeta';
+  }
+
+  validateCardNumber(cardNumber: string): boolean {
+    const cleaned = cardNumber.replace(/\s+/g, '');
+    return /^[0-9]{13,19}$/.test(cleaned);
+  }
+
+  validateExpiryDate(expiryDate: string): boolean {
+    if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+      return false;
+    }
+
+    const [month, year] = expiryDate.split('/').map(Number);
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100;
+    const currentMonth = currentDate.getMonth() + 1;
+
+    if (month < 1 || month > 12) {
+      return false;
+    }
+
+    if (year < currentYear || (year === currentYear && month < currentMonth)) {
+      return false;
+    }
+
+    return true;
   }
 }
 
-export const paymentService = new PaymentService()
+export const paymentService = new PaymentService();
+export default paymentService;

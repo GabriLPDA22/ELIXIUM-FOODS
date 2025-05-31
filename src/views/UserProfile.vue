@@ -30,6 +30,11 @@
             <AddressList @update="handleAddressesUpdate" />
           </div>
 
+          <!-- Métodos de pago -->
+          <div v-if="activeTab === 'payment-methods'" class="profile-panel">
+            <PaymentMethodsList @update="handlePaymentMethodsUpdate" />
+          </div>
+
           <!-- Historial de pedidos -->
           <div v-if="activeTab === 'orders'" class="profile-panel">
             <div v-if="loadingOrders" class="loading-orders">
@@ -54,12 +59,8 @@
             <div v-else class="orders-list">
               <h3 class="orders-section-title">Tus pedidos recientes</h3>
               <div class="orders-grid">
-                <div
-                  v-for="order in userOrders.slice(0, 5)"
-                  :key="order.id"
-                  class="order-card"
-                  @click="$router.push(`/orders/${order.id}`)"
-                >
+                <div v-for="order in userOrders.slice(0, 5)" :key="order.id" class="order-card"
+                     @click="$router.push(`/orders/${order.id}`)">
                   <div class="order-card__header">
                     <div class="order-card__restaurant">{{ order.restaurantName }}</div>
                     <div class="order-card__status" :class="getOrderStatusClass(order.status)">
@@ -68,12 +69,8 @@
                   </div>
 
                   <div class="order-card__items">
-                    <div class="order-card__items-count">
-                      {{ order.orderItems?.length || 0 }} productos
-                    </div>
-                    <div class="order-card__date">
-                      {{ formatOrderDate(order.createdAt) }}
-                    </div>
+                    <div class="order-card__items-count">{{ order.orderItems?.length || 0 }} productos</div>
+                    <div class="order-card__date">{{ formatOrderDate(order.createdAt) }}</div>
                   </div>
 
                   <div class="order-card__footer">
@@ -108,8 +105,6 @@
                   Cambiar contraseña
                 </button>
               </div>
-
-              <!-- Más configuraciones pueden ir aquí -->
             </div>
           </div>
         </div>
@@ -123,8 +118,7 @@
         <div class="modal__header">
           <h3>Cambiar contraseña</h3>
           <button class="modal__close" @click="showPasswordModal = false">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -133,8 +127,7 @@
         <div class="modal__body">
           <form @submit.prevent="changePassword" class="password-form">
             <div v-if="passwordError" class="password-form__error">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="8" x2="12" y2="12"></line>
                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -143,8 +136,7 @@
             </div>
 
             <div v-if="passwordSuccess" class="password-form__success">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
@@ -154,32 +146,28 @@
             <div class="password-form__field">
               <label for="currentPassword">Contraseña actual</label>
               <input type="password" id="currentPassword" v-model="passwordForm.currentPassword"
-                placeholder="Ingresa tu contraseña actual" required />
+                     placeholder="Ingresa tu contraseña actual" required />
             </div>
 
             <div class="password-form__field">
               <label for="newPassword">Nueva contraseña</label>
               <input type="password" id="newPassword" v-model="passwordForm.newPassword"
-                placeholder="Ingresa tu nueva contraseña" required minlength="8" />
-              <div class="password-form__hint">
-                La contraseña debe tener al menos 8 caracteres
-              </div>
+                     placeholder="Ingresa tu nueva contraseña" required minlength="8" />
+              <div class="field-hint">La contraseña debe tener al menos 8 caracteres</div>
             </div>
 
             <div class="password-form__field">
               <label for="confirmPassword">Confirmar nueva contraseña</label>
               <input type="password" id="confirmPassword" v-model="passwordForm.confirmPassword"
-                placeholder="Confirma tu nueva contraseña" required />
+                     placeholder="Confirma tu nueva contraseña" required />
             </div>
 
             <div class="password-form__actions">
-              <button type="button" class="password-form__button password-form__button--cancel"
-                @click="showPasswordModal = false">
+              <button type="button" class="form-button form-button--cancel" @click="showPasswordModal = false">
                 Cancelar
               </button>
-              <button type="submit" class="password-form__button password-form__button--save"
-                :disabled="passwordLoading">
-                <div v-if="passwordLoading" class="password-form__spinner"></div>
+              <button type="submit" class="form-button form-button--save" :disabled="passwordLoading">
+                <div v-if="passwordLoading" class="button-spinner"></div>
                 <span v-else>Guardar</span>
               </button>
             </div>
@@ -195,17 +183,18 @@ import { ref, reactive, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useOrderStore } from '@/stores/orderStore';
 import ProfileHeader from '@/components/feature/profile/ProfileHeader.vue';
-import UserInfo from '@/components/feature/profile/UserInfo.vue'; // Componente que probablemente llama a /api/Users/me
+import UserInfo from '@/components/feature/profile/UserInfo.vue';
 import AddressList from '@/components/feature/profile/AddressList.vue';
-import userService, { type UserProfile } from '@/services/userService'; // UserProfile podría tener más campos que User de authStore
-import { OrderStatus } from '@/services/orderService'; // Asegúrate que este enum/objeto exista
-import type { OrderResponse } from '@/services/orderService'; // Asegúrate que esta interfaz exista
+import PaymentMethodsList from '@/components/feature/profile/PaymentMethodsList.vue';
+import userService, { type UserProfile } from '@/services/userService';
+import { OrderStatus } from '@/services/orderService';
+import type { OrderResponse } from '@/services/orderService';
 
 const authStore = useAuthStore();
 const orderStore = useOrderStore();
 
-// Estado
-const activeTab = ref('info'); // Por defecto, mostrar la pestaña de información
+// Estado general
+const activeTab = ref('info');
 const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const passwordError = ref('');
@@ -216,7 +205,7 @@ const userOrders = ref<OrderResponse[]>([]);
 const loadingOrders = ref(false);
 const ordersError = ref('');
 
-// Formulario de contraseña
+// Formularios
 const passwordForm = reactive({
   currentPassword: '',
   newPassword: '',
@@ -236,10 +225,14 @@ const tabs = [
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
   },
   {
+    id: 'payment-methods',
+    label: 'Métodos de pago',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>'
+  },
+  {
     id: 'orders',
     label: 'Pedidos',
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10 5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>'
-    // Otra opción de icono para pedidos: <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path>
   },
   {
     id: 'settings',
@@ -248,46 +241,41 @@ const tabs = [
   }
 ];
 
-// Información del usuario (datos que UserInfo.vue podría llenar/usar)
+// Información del usuario
 const userInfo = reactive<UserProfile>({
-  id: authStore.user?.id || 0, // Inicializar con ID del authStore si existe
+  id: authStore.user?.id || 0,
   firstName: authStore.user?.firstName || '',
   lastName: authStore.user?.lastName || '',
   email: authStore.user?.email || '',
-  phoneNumber: (authStore.user as any)?.phoneNumber || '', // phoneNumber no está en la interfaz User de authStore
-  birthdate: '', // Estos campos probablemente los llena UserInfo.vue
+  phoneNumber: (authStore.user as any)?.phoneNumber || '',
+  birthdate: '',
   bio: '',
   dietaryPreferences: [],
-  photoURL: authStore.user?.photoURL || '', // Usar photoURL del authStore
+  photoURL: authStore.user?.photoURL || '',
 });
 
-// Métodos
-const loadUserData = () => {
-  // Esta función ahora principalmente inicializa con datos del authStore.
-  // El componente UserInfo.vue es el que probablemente hace la llamada a /api/Auth/me
-  if (authStore.user) {
-    userInfo.id = authStore.user.id;
-    userInfo.firstName = authStore.user.firstName;
-    userInfo.lastName = authStore.user.lastName;
-    userInfo.email = authStore.user.email;
-    // El campo phoneNumber no está en la interfaz User de auth.ts.
-    // Si tu backend lo devuelve en el login/google-login y lo guardas en authStore.user, necesitas añadirlo a la interfaz User en auth.ts.
-    userInfo.phoneNumber = (authStore.user as any)?.phoneNumber || '';
-    userInfo.photoURL = authStore.user.photoURL || ''; // Usar la photoURL del authStore
-  }
-  // Nota: La llamada a /api/Users/me (que debería ser /api/Auth/me)
-  // parece estar ocurriendo en UserInfo.vue según los logs.
-};
-
+// Métodos de gestión de pestañas
 const handleTabChange = async (tabId: string) => {
-  activeTab.value = tabId; // Asegurar que activeTab se actualice primero
+  activeTab.value = tabId;
+
   if (tabId === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
     await loadUserOrders();
   }
 };
 
+// Métodos de carga de datos
+const loadUserData = () => {
+  if (authStore.user) {
+    userInfo.id = authStore.user.id;
+    userInfo.firstName = authStore.user.firstName;
+    userInfo.lastName = authStore.user.lastName;
+    userInfo.email = authStore.user.email;
+    userInfo.phoneNumber = (authStore.user as any)?.phoneNumber || '';
+    userInfo.photoURL = authStore.user.photoURL || '';
+  }
+};
+
 const loadUserOrders = async () => {
-  // Corregido: acceder a isAuthenticated como propiedad
   if (!authStore.isAuthenticated) {
     console.log("Usuario no autenticado, no se cargarán los pedidos.");
     return;
@@ -296,10 +284,8 @@ const loadUserOrders = async () => {
   try {
     loadingOrders.value = true;
     ordersError.value = '';
-
-    // Asumimos que fetchOrders usa el token del authStore (configurado en api.ts)
     await orderStore.fetchOrders();
-    userOrders.value = orderStore.orderHistory; // Asumiendo que orderStore.orderHistory tiene los pedidos
+    userOrders.value = orderStore.orderHistory;
   } catch (error: any) {
     console.error('Error loading user orders:', error);
     ordersError.value = error.response?.data?.message || error.message || 'No se pudieron cargar los pedidos.';
@@ -308,6 +294,12 @@ const loadUserOrders = async () => {
   }
 };
 
+// Métodos de gestión de métodos de pago
+const handlePaymentMethodsUpdate = () => {
+  console.log('Lista de métodos de pago actualizada');
+};
+
+// Métodos de gestión de pedidos
 const getOrderStatusClass = (status: OrderStatus | string): string => {
   switch (status) {
     case OrderStatus.DELIVERED:
@@ -326,7 +318,6 @@ const getOrderStatusClass = (status: OrderStatus | string): string => {
 };
 
 const getOrderStatusText = (status: OrderStatus | string): string => {
-  // Este mapeo puede ser más extenso o venir de una configuración
   const statusMap: Record<string, string> = {
     [OrderStatus.PENDING]: 'Pendiente',
     [OrderStatus.ACCEPTED]: 'Aceptado',
@@ -341,17 +332,18 @@ const getOrderStatusText = (status: OrderStatus | string): string => {
 
 const formatOrderDate = (dateString?: string): string => {
   if (!dateString) return 'Fecha desconocida';
+
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Fecha inválida'; // Comprobar si la fecha es válida
+    if (isNaN(date.getTime())) return 'Fecha inválida';
 
     const now = new Date();
     const diffTime = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffTime < 0) { // Si la fecha es futura (ej. pedido programado)
-        return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) +
-               ` a las ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    if (diffTime < 0) {
+      return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) +
+             ` a las ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
     }
 
     if (diffDays === 0) {
@@ -364,47 +356,36 @@ const formatOrderDate = (dateString?: string): string => {
       return date.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: 'short',
-        year: (now.getFullYear() !== date.getFullYear()) ? 'numeric' : undefined // Mostrar año solo si es diferente al actual
+        year: (now.getFullYear() !== date.getFullYear()) ? 'numeric' : undefined
       });
     }
   } catch (e) {
-      console.error("Error formateando fecha:", dateString, e);
-      return dateString; // Devolver original si hay error
+    console.error("Error formateando fecha:", dateString, e);
+    return dateString;
   }
 };
 
-
+// Métodos de gestión de perfil
 const openEditProfileModal = () => {
-  activeTab.value = 'info'; // Asegurarse que la pestaña de info esté activa
-  // Podrías usar un ref en el componente UserInfo y llamar un método para abrir su modal de edición si existe
-  // O emitir un evento que UserInfo escuche.
-  // Por ahora, esto solo cambia la pestaña. La edición real estaría en UserInfo.vue.
+  activeTab.value = 'info';
   console.log("Intentando abrir modal de edición de perfil (lógica en UserInfo.vue)");
-  // Scroll a la sección si es necesario
-  // nextTick(() => {
-  //   document.querySelector('.profile-panel')?.scrollIntoView({ behavior: 'smooth' });
-  // });
 };
 
-// Esta función se llama cuando UserInfo.vue emite un evento 'update'
 const handleUserInfoUpdate = (updatedInfo: UserProfile) => {
-  Object.assign(userInfo, updatedInfo); // Actualizar los datos locales
-  // También podrías querer actualizar authStore.user si los campos coinciden
+  Object.assign(userInfo, updatedInfo);
   if (authStore.user) {
     authStore.user.firstName = updatedInfo.firstName;
     authStore.user.lastName = updatedInfo.lastName;
-    authStore.user.email = updatedInfo.email; // Cuidado si el email se puede cambiar aquí
+    authStore.user.email = updatedInfo.email;
     authStore.user.photoURL = updatedInfo.photoURL;
-    // Si 'phoneNumber' se añade a la interfaz User de auth.ts:
-    // authStore.user.phoneNumber = updatedInfo.phoneNumber;
   }
 };
 
 const handleAddressesUpdate = () => {
-  // Esta función se llamaría si AddressList.vue emite un evento 'update'
-  console.log('Lista de direcciones actualizada (lógica en AddressList.vue)');
+  console.log('Lista de direcciones actualizada');
 };
 
+// Métodos de gestión de contraseña
 const changePassword = async () => {
   passwordError.value = '';
   passwordSuccess.value = '';
@@ -425,13 +406,11 @@ const changePassword = async () => {
   passwordLoading.value = true;
 
   try {
-    // userService.changePassword debería existir y estar implementado
     const response = await userService.changePassword(
       passwordForm.currentPassword,
       passwordForm.newPassword
     );
 
-    // Asumimos que userService.changePassword devuelve un objeto con `success` y `message` o lanza error
     if (response && response.success) {
       passwordSuccess.value = response.message || 'Contraseña actualizada correctamente.';
       passwordForm.currentPassword = '';
@@ -440,14 +419,14 @@ const changePassword = async () => {
 
       setTimeout(() => {
         showPasswordModal.value = false;
-        passwordSuccess.value = ''; // Limpiar mensaje después de cerrar
+        passwordSuccess.value = '';
       }, 2500);
     } else {
-      passwordError.value = response?.message || 'No se pudo actualizar la contraseña. Verifica tu contraseña actual.';
+      passwordError.value = response?.message || 'No se pudo actualizar la contraseña.';
     }
   } catch (err: any) {
     console.error('Error al cambiar contraseña:', err);
-    passwordError.value = err.response?.data?.message || 'Error al conectar con el servidor para cambiar la contraseña.';
+    passwordError.value = err.response?.data?.message || 'Error al conectar con el servidor.';
   } finally {
     passwordLoading.value = false;
   }
@@ -455,8 +434,7 @@ const changePassword = async () => {
 
 // Inicialización
 onMounted(() => {
-  loadUserData(); // Cargar datos iniciales del authStore
-  // Si la pestaña por defecto es 'orders', cargar pedidos
+  loadUserData();
   if (activeTab.value === 'orders') {
     loadUserOrders();
   }
@@ -464,7 +442,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// Variables
+// Variables (las mismas que antes)
 $primary: #FF416C;
 $primary-gradient: linear-gradient(to right, #FF416C, #FF4B2B);
 $secondary: #0652DD;
@@ -478,6 +456,7 @@ $border: #e2e8f0;
 $border-radius: 12px;
 $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 
+// Contenedor y layout principal (igual que antes)
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -605,7 +584,276 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-// Loading orders
+// ===== RESTO DE ESTILOS (Orders, Settings, etc.) =====
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  &__container {
+    position: relative;
+    background-color: white;
+    border-radius: $border-radius;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+
+    &--small {
+      max-width: 450px;
+    }
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid $border;
+
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: $dark;
+    }
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $text-light;
+    transition: $transition;
+
+    &:hover {
+      color: $dark;
+    }
+  }
+
+  &__body {
+    padding: 1.5rem;
+  }
+}
+
+.payment-form {
+  &__error {
+    background-color: rgba(#ef4444, 0.1);
+    color: #ef4444;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  &__field {
+    margin-bottom: 1.5rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: $dark;
+      font-size: 0.95rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid $border;
+      border-radius: 8px;
+      font-size: 1rem;
+      color: $dark;
+      transition: $transition;
+
+      &:focus {
+        outline: none;
+        border-color: $primary;
+        box-shadow: 0 0 0 3px rgba($primary, 0.1);
+      }
+
+      &::placeholder {
+        color: #9ca3af;
+      }
+    }
+
+    &--checkbox {
+      display: flex !important;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+
+      input[type="checkbox"] {
+        width: auto !important;
+        margin: 0;
+        transform: scale(1.2);
+        accent-color: $primary;
+      }
+
+      label {
+        margin: 0 !important;
+        font-weight: 500 !important;
+        cursor: pointer;
+      }
+    }
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+
+    @media (max-width: 576px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+}
+
+.card-section,
+.paypal-section {
+  background: rgba($primary, 0.02);
+  border: 1px solid rgba($primary, 0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  .payment-form__field:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.security-note {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba($accent, 0.1);
+  border: 1px solid rgba($accent, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  color: #cc7600;
+
+  svg {
+    color: $accent;
+    flex-shrink: 0;
+  }
+}
+
+.form-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+
+  &--cancel {
+    background: $light;
+    color: $text;
+    border: 1px solid $border;
+
+    &:hover {
+      background: white;
+      border-color: #cbd5e1;
+    }
+  }
+
+  &--save {
+    background: $primary-gradient;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba($primary, 0.2);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($primary, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+
+  &--delete {
+    background: linear-gradient(45deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(#ef4444, 0.2);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(#ef4444, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+}
+
+.button-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+.confirmation-text {
+  margin: 0 0 2rem;
+  color: $text;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+// ===== RESTO DE ESTILOS (Orders, Settings, etc.) =====
+// Loading orders, orders error, etc...
 .loading-orders,
 .orders-error {
   display: flex;
@@ -867,75 +1115,6 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &__backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-  }
-
-  &__container {
-    position: relative;
-    background-color: white;
-    border-radius: $border-radius;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    z-index: 1001;
-
-    &--small {
-      max-width: 450px;
-    }
-  }
-
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid $border;
-
-    h3 {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: $dark;
-    }
-  }
-
-  &__close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: $text-light;
-    transition: $transition;
-
-    &:hover {
-      color: $dark;
-    }
-  }
-
-  &__body {
-    padding: 1.5rem;
-  }
-}
-
 .password-form {
   &__error {
     background-color: rgba(#ef4444, 0.1);
@@ -989,65 +1168,18 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
     }
   }
 
-  &__hint {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: $text-light;
-  }
-
   &__actions {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 2rem;
   }
+}
 
-  &__button {
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: $transition;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &--cancel {
-      background-color: $light;
-      color: $text;
-      border: 1px solid $border;
-
-      &:hover {
-        background-color: white;
-      }
-    }
-
-    &--save {
-      background: $primary-gradient;
-      color: white;
-      border: none;
-
-      &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba($primary, 0.3);
-      }
-
-      &:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-      }
-    }
-  }
-
-  &__spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s linear infinite;
-  }
+.field-hint {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: $text-light;
 }
 
 @keyframes spin {
