@@ -98,44 +98,6 @@
         </div>
       </section>
 
-      <!-- Ofertas activas del restaurante -->
-      <section class="offers-section">
-        <div class="container">
-          <h2 class="offers-section__title">🔥 Ofertas especiales</h2>
-          
-          <!-- Debug info solo si no hay ofertas -->
-          <div v-if="!activeOffers.length" class="offers-debug">
-            <p class="offers-debug__text">🔍 No hay ofertas activas para este restaurante</p>
-          </div>
-          
-          <div v-if="activeOffers.length > 0" class="offers-grid">
-            <div v-for="offer in activeOffers" :key="offer.id" class="offer-card">
-              <div class="offer-card__badge">
-                <span v-if="offer.discountType === '%'">{{ offer.discountValue }}% OFF</span>
-                <span v-else>${{ offer.discountValue }} OFF</span>
-              </div>
-              <div class="offer-card__content">
-                <h3 class="offer-card__name">{{ offer.name }}</h3>
-                <p class="offer-card__description">{{ offer.description }}</p>
-                <div class="offer-card__conditions">
-                  <span v-if="offer.minimumOrderAmount > 0">Pedido mín: ${{ offer.minimumOrderAmount }}</span>
-                  <span v-if="offer.minimumQuantity > 1">Cant. mín: {{ offer.minimumQuantity }}</span>
-                  <span v-if="offer.usageLimit > 0">{{ Math.max(0, offer.usageLimit - offer.usageCount) }} usos disponibles</span>
-                </div>
-              </div>
-              <div class="offer-card__product" v-if="offer.productName">
-                <span class="offer-card__product-name">{{ offer.productName }}</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Fallback cuando no hay ofertas -->
-          <div v-else class="offers-empty">
-            <p class="offers-empty__text">Pronto tendremos ofertas especiales para ti 🎁</p>
-          </div>
-        </div>
-      </section>
-
       <!-- Category filters -->
       <section class="category-filters">
         <div class="container">
@@ -175,10 +137,9 @@
                 </div>
 
                 <div class="menu-items">
-                  <div v-for="item in filteredMenuItems" :key="item.id" 
-                       :class="['menu-item', { 'menu-item--has-offer': getApplicableOffer(item) }]">
+                  <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item">
                     <div class="menu-item__content">
-                                              <div class="menu-item__header">
+                      <div class="menu-item__header">
                         <h3 class="menu-item__name">{{ item.name || 'Producto' }}</h3>
                         <div class="menu-item__price-wrapper">
                           <!-- Mostrar precio original y con descuento -->
@@ -203,14 +164,6 @@
                       </div>
                       
                       <p v-if="item.description" class="menu-item__description">{{ item.description }}</p>
-                      
-                      <!-- Mostrar ofertas aplicables -->
-                      <div v-if="getApplicableOffer(item)" class="menu-item__offer-info">
-                        <div class="menu-item__offer-details">
-                          <span class="menu-item__offer-name">🎉 {{ getApplicableOffer(item)?.name }}</span>
-                          <span class="menu-item__offer-desc">{{ getApplicableOffer(item)?.description }}</span>
-                        </div>
-                      </div>
                       
                       <div class="menu-item__tags" v-if="item.isVegetarian || item.isSpicy || item.isNew">
                         <span v-if="item.isVegetarian" class="menu-item__tag menu-item__tag--vegetarian">🌱 Vegetariano</span>
@@ -303,15 +256,6 @@
 
                       <div class="cart-item__details">
                         <h4 class="cart-item__name">{{ item.name || 'Producto' }}</h4>
-                        <!-- Mostrar oferta aplicada en el carrito -->
-                        <div v-if="item.appliedOffer" class="cart-item__offer-applied">
-                          <span class="cart-item__offer-tag">
-                            {{ item.appliedOffer.discountType === '%' ? 
-                                `${item.appliedOffer.discountValue}% OFF` : 
-                                `${item.appliedOffer.discountValue} OFF` }}
-                          </span>
-                          <span class="cart-item__offer-name">{{ item.appliedOffer.name }}</span>
-                        </div>
                         <div class="cart-item__actions">
                           <button class="cart-item__remove" @click="removeItem(item.id)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -340,7 +284,7 @@
                       <span>${{ cartTotals.subtotal.toFixed(2) }}</span>
                     </div>
                     <div v-if="cartTotals.totalSavings > 0" class="cart__summary-row cart__summary-row--savings">
-                      <span>🎉 Ahorros por ofertas</span>
+                      <span>Ahorros por ofertas</span>
                       <span>-${{ cartTotals.totalSavings.toFixed(2) }}</span>
                     </div>
                     <div class="cart__summary-row">
@@ -516,7 +460,6 @@ const calculateDiscountedPrice = (product: MenuItem): number => {
   const originalPrice = getProductPrice(product);
   
   if (!offer) {
-    console.log(`💵 Precio sin oferta para ${product.name}: ${originalPrice}`);
     return originalPrice;
   }
   
@@ -524,10 +467,8 @@ const calculateDiscountedPrice = (product: MenuItem): number => {
   
   if (offer.discountType === '%') {
     discountedPrice = originalPrice * (1 - offer.discountValue / 100);
-    console.log(`🎯 Descuento porcentual ${offer.discountValue}%: ${originalPrice} → ${discountedPrice.toFixed(2)}`);
   } else {
     discountedPrice = Math.max(0, originalPrice - offer.discountValue);
-    console.log(`💰 Descuento fijo ${offer.discountValue}: ${originalPrice} → ${discountedPrice.toFixed(2)}`);
   }
   
   return discountedPrice;
@@ -604,11 +545,9 @@ const fetchActiveOffers = async (): Promise<void> => {
       const offers = await response.json();
       activeOffers.value = offers || [];
     } else {
-      console.warn('⚠️ Error del servidor:', response.status);
       activeOffers.value = [];
     }
   } catch (error) {
-    console.error('❌ Error de red:', error);
     activeOffers.value = [];
   }
 };
@@ -658,7 +597,6 @@ const fetchRestaurantData = async (): Promise<void> => {
     syncLocalCart();
 
   } catch (err: any) {
-    console.error('❌ Error al cargar el restaurante:', err)
     error.value = err.message || 'Error al cargar los datos del restaurante'
     restaurant.value = null
   } finally {
@@ -707,7 +645,6 @@ const recalculateCartPrices = (): void => {
 // Función para agregar al carrito (optimizada)
 const addToCart = async (item: MenuItem): Promise<void> => {
   if (!item || !item.id) {
-    console.error('❌ Item inválido');
     return;
   }
 
@@ -1162,151 +1099,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Sección de ofertas espectacular
-.offers-section {
-  background: linear-gradient(135deg, rgba(255, 65, 108, 0.05), rgba(255, 75, 43, 0.05));
-  padding: 3rem 0;
-  border-bottom: 1px solid rgba(255, 65, 108, 0.1);
-
-  &__title {
-    font-size: 2rem;
-    font-weight: 800;
-    text-align: center;
-    margin: 0 0 2rem;
-    background: $primary-gradient;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-}
-
-// Debug section para ofertas
-.offers-debug {
-  background: rgba(100, 116, 139, 0.1);
-  border: 2px solid rgba(100, 116, 139, 0.3);
-  border-radius: 15px;
-  padding: 1.5rem;
-  text-align: center;
-  margin-bottom: 2rem;
-
-  &__text {
-    color: $text-secondary;
-    font-weight: 600;
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
-  }
-}
-
-// Sección vacía de ofertas
-.offers-empty {
-  text-align: center;
-  padding: 2rem;
-  background: rgba(100, 116, 139, 0.05);
-  border-radius: 15px;
-  border: 2px dashed rgba(100, 116, 139, 0.2);
-
-  &__text {
-    color: $text-secondary;
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0;
-  }
-}
-
-.offers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.offer-card {
-  background: white;
-  border-radius: 20px;
-  padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  box-shadow: $shadow-soft;
-  transition: $transition;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: $shadow-elevated;
-    border-color: rgba(255, 65, 108, 0.3);
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    background: $primary-gradient;
-    border-radius: 22px;
-    opacity: 0.1;
-    z-index: -1;
-  }
-
-  &__badge {
-    position: absolute;
-    top: -10px;
-    right: 20px;
-    background: $primary-gradient;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 25px;
-    font-weight: 800;
-    font-size: 0.9rem;
-    box-shadow: $shadow-medium;
-    transform: rotate(-5deg);
-  }
-
-  &__content {
-    margin-top: 1rem;
-  }
-
-  &__name {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 0.5rem;
-  }
-
-  &__description {
-    color: $text-secondary;
-    line-height: 1.5;
-    margin: 0 0 1rem;
-  }
-
-  &__conditions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-
-    span {
-      background: rgba(100, 116, 139, 0.1);
-      color: $text-secondary;
-      padding: 0.25rem 0.75rem;
-      border-radius: 15px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-  }
-
-  &__product {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid $medium-gray;
-  }
-
-  &__product-name {
-    font-weight: 600;
-    color: $text-primary;
-    font-size: 0.9rem;
-  }
-}
-
 // Category filters elegantes
 .category-filters {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
@@ -1428,7 +1220,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Menu items con ofertas visibles
+// Menu items con precios limpios
 .menu-items {
   display: grid;
   gap: 1.5rem;
@@ -1449,10 +1241,8 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: $shadow-medium;
+    box-shadow: $shadow-medium, 0 0 0 4px #FF8A00;
     background: rgba(255, 248, 245, 0.95);
-    border: 4px solid;
-    border-image: linear-gradient(135deg, #FF8A00, #FFC837, #FF6B35) 1;
 
     .menu-item__add-btn {
       opacity: 1;
@@ -1465,7 +1255,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 
     .menu-item__price,
     .menu-item__price-discounted {
-      text-shadow: 0 2px 8px rgba(255, 138, 0, 0.3);
       transform: scale(1.02);
     }
   }
@@ -1507,7 +1296,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: $transition;
   }
 
-  // Precios con ofertas - MÁS VISIBLES
+  // Precios con ofertas
   &__price-with-offer {
     display: flex;
     flex-direction: column;
@@ -1527,13 +1316,12 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     position: absolute;
     top: -15px;
     right: -10px;
-    transform: rotate(-8deg);
     border: 2px solid white;
     animation: pulse 2s infinite;
 
     @keyframes pulse {
-      0%, 100% { transform: rotate(-8deg) scale(1); }
-      50% { transform: rotate(-8deg) scale(1.05); }
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
   }
 
@@ -1553,7 +1341,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     background-clip: text;
     color: transparent;
     transition: $transition;
-    text-shadow: 0 2px 8px rgba(6, 193, 103, 0.3);
   }
 
   &__description {
@@ -1561,32 +1348,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     line-height: 1.6;
     margin: 0;
     flex: 1;
-  }
-
-  // Información de ofertas
-  &__offer-info {
-    background: linear-gradient(135deg, rgba(6, 193, 103, 0.05), rgba(4, 166, 83, 0.05));
-    border: 1px solid rgba(6, 193, 103, 0.2);
-    border-radius: 12px;
-    padding: 0.75rem;
-  }
-
-  &__offer-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__offer-name {
-    font-weight: 700;
-    color: #059669;
-    font-size: 0.85rem;
-  }
-
-  &__offer-desc {
-    color: $text-secondary;
-    font-size: 0.8rem;
-    line-height: 1.4;
   }
 
   &__tags {
@@ -1681,37 +1442,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
       opacity: 0.5;
       cursor: not-allowed;
       background: $medium-gray;
-    }
-  }
-
-  &--has-offer {
-    border: 3px solid;
-    border-image: $success-gradient 1;
-    background: linear-gradient(135deg, rgba(6, 193, 103, 0.02), rgba(4, 166, 83, 0.05));
-    position: relative;
-
-    &::before {
-      content: '🎉';
-      position: absolute;
-      top: -10px;
-      left: -10px;
-      background: $success-gradient;
-      color: white;
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      border: 3px solid white;
-      box-shadow: $shadow-medium;
-      z-index: 2;
-    }
-
-    &:hover {
-      background: linear-gradient(135deg, rgba(6, 193, 103, 0.05), rgba(4, 166, 83, 0.08));
-      border-width: 4px;
     }
   }
 
@@ -1947,7 +1677,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Cart items con ofertas aplicadas
+// Cart items limpios
 .cart-item {
   display: flex;
   align-items: center;
@@ -2014,29 +1744,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     color: $text-primary;
     margin: 0 0 0.5rem;
     font-size: 0.95rem;
-  }
-
-  // Oferta aplicada en el carrito
-  &__offer-applied {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  &__offer-tag {
-    background: $success-gradient;
-    color: white;
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-  }
-
-  &__offer-name {
-    color: #059669;
-    font-size: 0.8rem;
-    font-weight: 600;
   }
 
   &__actions {
@@ -2201,10 +1908,6 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     &__title {
       font-size: 1.2rem;
     }
-  }
-
-  .offers-grid {
-    grid-template-columns: 1fr;
   }
 
   .category-filters__wrapper {
