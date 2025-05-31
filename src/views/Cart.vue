@@ -1,4 +1,4 @@
-<!-- src/views/Cart.vue - ACTUALIZADO CON CÁLCULO DE DESCUENTOS -->
+<!-- src/views/Cart.vue -->
 <template>
   <div class="cart-page">
     <div class="container">
@@ -186,7 +186,7 @@ interface ProductOffer {
   id: number
   name: string
   description: string
-  discountType: '%' | 'fixed'
+  discountType: string
   discountValue: number
   minimumOrderAmount: number
   minimumQuantity: number
@@ -227,14 +227,15 @@ const promoSuccess = ref(false);
 const activeOffers = ref<ProductOffer[]>([]);
 const loadingOffers = ref(false);
 
+const deliveryFee = ref(0);
+const restaurantData = ref<any>(null);
+
 // Computed properties
 const isEmpty = computed(() => cartStore.isEmpty);
 const cartItems = computed(() => cartStore.items);
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const deliveryTime = ref(cartStore.estimatedDeliveryTime || 25);
-
-// ============= LÓGICA DE OFERTAS (COPIADA DE RESTAURANTDETAIL) =============
 
 // Helper function para números seguros
 const safeNumber = (value: any, defaultValue: number = 0): number => {
@@ -260,11 +261,12 @@ const getProductPrice = (product: any): number => {
   return 0;
 };
 
-// Función para obtener oferta aplicable a un producto
-const getApplicableOffer = (product: any, currentSubtotal: number): ProductOffer | null => {
+const getApplicableOffer = (product: any): ProductOffer | null => {
   if (!activeOffers.value.length) {
     return null;
   }
+  
+  const currentSubtotal = cartTotals.value.subtotal;
   
   // Buscar ofertas para este producto específico
   const productOffers = activeOffers.value.filter(offer => {
@@ -294,8 +296,8 @@ const getApplicableOffer = (product: any, currentSubtotal: number): ProductOffer
   return bestOffer;
 };
 
-// Función para calcular precio con descuento
-const calculateDiscountedPrice = (product: any, offer: ProductOffer | null): number => {
+const calculateDiscountedPrice = (product: any): number => {
+  const offer = getApplicableOffer(product);
   const originalPrice = getProductPrice(product);
   
   if (!offer) {
@@ -313,19 +315,13 @@ const calculateDiscountedPrice = (product: any, offer: ProductOffer | null): num
   return discountedPrice;
 };
 
-// ============= PRODUCTOS PROCESADOS CON OFERTAS =============
 const processedCartItems = computed((): ProcessedCartItem[] => {
   if (!cartItems.value.length) return [];
   
-  // Calcular subtotal actual para validar ofertas
-  const currentSubtotal = cartItems.value.reduce((sum, item) => {
-    return sum + (getProductPrice(item) * item.quantity);
-  }, 0);
-  
   return cartItems.value.map(item => {
     const originalPrice = getProductPrice(item);
-    const offer = getApplicableOffer(item, currentSubtotal);
-    const finalPrice = offer ? calculateDiscountedPrice(item, offer) : originalPrice;
+    const finalPrice = calculateDiscountedPrice(item);
+    const offer = getApplicableOffer(item);
     
     return {
       id: item.id,
@@ -340,13 +336,32 @@ const processedCartItems = computed((): ProcessedCartItem[] => {
   });
 });
 
-// Calculate order values with safe number handling y ofertas aplicadas
-const deliveryFee = ref(cartStore.deliveryFee || 3.99);
-const taxRate = 0.16;
+// Función para cargar datos del restaurante y su delivery fee
+const fetchRestaurantData = async (): Promise<void> => {
+  if (!restaurantId.value) return;
+  
+  try {
+    const response = await fetch(`http://localhost:5290/api/restaurants/${restaurantId.value}`, {
+      headers: {
+        'Authorization': authStore.token ? `Bearer ${authStore.token}` : ''
+      }
+    });
+    
+    if (response.ok) {
+      restaurantData.value = await response.json();
+      deliveryFee.value = safeNumber(restaurantData.value.deliveryFee, 0);
+      console.log('✅ Delivery fee obtenido del restaurante:', deliveryFee.value);
+    } else {
+      deliveryFee.value = 3.99; // Fallback
+    }
+  } catch (error) {
+    console.error('❌ Error obteniendo datos del restaurante:', error);
+    deliveryFee.value = 3.99; // Fallback
+  }
+};
 
-// ============= TOTALES CALCULADOS CON OFERTAS =============
-const calculatedTotals = computed(() => {
-  const subtotalWithOffers = processedCartItems.value.reduce((sum, item) => {
+const cartTotals = computed(() => {
+  const subtotal = processedCartItems.value.reduce((sum, item) => {
     return sum + (item.finalPrice * item.quantity);
   }, 0);
   
@@ -354,14 +369,25 @@ const calculatedTotals = computed(() => {
     return sum + (item.originalPrice * item.quantity);
   }, 0);
   
-  const totalOfferSavings = originalSubtotal - subtotalWithOffers;
-  const tax = subtotalWithOffers * taxRate;
-  const total = subtotalWithOffers + deliveryFee.value + tax;
+  const totalOfferSavings = originalSubtotal - subtotal;
   
   return {
-    subtotal: subtotalWithOffers,
+    subtotal,
     originalSubtotal,
-    totalOfferSavings,
+    totalOfferSavings
+  };
+});
+
+const taxRate = 0.16;
+
+const calculatedTotals = computed(() => {
+  const tax = cartTotals.value.subtotal * taxRate;
+  const total = cartTotals.value.subtotal + deliveryFee.value + tax;
+  
+  return {
+    subtotal: cartTotals.value.subtotal,
+    originalSubtotal: cartTotals.value.originalSubtotal,
+    totalOfferSavings: cartTotals.value.totalOfferSavings,
     tax,
     total
   };
@@ -522,7 +548,10 @@ watch(activeOffers, () => {
 // Watcher para cargar ofertas cuando cambie el restaurante
 watch(restaurantId, async (newRestaurantId) => {
   if (newRestaurantId) {
-    await fetchActiveOffers();
+    await Promise.all([
+      fetchRestaurantData(),
+      fetchActiveOffers()
+    ]);
   }
 }, { immediate: true });
 
@@ -530,9 +559,12 @@ watch(restaurantId, async (newRestaurantId) => {
 onMounted(async () => {
   console.log("Cart.vue mounted. Auth state:", authStore.isAuthenticated);
   
-  // Cargar ofertas si hay un restaurante seleccionado
+  // Cargar datos del restaurante y ofertas si hay un restaurante seleccionado
   if (restaurantId.value) {
-    await fetchActiveOffers();
+    await Promise.all([
+      fetchRestaurantData(),
+      fetchActiveOffers()
+    ]);
   }
   
   // Validar carrito si no está vacío

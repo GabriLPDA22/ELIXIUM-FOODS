@@ -1,4 +1,3 @@
-<!-- src/views/Checkout.vue - ACTUALIZADO CON CÁLCULO DE DESCUENTOS -->
 <template>
   <div class="checkout-page">
     <div class="container">
@@ -411,7 +410,7 @@
           </div>
         </div>
 
-        <!-- Order summary sidebar - ACTUALIZADO CON DESCUENTOS -->
+        <!-- Order summary sidebar - CON OFERTAS CORREGIDAS -->
         <div class="order-sidebar" v-if="currentStep < 3">
           <div class="order-summary">
             <div class="order-summary__header">
@@ -676,7 +675,7 @@ interface ProductOffer {
   id: number
   name: string
   description: string
-  discountType: '%' | 'fixed'
+  discountType: string
   discountValue: number
   minimumOrderAmount: number
   minimumQuantity: number
@@ -788,11 +787,37 @@ const validatingPromo = ref(false);
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() => cartStore.items);
-const deliveryFee = ref(0);
 const taxRate = 0.16;
 const estimatedDeliveryTime = ref(30);
 
-// ============= LÓGICA DE OFERTAS (COPIADA DE RESTAURANTDETAIL) =============
+const deliveryFee = ref(0);
+const restaurantData = ref<any>(null);
+
+// Función para cargar datos del restaurante y su delivery fee
+const fetchRestaurantData = async (): Promise<void> => {
+  if (!restaurantId.value) return;
+  
+  try {
+    const response = await fetch(`http://localhost:5290/api/restaurants/${restaurantId.value}`, {
+      headers: {
+        'Authorization': authStore.token ? `Bearer ${authStore.token}` : ''
+      }
+    });
+    
+    if (response.ok) {
+      restaurantData.value = await response.json();
+      deliveryFee.value = safeNumber(restaurantData.value.deliveryFee, 0);
+      estimatedDeliveryTime.value = safeNumber(restaurantData.value.estimatedDeliveryTime, 30);
+      console.log('✅ Delivery fee obtenido del restaurante:', deliveryFee.value);
+    } else {
+      deliveryFee.value = 3.99; // Fallback
+    }
+  } catch (error) {
+    console.error('❌ Error obteniendo datos del restaurante:', error);
+    deliveryFee.value = 3.99; // Fallback
+  }
+};
+
 
 // Helper function para números seguros
 const safeNumber = (value: any, defaultValue: number = 0): number => {
@@ -818,11 +843,12 @@ const getProductPrice = (product: any): number => {
   return 0;
 };
 
-// Función para obtener oferta aplicable a un producto
-const getApplicableOffer = (product: any, currentSubtotal: number): ProductOffer | null => {
+const getApplicableOffer = (product: any): ProductOffer | null => {
   if (!activeOffers.value.length) {
     return null;
   }
+  
+  const currentSubtotal = cartTotals.value.subtotal;
   
   // Buscar ofertas para este producto específico
   const productOffers = activeOffers.value.filter(offer => {
@@ -852,8 +878,8 @@ const getApplicableOffer = (product: any, currentSubtotal: number): ProductOffer
   return bestOffer;
 };
 
-// Función para calcular precio con descuento
-const calculateDiscountedPrice = (product: any, offer: ProductOffer | null): number => {
+const calculateDiscountedPrice = (product: any): number => {
+  const offer = getApplicableOffer(product);
   const originalPrice = getProductPrice(product);
   
   if (!offer) {
@@ -871,19 +897,13 @@ const calculateDiscountedPrice = (product: any, offer: ProductOffer | null): num
   return discountedPrice;
 };
 
-// ============= PRODUCTOS PROCESADOS CON OFERTAS =============
 const processedCartItems = computed((): ProcessedCartItem[] => {
   if (!cartItems.value.length) return [];
   
-  // Calcular subtotal actual para validar ofertas
-  const currentSubtotal = cartItems.value.reduce((sum, item) => {
-    return sum + (getProductPrice(item) * item.quantity);
-  }, 0);
-  
   return cartItems.value.map(item => {
     const originalPrice = getProductPrice(item);
-    const offer = getApplicableOffer(item, currentSubtotal);
-    const finalPrice = offer ? calculateDiscountedPrice(item, offer) : originalPrice;
+    const finalPrice = calculateDiscountedPrice(item);
+    const offer = getApplicableOffer(item);
     
     return {
       id: item.id,
@@ -897,9 +917,8 @@ const processedCartItems = computed((): ProcessedCartItem[] => {
   });
 });
 
-// ============= TOTALES CALCULADOS CON OFERTAS =============
-const calculatedTotals = computed(() => {
-  const subtotalWithOffers = processedCartItems.value.reduce((sum, item) => {
+const cartTotals = computed(() => {
+  const subtotal = processedCartItems.value.reduce((sum, item) => {
     return sum + (item.finalPrice * item.quantity);
   }, 0);
   
@@ -907,18 +926,63 @@ const calculatedTotals = computed(() => {
     return sum + (item.originalPrice * item.quantity);
   }, 0);
   
-  const totalOfferSavings = originalSubtotal - subtotalWithOffers;
-  const subtotalAfterPromo = Math.max(0, subtotalWithOffers - promoDiscount.value);
+  const totalOfferSavings = originalSubtotal - subtotal;
+  
+  return {
+    subtotal,
+    originalSubtotal,
+    totalOfferSavings
+  };
+});
+
+const calculatedTotals = computed(() => {
+  const subtotalAfterPromo = Math.max(0, cartTotals.value.subtotal - promoDiscount.value);
   const tax = subtotalAfterPromo * taxRate;
   const total = subtotalAfterPromo + deliveryFee.value + tax;
   
   return {
-    subtotal: subtotalWithOffers,
-    originalSubtotal,
-    totalOfferSavings,
+    subtotal: cartTotals.value.subtotal,
+    originalSubtotal: cartTotals.value.originalSubtotal,
+    totalOfferSavings: cartTotals.value.totalOfferSavings,
     tax,
     total
   };
+});
+
+const minDate = computed(() => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+});
+
+const maxDate = computed(() => {
+  const future = new Date();
+  future.setDate(future.getDate() + 7);
+  return future.toISOString().split('T')[0];
+});
+
+const canProceedToPayment = computed(() => {
+  if (!selectedAddress.value) return false;
+  if (deliveryType.value === 'scheduled') {
+    return !!(scheduledDate.value && scheduledTime.value);
+  }
+  return true;
+});
+
+// Validación para poder guardar método de pago
+const canSavePayment = computed(() => {
+  if (!newPayment.value.nickname?.trim()) return false;
+  if (!newPayment.value.type) return false;
+
+  if (newPayment.value.type === 'paypal') {
+    return !!(newPayment.value.payPalEmail?.trim());
+  } else {
+    return !!(
+      newPayment.value.cardNumber?.trim() &&
+      newPayment.value.expiryDate?.trim() &&
+      newPayment.value.cvv?.trim() &&
+      newPayment.value.cardholderName?.trim()
+    );
+  }
 });
 
 // ============= FUNCIONES AUXILIARES PARA OFERTAS =============
@@ -968,43 +1032,6 @@ const fetchActiveOffers = async (): Promise<void> => {
   }
 };
 
-// ============= RESTO DE COMPUTED PROPERTIES =============
-const minDate = computed(() => {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
-});
-
-const maxDate = computed(() => {
-  const future = new Date();
-  future.setDate(future.getDate() + 7);
-  return future.toISOString().split('T')[0];
-});
-
-const canProceedToPayment = computed(() => {
-  if (!selectedAddress.value) return false;
-  if (deliveryType.value === 'scheduled') {
-    return !!(scheduledDate.value && scheduledTime.value);
-  }
-  return true;
-});
-
-// Validación para poder guardar método de pago
-const canSavePayment = computed(() => {
-  if (!newPayment.value.nickname?.trim()) return false;
-  if (!newPayment.value.type) return false;
-
-  if (newPayment.value.type === 'paypal') {
-    return !!(newPayment.value.payPalEmail?.trim());
-  } else {
-    return !!(
-      newPayment.value.cardNumber?.trim() &&
-      newPayment.value.expiryDate?.trim() &&
-      newPayment.value.cvv?.trim() &&
-      newPayment.value.cardholderName?.trim()
-    );
-  }
-});
-
 const goToStep = (step: number) => {
   currentStep.value = step;
   window.scrollTo(0, 0);
@@ -1012,17 +1039,7 @@ const goToStep = (step: number) => {
 
 const selectAddress = async (addressId: number) => {
   selectedAddress.value = addressId;
-  if (restaurantId.value && addressId) {
-    try {
-      const fee = await orderService.getDeliveryFee(restaurantId.value, addressId);
-      deliveryFee.value = fee;
-    } catch (error) {
-      console.error('Error fetching delivery fee:', error);
-      deliveryFee.value = 3.99;
-    }
-  } else {
-    deliveryFee.value = 0;
-  }
+  // El delivery fee ya viene del restaurante, no necesitamos recalcularlo por dirección
 };
 
 const selectPaymentMethod = (paymentId: number) => {
@@ -1355,11 +1372,11 @@ onMounted(async () => {
     return;
   }
 
-  // Cargar direcciones, métodos de pago y ofertas en paralelo
   await Promise.all([
     loadAddresses(),
     loadPaymentMethods(),
-    fetchActiveOffers() // ⭐ NUEVA: Cargar ofertas
+    fetchRestaurantData(),
+    fetchActiveOffers()
   ]);
 });
 </script>
