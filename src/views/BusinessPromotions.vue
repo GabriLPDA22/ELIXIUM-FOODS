@@ -1,159 +1,268 @@
 <!-- src/views/BusinessPromotions.vue -->
 <template>
   <div class="business-promotions">
+    <!-- Header con selector de restaurante -->
     <div class="business-promotions__header">
-      <h1 class="business-promotions__title">Gestión de Promociones</h1>
-      <button @click="openNewPromotionModal" class="business-promotions__add-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span>Nueva Promoción</span>
-      </button>
-    </div>
-
-    <!-- Tabs -->
-    <div class="business-promotions__tabs">
-      <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
-        :class="['business-promotions__tab', { 'business-promotions__tab--active': activeTab === tab.value }]">
-        {{ tab.label }}
-        <span class="business-promotions__tab-count">{{ getPromotionsCount(tab.value) }}</span>
-      </button>
-    </div>
-
-    <!-- Content -->
-    <div class="business-promotions__content">
-      <!-- Loading state -->
-      <div v-if="loading" class="business-promotions__loading">
-        <div class="business-promotions__spinner"></div>
-        <p>Cargando promociones...</p>
+      <div class="business-promotions__title-section">
+        <h1 class="business-promotions__title">Gestión de Promociones</h1>
+        <p class="business-promotions__subtitle">Administra las ofertas y descuentos de tus restaurantes</p>
       </div>
 
-      <!-- Empty state -->
-      <div v-else-if="filteredPromotions.length === 0" class="business-promotions__empty">
-        <div class="business-promotions__empty-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path
-              d="M20 12v-2a2 2 0 0 0-2-2H8l3.293-3.293a1 1 0 1 0-1.414-1.414l-5 5a1 1 0 0 0 0 1.414l5 5a1 1 0 0 0 1.414-1.414L8 12h10a2 2 0 0 0 2-2z" />
-          </svg>
+      <!-- Restaurant Selector -->
+      <div class="business-promotions__restaurant-selector">
+        <label for="restaurantSelect" class="business-promotions__selector-label">Restaurante:</label>
+        <select
+          id="restaurantSelect"
+          v-model="selectedRestaurantId"
+          @change="onRestaurantChange"
+          class="business-promotions__selector"
+          :disabled="loadingRestaurants"
+        >
+          <option value="" disabled>{{ loadingRestaurants ? 'Cargando...' : 'Selecciona un restaurante' }}</option>
+          <option v-for="restaurant in restaurants" :key="restaurant.id" :value="restaurant.id">
+            {{ restaurant.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Restaurant Info Card (si hay uno seleccionado) -->
+    <div v-if="selectedRestaurant" class="business-promotions__restaurant-info">
+      <div class="business-promotions__restaurant-card">
+        <img
+          v-if="selectedRestaurant.logoUrl"
+          :src="selectedRestaurant.logoUrl"
+          :alt="selectedRestaurant.name"
+          class="business-promotions__restaurant-logo"
+        >
+        <div class="business-promotions__restaurant-details">
+          <h3 class="business-promotions__restaurant-name">{{ selectedRestaurant.name }}</h3>
+          <p class="business-promotions__restaurant-description">{{ selectedRestaurant.description }}</p>
+          <div class="business-promotions__restaurant-stats">
+            <span class="business-promotions__stat">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              {{ selectedRestaurant.averageRating?.toFixed(1) || 'N/A' }}
+            </span>
+            <span class="business-promotions__stat">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              {{ selectedRestaurant.estimatedDeliveryTime || 0 }} min
+            </span>
+            <span class="business-promotions__stat" :class="{ 'business-promotions__stat--open': selectedRestaurant.isOpen }">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"></path>
+              </svg>
+              {{ selectedRestaurant.isOpen ? 'Abierto' : 'Cerrado' }}
+            </span>
+          </div>
         </div>
-        <h3>No hay promociones</h3>
-        <p v-if="activeTab === 'active'">No tienes promociones activas actualmente</p>
-        <p v-else-if="activeTab === 'scheduled'">No tienes promociones programadas</p>
-        <p v-else-if="activeTab === 'expired'">No tienes promociones expiradas</p>
-        <p v-else>No tienes promociones creadas</p>
-        <button @click="openNewPromotionModal" class="business-promotions__empty-button">
-          Crear Nueva Promoción
+        <button @click="openNewPromotionModal" class="business-promotions__add-btn" :disabled="!selectedRestaurantId">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Nueva Promoción</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mensaje si no hay restaurante seleccionado -->
+    <div v-if="!selectedRestaurantId && !loadingRestaurants" class="business-promotions__no-selection">
+      <div class="business-promotions__no-selection-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <h3>Selecciona un restaurante</h3>
+      <p>Elige un restaurante para ver y gestionar sus promociones</p>
+    </div>
+
+    <!-- Contenido de promociones (solo si hay restaurante seleccionado) -->
+    <div v-if="selectedRestaurantId">
+      <!-- Tabs -->
+      <div class="business-promotions__tabs">
+        <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
+          :class="['business-promotions__tab', { 'business-promotions__tab--active': activeTab === tab.value }]">
+          {{ tab.label }}
+          <span class="business-promotions__tab-count">{{ getPromotionsCount(tab.value) }}</span>
         </button>
       </div>
 
-      <!-- Promotions grid -->
-      <div v-else class="business-promotions__grid">
-        <div v-for="promotion in filteredPromotions" :key="promotion.id" class="business-promotions__card">
-          <div class="business-promotions__card-banner" :style="{ backgroundColor: getPromotionColor(promotion.type) }">
-            <span class="business-promotions__card-type">{{ getPromotionTypeLabel(promotion.type) }}</span>
-          </div>
+      <!-- Content -->
+      <div class="business-promotions__content">
+        <!-- Loading state -->
+        <div v-if="loading" class="business-promotions__loading">
+          <div class="business-promotions__spinner"></div>
+          <p>Cargando promociones de {{ selectedRestaurant?.name }}...</p>
+        </div>
 
-          <div class="business-promotions__card-content">
-            <div class="business-promotions__card-header">
-              <h3 class="business-promotions__card-title">{{ promotion.name }}</h3>
-              <div
-                :class="['business-promotions__card-status', `business-promotions__card-status--${promotion.status}`]">
-                {{ getStatusLabel(promotion.status) }}
+        <!-- Error state -->
+        <div v-else-if="error" class="business-promotions__error">
+          <div class="business-promotions__error-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h3>Error cargando promociones</h3>
+          <p>{{ error }}</p>
+          <button @click="loadPromotions" class="business-promotions__retry-button">
+            Intentar de nuevo
+          </button>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="filteredPromotions.length === 0" class="business-promotions__empty">
+          <div class="business-promotions__empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </div>
+          <h3>No hay promociones {{ getEmptyStateText() }}</h3>
+          <p>{{ getEmptyStateDescription() }}</p>
+          <button @click="openNewPromotionModal" class="business-promotions__empty-button">
+            Crear Nueva Promoción
+          </button>
+        </div>
+
+        <!-- Promotions grid -->
+        <div v-else class="business-promotions__grid">
+          <div v-for="promotion in filteredPromotions" :key="promotion.id" class="business-promotions__card">
+            <div class="business-promotions__card-banner" :style="{ backgroundColor: getPromotionColor(promotion.discountType) }">
+              <span class="business-promotions__card-type">{{ getPromotionTypeLabel(promotion.discountType) }}</span>
+            </div>
+
+            <div class="business-promotions__card-content">
+              <div class="business-promotions__card-header">
+                <h3 class="business-promotions__card-title">{{ promotion.name }}</h3>
+                <div
+                  :class="['business-promotions__card-status', `business-promotions__card-status--${promotion.status}`]">
+                  {{ getStatusLabel(promotion.status) }}
+                </div>
+              </div>
+
+              <p class="business-promotions__card-description">{{ promotion.description }}</p>
+
+              <!-- Product info with enhanced display -->
+              <div class="business-promotions__card-product">
+                <img v-if="promotion.productImageUrl" :src="promotion.productImageUrl" :alt="promotion.productName" class="business-promotions__product-image">
+                <div class="business-promotions__product-info">
+                  <span class="business-promotions__product-name">{{ promotion.productName }}</span>
+                  <span class="business-promotions__discount-badge" :class="getDiscountBadgeClass(promotion)">
+                    {{ offerUtils.formatDiscount(promotion.discountType, promotion.discountValue) }}
+                  </span>
+                </div>
+                <!-- Hot offer indicator -->
+                <div v-if="offerUtils.isHotOffer(promotion)" class="business-promotions__hot-badge">
+                  🔥 HOT
+                </div>
+              </div>
+
+              <div class="business-promotions__card-details">
+                <div class="business-promotions__card-item">
+                  <span class="business-promotions__item-label">Descuento:</span>
+                  <span class="business-promotions__item-value">
+                    {{ promotion.discountType === 'percentage' ? `${promotion.discountValue}%` :
+                      `${formatCurrency(promotion.discountValue)}` }}
+                  </span>
+                </div>
+
+                <div class="business-promotions__card-item">
+                  <span class="business-promotions__item-label">Validez:</span>
+                  <div class="business-promotions__validity-info">
+                    <span class="business-promotions__item-value">
+                      {{ formatDate(promotion.startDate) }} - {{ formatDate(promotion.endDate) }}
+                    </span>
+                    <span v-if="getTimeRemaining(promotion)" class="business-promotions__time-remaining" :class="{ 'business-promotions__time-remaining--urgent': offerUtils.isExpiringOffer(promotion) }">
+                      ⏰ {{ getTimeRemaining(promotion) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="business-promotions__card-item" v-if="promotion.minimumOrderAmount > 0">
+                  <span class="business-promotions__item-label">Pedido mínimo:</span>
+                  <span class="business-promotions__item-value">{{ formatCurrency(promotion.minimumOrderAmount) }}</span>
+                </div>
+
+                <div class="business-promotions__card-item" v-if="promotion.minimumQuantity > 1">
+                  <span class="business-promotions__item-label">Cantidad mínima:</span>
+                  <span class="business-promotions__item-value">{{ promotion.minimumQuantity }}</span>
+                </div>
+
+                <div class="business-promotions__card-item" v-if="promotion.usageLimit > 0">
+                  <span class="business-promotions__item-label">Usos:</span>
+                  <div class="business-promotions__usage-info">
+                    <span class="business-promotions__item-value">{{ promotion.usageCount }} / {{ promotion.usageLimit }}</span>
+                    <div class="business-promotions__usage-bar">
+                      <div class="business-promotions__usage-progress" :style="{ width: `${(promotion.usageCount / promotion.usageLimit) * 100}%` }"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <p class="business-promotions__card-description">{{ promotion.description }}</p>
+            <div class="business-promotions__card-actions">
+              <button @click="editPromotion(promotion)"
+                class="business-promotions__action-btn business-promotions__action-btn--edit">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span>Editar</span>
+              </button>
 
-            <div class="business-promotions__card-details">
-              <div class="business-promotions__card-item">
-                <span class="business-promotions__item-label">Descuento:</span>
-                <span class="business-promotions__item-value">
-                  {{ promotion.discountType === 'percentage' ? `${promotion.discountValue}%` :
-                    `${formatCurrency(promotion.discountValue)}` }}
-                </span>
-              </div>
+              <button v-if="promotion.status === 'active'" @click="deactivatePromotion(promotion)"
+                class="business-promotions__action-btn business-promotions__action-btn--deactivate">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                </svg>
+                <span>Desactivar</span>
+              </button>
 
-              <div class="business-promotions__card-item">
-                <span class="business-promotions__item-label">Validez:</span>
-                <span class="business-promotions__item-value">
-                  {{ formatDate(promotion.startDate) }} - {{ formatDate(promotion.endDate) }}
-                </span>
-              </div>
+              <button v-if="promotion.status === 'inactive'" @click="activatePromotion(promotion)"
+                class="business-promotions__action-btn business-promotions__action-btn--activate">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span>Activar</span>
+              </button>
 
-              <div class="business-promotions__card-item" v-if="promotion.minimumOrderValue > 0">
-                <span class="business-promotions__item-label">Pedido mínimo:</span>
-                <span class="business-promotions__item-value">{{ formatCurrency(promotion.minimumOrderValue) }}</span>
-              </div>
+              <button @click="duplicatePromotion(promotion)"
+                class="business-promotions__action-btn business-promotions__action-btn--duplicate">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Duplicar</span>
+              </button>
 
-              <div class="business-promotions__card-item">
-                <span class="business-promotions__item-label">Código:</span>
-                <span class="business-promotions__item-value promotion-code">{{ promotion.code }}</span>
-              </div>
-
-              <div class="business-promotions__card-item" v-if="promotion.usageLimit > 0">
-                <span class="business-promotions__item-label">Usos:</span>
-                <span class="business-promotions__item-value">{{ promotion.usageCount }} / {{ promotion.usageLimit
-                  }}</span>
-              </div>
+              <button @click="deletePromotion(promotion)"
+                class="business-promotions__action-btn business-promotions__action-btn--delete">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+                <span>Eliminar</span>
+              </button>
             </div>
-          </div>
-
-          <div class="business-promotions__card-actions">
-            <button @click="editPromotion(promotion)"
-              class="business-promotions__action-btn business-promotions__action-btn--edit">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-              <span>Editar</span>
-            </button>
-
-            <button v-if="promotion.status === 'active'" @click="deactivatePromotion(promotion)"
-              class="business-promotions__action-btn business-promotions__action-btn--deactivate">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="9" y1="9" x2="15" y2="15"></line>
-                <line x1="15" y1="9" x2="9" y2="15"></line>
-              </svg>
-              <span>Desactivar</span>
-            </button>
-
-            <button v-if="promotion.status === 'inactive'" @click="activatePromotion(promotion)"
-              class="business-promotions__action-btn business-promotions__action-btn--activate">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-              <span>Activar</span>
-            </button>
-
-            <button @click="duplicatePromotion(promotion)"
-              class="business-promotions__action-btn business-promotions__action-btn--duplicate">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              <span>Duplicar</span>
-            </button>
-
-            <button @click="deletePromotion(promotion)"
-              class="business-promotions__action-btn business-promotions__action-btn--delete">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                <line x1="10" y1="11" x2="10" y2="17"></line>
-                <line x1="14" y1="11" x2="14" y2="17"></line>
-              </svg>
-              <span>Eliminar</span>
-            </button>
           </div>
         </div>
       </div>
@@ -166,6 +275,7 @@
           <h2 class="business-promotions__modal-title">
             {{ editingPromotion ? 'Editar Promoción' : 'Nueva Promoción' }}
           </h2>
+          <span class="business-promotions__modal-restaurant">{{ selectedRestaurant?.name }}</span>
           <button @click="closeModal" class="business-promotions__modal-close">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -181,17 +291,16 @@
               <div class="business-promotions__form-group">
                 <label for="promotionName" class="business-promotions__form-label">Nombre de la promoción*</label>
                 <input type="text" id="promotionName" v-model="promotionForm.name"
-                  class="business-promotions__form-input" placeholder="Ej. Descuento de bienvenida" required>
+                  class="business-promotions__form-input" placeholder="Ej. Descuento especial pizza" required>
               </div>
 
               <div class="business-promotions__form-group">
-                <label for="promotionType" class="business-promotions__form-label">Tipo de promoción*</label>
-                <select id="promotionType" v-model="promotionForm.type" class="business-promotions__form-select"
-                  required>
-                  <option value="discount">Descuento General</option>
-                  <option value="welcome">Bienvenida</option>
-                  <option value="seasonal">Temporada</option>
-                  <option value="loyalty">Fidelización</option>
+                <label for="productSelect" class="business-promotions__form-label">Producto*</label>
+                <select id="productSelect" v-model="promotionForm.productId" class="business-promotions__form-select" required>
+                  <option value="">Seleccionar producto</option>
+                  <option v-for="product in availableProducts" :key="product.id" :value="product.id">
+                    {{ product.name }} - {{ formatCurrency(product.price || product.basePrice || 0) }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -205,8 +314,7 @@
             <div class="business-promotions__form-row">
               <div class="business-promotions__form-group">
                 <label for="discountType" class="business-promotions__form-label">Tipo de descuento*</label>
-                <select id="discountType" v-model="promotionForm.discountType" class="business-promotions__form-select"
-                  required>
+                <select id="discountType" v-model="promotionForm.discountType" class="business-promotions__form-select" required>
                   <option value="percentage">Porcentaje (%)</option>
                   <option value="fixed">Importe fijo (€)</option>
                 </select>
@@ -214,8 +322,7 @@
 
               <div class="business-promotions__form-group">
                 <label for="discountValue" class="business-promotions__form-label">
-                  {{ promotionForm.discountType === 'percentage' ? 'Porcentaje de descuento*' : 'Importe de descuento*'
-                  }}
+                  {{ promotionForm.discountType === 'percentage' ? 'Porcentaje de descuento*' : 'Importe de descuento*' }}
                 </label>
                 <input type="number" id="discountValue" v-model="promotionForm.discountValue"
                   class="business-promotions__form-input"
@@ -242,20 +349,15 @@
 
             <div class="business-promotions__form-row">
               <div class="business-promotions__form-group">
-                <label for="promotionCode" class="business-promotions__form-label">Código promocional*</label>
-                <div class="business-promotions__code-input">
-                  <input type="text" id="promotionCode" v-model="promotionForm.code"
-                    class="business-promotions__form-input" placeholder="Ej. WELCOME20" required>
-                  <button type="button" @click="generateCode" class="business-promotions__generate-btn">
-                    Generar
-                  </button>
-                </div>
+                <label for="minimumOrderValue" class="business-promotions__form-label">Pedido mínimo (€)</label>
+                <input type="number" id="minimumOrderValue" v-model="promotionForm.minimumOrderAmount"
+                  class="business-promotions__form-input" placeholder="Ej. 15.00" min="0" step="0.01">
               </div>
 
               <div class="business-promotions__form-group">
-                <label for="minimumOrderValue" class="business-promotions__form-label">Pedido mínimo (€)</label>
-                <input type="number" id="minimumOrderValue" v-model="promotionForm.minimumOrderValue"
-                  class="business-promotions__form-input" placeholder="Ej. 15.00" min="0" step="0.01">
+                <label for="minimumQuantity" class="business-promotions__form-label">Cantidad mínima</label>
+                <input type="number" id="minimumQuantity" v-model="promotionForm.minimumQuantity"
+                  class="business-promotions__form-input" placeholder="Ej. 2" min="1" step="1">
               </div>
             </div>
 
@@ -265,16 +367,6 @@
                 <input type="number" id="usageLimit" v-model="promotionForm.usageLimit"
                   class="business-promotions__form-input" placeholder="Ej. 100" min="0" step="1">
               </div>
-
-              <div class="business-promotions__form-group">
-                <label for="promotionStatus" class="business-promotions__form-label">Estado*</label>
-                <select id="promotionStatus" v-model="promotionForm.status" class="business-promotions__form-select"
-                  required>
-                  <option value="active">Activa</option>
-                  <option value="inactive">Inactiva</option>
-                  <option value="scheduled">Programada</option>
-                </select>
-              </div>
             </div>
 
             <div class="business-promotions__modal-footer">
@@ -282,8 +374,9 @@
                 class="business-promotions__modal-btn business-promotions__modal-btn--secondary">
                 Cancelar
               </button>
-              <button type="submit" class="business-promotions__modal-btn business-promotions__modal-btn--primary">
-                {{ editingPromotion ? 'Guardar Cambios' : 'Crear Promoción' }}
+              <button type="submit" class="business-promotions__modal-btn business-promotions__modal-btn--primary"
+                :disabled="submitting">
+                {{ submitting ? 'Guardando...' : (editingPromotion ? 'Guardar Cambios' : 'Crear Promoción') }}
               </button>
             </div>
           </form>
@@ -314,8 +407,9 @@
             class="business-promotions__modal-btn business-promotions__modal-btn--secondary">
             Cancelar
           </button>
-          <button @click="confirmAction" class="business-promotions__modal-btn" :class="confirmationActionClass">
-            {{ confirmationAction }}
+          <button @click="confirmAction" class="business-promotions__modal-btn" :class="confirmationActionClass"
+            :disabled="submitting">
+            {{ submitting ? 'Procesando...' : confirmationAction }}
           </button>
         </div>
       </div>
@@ -324,17 +418,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { promotionsService, type CreateProductOfferDto } from '@/services/promotionsService'
+import { productOfferService, type ProductOfferDto, offerUtils } from '@/services/productOfferService'
+import { productService, type Product } from '@/services/productService'
+import { restaurantService, type RestaurantCard } from '@/services/restaurantService'
+import { useAuthStore } from '@/stores/auth'
 
-// Estado
-const loading = ref(true)
-const promotions = ref([])
+// Auth store to get business info
+const authStore = useAuthStore()
+
+// Estado reactivo
+const loadingRestaurants = ref(true)
+const loading = ref(false)
+const error = ref<string | null>(null)
+const submitting = ref(false)
+const restaurants = ref<RestaurantCard[]>([])
+const selectedRestaurantId = ref<number | null>(null)
+const promotions = ref<ProductOfferDto[]>([])
+const availableProducts = ref<Product[]>([])
 const activeTab = ref('all')
 const showPromotionModal = ref(false)
-const editingPromotion = ref(null)
+const editingPromotion = ref<ProductOfferDto | null>(null)
 const showConfirmation = ref(false)
-const pendingAction = ref(null)
-const pendingPromotionId = ref(null)
+const pendingAction = ref<string | null>(null)
+const pendingPromotionId = ref<number | null>(null)
 const confirmationTitle = ref('')
 const confirmationMessage = ref('')
 const confirmationAction = ref('')
@@ -342,113 +450,106 @@ const confirmationActionClass = ref('')
 
 // Formulario para nueva/editar promoción
 const promotionForm = ref({
-  id: null,
+  id: null as number | null,
   name: '',
   description: '',
-  type: 'discount',
   discountType: 'percentage',
-  discountValue: null,
-  startDate: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
-  endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0], // Un mes después
-  code: '',
-  minimumOrderValue: 0,
+  discountValue: 0,
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+  minimumOrderAmount: 0,
+  minimumQuantity: 1,
   usageLimit: 0,
-  usageCount: 0,
-  status: 'active'
+  productId: null as number | null
 })
 
 // Datos de pestañas
 const tabs = [
   { label: 'Todas', value: 'all' },
   { label: 'Activas', value: 'active' },
-  { label: 'Programadas', value: 'scheduled' },
+  { label: 'Inactivas', value: 'inactive' },
   { label: 'Expiradas', value: 'expired' }
 ]
 
-// Cargar promociones (simulación)
-onMounted(async () => {
-  // Simular una llamada API
-  setTimeout(() => {
-    promotions.value = [
-      {
-        id: 1,
-        name: 'Descuento de Bienvenida',
-        description: 'Descuento especial para nuevos clientes en su primer pedido',
-        type: 'welcome',
-        discountType: 'percentage',
-        discountValue: 15,
-        startDate: new Date(2023, 3, 1),
-        endDate: new Date(2023, 8, 30),
-        code: 'WELCOME15',
-        minimumOrderValue: 20,
-        usageLimit: 100,
-        usageCount: 42,
-        status: 'active'
-      },
-      {
-        id: 2,
-        name: 'Envío Gratis',
-        description: 'Envío gratuito en todos los pedidos superiores a 30€',
-        type: 'discount',
-        discountType: 'fixed',
-        discountValue: 5,
-        startDate: new Date(2023, 4, 1),
-        endDate: new Date(2023, 5, 30),
-        code: 'FREESHIP',
-        minimumOrderValue: 30,
-        usageLimit: 0,
-        usageCount: 86,
-        status: 'active'
-      },
-      {
-        id: 3,
-        name: 'Descuento de Verano',
-        description: 'Disfruta del verano con un 20% de descuento en todos los platos',
-        type: 'seasonal',
-        discountType: 'percentage',
-        discountValue: 20,
-        startDate: new Date(2023, 5, 21),
-        endDate: new Date(2023, 8, 21),
-        code: 'SUMMER20',
-        minimumOrderValue: 25,
-        usageLimit: 0,
-        usageCount: 12,
-        status: 'scheduled'
-      },
-      {
-        id: 4,
-        name: 'Descuento de Primavera',
-        description: 'Celebra la primavera con un 10% de descuento',
-        type: 'seasonal',
-        discountType: 'percentage',
-        discountValue: 10,
-        startDate: new Date(2023, 2, 21),
-        endDate: new Date(2023, 4, 31),
-        code: 'SPRING10',
-        minimumOrderValue: 15,
-        usageLimit: 500,
-        usageCount: 368,
-        status: 'expired'
-      },
-      {
-        id: 5,
-        name: 'Cliente Fiel',
-        description: 'Descuento especial para clientes habituales',
-        type: 'loyalty',
-        discountType: 'percentage',
-        discountValue: 25,
-        startDate: new Date(2023, 4, 1),
-        endDate: new Date(2023, 11, 31),
-        code: 'LOYALTY25',
-        minimumOrderValue: 40,
-        usageLimit: 200,
-        usageCount: 73,
-        status: 'inactive'
-      }
-    ]
-    loading.value = false
-  }, 1000)
+// Computed para obtener el restaurante seleccionado
+const selectedRestaurant = computed(() => {
+  if (!selectedRestaurantId.value) return null
+  return restaurants.value.find(r => r.id === selectedRestaurantId.value) || null
 })
+
+// Cargar datos iniciales
+onMounted(async () => {
+  await loadRestaurants()
+})
+
+// Watch para cargar datos cuando cambia el restaurante seleccionado
+watch(selectedRestaurantId, async (newRestaurantId) => {
+  if (newRestaurantId) {
+    await Promise.all([
+      loadPromotions(),
+      loadAvailableProducts()
+    ])
+  } else {
+    promotions.value = []
+    availableProducts.value = []
+  }
+})
+
+// Cargar restaurantes del business
+const loadRestaurants = async () => {
+  try {
+    loadingRestaurants.value = true
+    error.value = null
+
+    // Usar el método disponible en tu restaurantService
+    const data = await restaurantService.getAllRestaurants()
+    restaurants.value = data
+
+    // Auto-seleccionar el primer restaurante si solo hay uno
+    if (data.length === 1) {
+      selectedRestaurantId.value = data[0].id
+    }
+  } catch (err: any) {
+    error.value = err.message || 'Error cargando restaurantes'
+    console.error('Error loading restaurants:', err)
+  } finally {
+    loadingRestaurants.value = false
+  }
+}
+
+// Manejar cambio de restaurante
+const onRestaurantChange = () => {
+  activeTab.value = 'all' // Reset tab when changing restaurant
+}
+
+// Cargar promociones del backend
+const loadPromotions = async () => {
+  if (!selectedRestaurantId.value) return
+
+  try {
+    loading.value = true
+    error.value = null
+    const data = await promotionsService.getOffersByRestaurant(selectedRestaurantId.value)
+    promotions.value = data
+  } catch (err: any) {
+    error.value = err.message || 'Error cargando promociones'
+    console.error('Error loading promotions:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Cargar productos disponibles
+const loadAvailableProducts = async () => {
+  if (!selectedRestaurantId.value) return
+
+  try {
+    const data = await productService.getProductsByRestaurant(selectedRestaurantId.value)
+    availableProducts.value = data
+  } catch (err: any) {
+    console.error('Error loading products:', err)
+  }
+}
 
 // Filtrar promociones según la pestaña activa
 const filteredPromotions = computed(() => {
@@ -456,39 +557,71 @@ const filteredPromotions = computed(() => {
     return promotions.value
   } else if (activeTab.value === 'active') {
     return promotions.value.filter(p => p.status === 'active')
-  } else if (activeTab.value === 'scheduled') {
-    return promotions.value.filter(p => p.status === 'scheduled')
+  } else if (activeTab.value === 'inactive') {
+    return promotions.value.filter(p => p.status === 'inactive')
   } else if (activeTab.value === 'expired') {
-    // Mostrar las promociones expiradas o con fechas pasadas
     const today = new Date()
     return promotions.value.filter(p =>
-      p.status === 'expired' ||
-      (new Date(p.endDate) < today && p.status !== 'scheduled')
+      p.status === 'expired' || new Date(p.endDate) < today
     )
   }
   return promotions.value
 })
 
 // Obtener conteo de promociones por pestaña
-const getPromotionsCount = (tabValue) => {
+const getPromotionsCount = (tabValue: string) => {
   if (tabValue === 'all') {
     return promotions.value.length
   } else if (tabValue === 'active') {
     return promotions.value.filter(p => p.status === 'active').length
-  } else if (tabValue === 'scheduled') {
-    return promotions.value.filter(p => p.status === 'scheduled').length
+  } else if (tabValue === 'inactive') {
+    return promotions.value.filter(p => p.status === 'inactive').length
   } else if (tabValue === 'expired') {
     const today = new Date()
     return promotions.value.filter(p =>
-      p.status === 'expired' ||
-      (new Date(p.endDate) < today && p.status !== 'scheduled')
+      p.status === 'expired' || new Date(p.endDate) < today
     ).length
   }
   return 0
 }
 
+// Obtener texto de estado vacío
+const getEmptyStateText = () => {
+  switch (activeTab.value) {
+    case 'active': return 'activas'
+    case 'inactive': return 'inactivas'
+    case 'expired': return 'expiradas'
+    default: return ''
+  }
+}
+
+// Obtener descripción de estado vacío
+const getEmptyStateDescription = () => {
+  const restaurantName = selectedRestaurant.value?.name || 'este restaurante'
+  switch (activeTab.value) {
+    case 'active': return `${restaurantName} no tiene promociones activas actualmente`
+    case 'inactive': return `${restaurantName} no tiene promociones inactivas`
+    case 'expired': return `${restaurantName} no tiene promociones expiradas`
+    default: return `${restaurantName} no tiene promociones creadas aún`
+  }
+}
+
+// Obtener tiempo restante usando offerUtils
+const getTimeRemaining = (promotion: ProductOfferDto) => {
+  return offerUtils.getTimeRemaining(promotion.endDate)
+}
+
+// Obtener clase de badge de descuento
+const getDiscountBadgeClass = (promotion: ProductOfferDto) => {
+  return {
+    'business-promotions__discount-badge--percentage': promotion.discountType === 'percentage',
+    'business-promotions__discount-badge--fixed': promotion.discountType === 'fixed',
+    'business-promotions__discount-badge--hot': offerUtils.isHotOffer(promotion)
+  }
+}
+
 // Formatear fechas
-const formatDate = (date) => {
+const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: '2-digit',
@@ -497,44 +630,36 @@ const formatDate = (date) => {
 }
 
 // Formatear moneda
-const formatCurrency = (value) => {
+const formatCurrency = (value: number) => {
   return value.toFixed(2).replace('.', ',') + ' €'
 }
 
 // Obtener etiqueta de tipo de promoción
-const getPromotionTypeLabel = (type) => {
+const getPromotionTypeLabel = (type: string) => {
   switch (type) {
-    case 'discount':
-      return 'Descuento'
-    case 'welcome':
-      return 'Bienvenida'
-    case 'seasonal':
-      return 'Temporada'
-    case 'loyalty':
-      return 'Fidelización'
+    case 'percentage':
+      return 'Porcentaje'
+    case 'fixed':
+      return 'Importe fijo'
     default:
       return type
   }
 }
 
 // Obtener color de fondo para el tipo de promoción
-const getPromotionColor = (type) => {
+const getPromotionColor = (type: string) => {
   switch (type) {
-    case 'discount':
+    case 'percentage':
       return '#3b82f6' // Azul
-    case 'welcome':
+    case 'fixed':
       return '#10b981' // Verde
-    case 'seasonal':
-      return '#8b5cf6' // Púrpura
-    case 'loyalty':
-      return '#f59e0b' // Ámbar
     default:
       return '#64748b' // Gris
   }
 }
 
 // Obtener etiqueta de estado
-const getStatusLabel = (status) => {
+const getStatusLabel = (status: string) => {
   switch (status) {
     case 'active':
       return 'Activa'
@@ -551,44 +676,40 @@ const getStatusLabel = (status) => {
 
 // Abrir modal para nueva promoción
 const openNewPromotionModal = () => {
+  if (!selectedRestaurantId.value) return
+
   editingPromotion.value = null
-  // Resetear el formulario
   promotionForm.value = {
     id: null,
     name: '',
     description: '',
-    type: 'discount',
     discountType: 'percentage',
-    discountValue: null,
+    discountValue: 0,
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
-    code: '',
-    minimumOrderValue: 0,
+    minimumOrderAmount: 0,
+    minimumQuantity: 1,
     usageLimit: 0,
-    usageCount: 0,
-    status: 'active'
+    productId: null
   }
   showPromotionModal.value = true
 }
 
 // Editar promoción existente
-const editPromotion = (promotion) => {
+const editPromotion = (promotion: ProductOfferDto) => {
   editingPromotion.value = promotion
-  // Cargar datos de la promoción en el formulario
   promotionForm.value = {
     id: promotion.id,
     name: promotion.name,
     description: promotion.description,
-    type: promotion.type,
     discountType: promotion.discountType,
     discountValue: promotion.discountValue,
     startDate: new Date(promotion.startDate).toISOString().split('T')[0],
     endDate: new Date(promotion.endDate).toISOString().split('T')[0],
-    code: promotion.code,
-    minimumOrderValue: promotion.minimumOrderValue,
+    minimumOrderAmount: promotion.minimumOrderAmount,
+    minimumQuantity: promotion.minimumQuantity,
     usageLimit: promotion.usageLimit,
-    usageCount: promotion.usageCount,
-    status: promotion.status
+    productId: promotion.productId
   }
   showPromotionModal.value = true
 }
@@ -599,46 +720,49 @@ const closeModal = () => {
   editingPromotion.value = null
 }
 
-// Generar código aleatorio
-const generateCode = () => {
-  const prefix = promotionForm.value.type.toUpperCase().substring(0, 3)
-  const value = promotionForm.value.discountType === 'percentage' ?
-    Math.round(promotionForm.value.discountValue || 10) :
-    'SAVE'
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-  promotionForm.value.code = `${prefix}${value}${random}`
-}
-
 // Guardar promoción (nueva o editada)
-const savePromotion = () => {
-  if (editingPromotion.value) {
-    // Actualizar promoción existente
-    const index = promotions.value.findIndex(p => p.id === editingPromotion.value.id)
-    if (index !== -1) {
-      // Convertir fechas de string a Date
-      const updatedPromotion = {
-        ...promotionForm.value,
-        startDate: new Date(promotionForm.value.startDate),
-        endDate: new Date(promotionForm.value.endDate)
-      }
-      promotions.value[index] = updatedPromotion
-    }
-  } else {
-    // Crear nueva promoción
-    const newPromotion = {
-      ...promotionForm.value,
-      id: Math.max(0, ...promotions.value.map(p => p.id)) + 1,
-      startDate: new Date(promotionForm.value.startDate),
-      endDate: new Date(promotionForm.value.endDate),
-      usageCount: 0
-    }
-    promotions.value.push(newPromotion)
+const savePromotion = async () => {
+  if (!promotionForm.value.productId || !selectedRestaurantId.value) {
+    alert('Por favor selecciona un producto')
+    return
   }
-  showPromotionModal.value = false
+
+  try {
+    submitting.value = true
+
+    const promotionData: CreateProductOfferDto = {
+      name: promotionForm.value.name,
+      description: promotionForm.value.description,
+      discountType: promotionForm.value.discountType,
+      discountValue: promotionForm.value.discountValue,
+      minimumOrderAmount: promotionForm.value.minimumOrderAmount,
+      minimumQuantity: promotionForm.value.minimumQuantity,
+      startDate: promotionForm.value.startDate,
+      endDate: promotionForm.value.endDate,
+      usageLimit: promotionForm.value.usageLimit,
+      productId: promotionForm.value.productId
+    }
+
+    if (editingPromotion.value) {
+      // Actualizar promoción existente
+      await promotionsService.updateOffer(selectedRestaurantId.value, editingPromotion.value.id, promotionData)
+    } else {
+      // Crear nueva promoción
+      await promotionsService.createOffer(selectedRestaurantId.value, promotionData)
+    }
+
+    // Recargar promociones
+    await loadPromotions()
+    showPromotionModal.value = false
+  } catch (err: any) {
+    alert(err.message || 'Error guardando promoción')
+  } finally {
+    submitting.value = false
+  }
 }
 
 // Desactivar promoción
-const deactivatePromotion = (promotion) => {
+const deactivatePromotion = (promotion: ProductOfferDto) => {
   confirmationTitle.value = 'Desactivar Promoción'
   confirmationMessage.value = `¿Estás seguro de que quieres desactivar la promoción "${promotion.name}"?`
   confirmationAction.value = 'Desactivar'
@@ -649,7 +773,7 @@ const deactivatePromotion = (promotion) => {
 }
 
 // Activar promoción
-const activatePromotion = (promotion) => {
+const activatePromotion = (promotion: ProductOfferDto) => {
   confirmationTitle.value = 'Activar Promoción'
   confirmationMessage.value = `¿Estás seguro de que quieres activar la promoción "${promotion.name}"?`
   confirmationAction.value = 'Activar'
@@ -660,19 +784,26 @@ const activatePromotion = (promotion) => {
 }
 
 // Duplicar promoción
-const duplicatePromotion = (promotion) => {
-  const newPromotion = {
-    ...promotion,
-    id: Math.max(0, ...promotions.value.map(p => p.id)) + 1,
+const duplicatePromotion = (promotion: ProductOfferDto) => {
+  editingPromotion.value = null
+  promotionForm.value = {
+    id: null,
     name: `${promotion.name} (Copia)`,
-    code: `${promotion.code}_COPY`,
-    usageCount: 0
+    description: promotion.description,
+    discountType: promotion.discountType,
+    discountValue: promotion.discountValue,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+    minimumOrderAmount: promotion.minimumOrderAmount,
+    minimumQuantity: promotion.minimumQuantity,
+    usageLimit: promotion.usageLimit,
+    productId: promotion.productId
   }
-  promotions.value.push(newPromotion)
+  showPromotionModal.value = true
 }
 
 // Eliminar promoción
-const deletePromotion = (promotion) => {
+const deletePromotion = (promotion: ProductOfferDto) => {
   confirmationTitle.value = 'Eliminar Promoción'
   confirmationMessage.value = `¿Estás seguro de que quieres eliminar la promoción "${promotion.name}"? Esta acción no se puede deshacer.`
   confirmationAction.value = 'Eliminar'
@@ -690,64 +821,198 @@ const cancelConfirmation = () => {
 }
 
 // Confirmar acción pendiente
-const confirmAction = () => {
-  const promotionIndex = promotions.value.findIndex(p => p.id === pendingPromotionId.value)
-  if (promotionIndex === -1) {
-    return
-  }
+const confirmAction = async () => {
+  if (!pendingPromotionId.value || !pendingAction.value || !selectedRestaurantId.value) return
 
-  if (pendingAction.value === 'deactivate') {
-    promotions.value[promotionIndex].status = 'inactive'
-  } else if (pendingAction.value === 'activate') {
-    promotions.value[promotionIndex].status = 'active'
-  } else if (pendingAction.value === 'delete') {
-    promotions.value.splice(promotionIndex, 1)
-  }
+  try {
+    submitting.value = true
 
-  showConfirmation.value = false
-  pendingAction.value = null
-  pendingPromotionId.value = null
+    if (pendingAction.value === 'deactivate') {
+      await promotionsService.deactivateOffer(selectedRestaurantId.value, pendingPromotionId.value)
+    } else if (pendingAction.value === 'activate') {
+      await promotionsService.activateOffer(selectedRestaurantId.value, pendingPromotionId.value)
+    } else if (pendingAction.value === 'delete') {
+      await promotionsService.deleteOffer(selectedRestaurantId.value, pendingPromotionId.value)
+    }
+
+    // Recargar promociones
+    await loadPromotions()
+    showConfirmation.value = false
+    pendingAction.value = null
+    pendingPromotionId.value = null
+  } catch (err: any) {
+    alert(err.message || 'Error procesando acción')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
 <style lang="scss" scoped>
 .business-promotions {
+  padding: 1rem;
+
   &__header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    gap: 2rem;
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
+      gap: 1.5rem;
     }
   }
 
+  &__title-section {
+    flex-grow: 1;
+  }
+
   &__title {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
-    margin: 0;
+    margin: 0 0 0.5rem;
     color: #1e293b;
+  }
+
+  &__subtitle {
+    font-size: 1rem;
+    color: #64748b;
+    margin: 0;
+  }
+
+  &__restaurant-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 280px;
+
+    @media (max-width: 1024px) {
+      min-width: 0;
+    }
+  }
+
+  &__selector-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e293b;
+  }
+
+  &__selector {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1rem;
+    color: #1e293b;
+    background-color: white;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #06a98d;
+      box-shadow: 0 0 0 3px rgba(6, 169, 141, 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__restaurant-info {
+    margin-bottom: 2rem;
+  }
+
+  &__restaurant-card {
+    background: linear-gradient(135deg, #06a98d 0%, #058a73 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 8px 25px rgba(6, 169, 141, 0.2);
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+
+  &__restaurant-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+  }
+
+  &__restaurant-details {
+    flex-grow: 1;
+  }
+
+  &__restaurant-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+  }
+
+  &__restaurant-description {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0 0 1rem;
+    line-height: 1.5;
+  }
+
+  &__restaurant-stats {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &--open {
+      color: #10f981;
+    }
   }
 
   &__add-btn {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background-color: #06a98d;
+    background-color: rgba(255, 255, 255, 0.2);
     color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0.6rem 1rem;
-    font-weight: 500;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
 
-    &:hover {
-      background-color: #058a73;
+    &:hover:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     svg {
@@ -759,6 +1024,45 @@ const confirmAction = () => {
       width: 100%;
       justify-content: center;
     }
+  }
+
+  &__no-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1rem;
+    text-align: center;
+  }
+
+  &__no-selection-icon {
+    width: 80px;
+    height: 80px;
+    background-color: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+
+    svg {
+      width: 36px;
+      height: 36px;
+    }
+  }
+
+  &__no-selection h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: #1e293b;
+  }
+
+  &__no-selection p {
+    color: #64748b;
+    margin: 0;
+    max-width: 400px;
   }
 
   &__tabs {
@@ -778,7 +1082,7 @@ const confirmAction = () => {
   &__tab {
     background: none;
     border: none;
-    padding: 0.6rem 1rem;
+    padding: 0.75rem 1.25rem;
     border-radius: 100px;
     font-size: 0.9rem;
     font-weight: 500;
@@ -812,9 +1116,9 @@ const confirmAction = () => {
     color: #64748b;
     font-size: 0.75rem;
     font-weight: 600;
-    min-width: 20px;
-    height: 20px;
-    border-radius: 10px;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -826,7 +1130,8 @@ const confirmAction = () => {
   }
 
   &__loading,
-  &__empty {
+  &__empty,
+  &__error {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -845,6 +1150,7 @@ const confirmAction = () => {
     margin-bottom: 1rem;
   }
 
+  &__error-icon,
   &__empty-icon {
     width: 60px;
     height: 60px;
@@ -862,25 +1168,33 @@ const confirmAction = () => {
     }
   }
 
-  &__empty h3 {
+  &__error-icon {
+    background-color: #fee2e2;
+    color: #dc2626;
+  }
+
+  &__empty h3,
+  &__error h3 {
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 0.5rem;
     color: #1e293b;
   }
 
-  &__empty p {
+  &__empty p,
+  &__error p {
     color: #64748b;
     margin: 0 0 1.5rem;
     max-width: 400px;
   }
 
-  &__empty-button {
+  &__empty-button,
+  &__retry-button {
     background-color: #06a98d;
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 0.6rem 1rem;
+    padding: 0.75rem 1.25rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -892,7 +1206,7 @@ const confirmAction = () => {
 
   &__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
 
     @media (max-width: 768px) {
@@ -902,16 +1216,17 @@ const confirmAction = () => {
 
   &__card {
     background-color: white;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.3s ease;
+    border: 1px solid #f1f5f9;
 
     &:hover {
       transform: translateY(-4px);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -925,7 +1240,7 @@ const confirmAction = () => {
   }
 
   &__card-content {
-    padding: 1.25rem;
+    padding: 1.5rem;
     flex-grow: 1;
   }
 
@@ -933,21 +1248,24 @@ const confirmAction = () => {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    gap: 1rem;
   }
 
   &__card-title {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 600;
     margin: 0;
     color: #1e293b;
+    line-height: 1.3;
   }
 
   &__card-status {
     font-size: 0.75rem;
     font-weight: 500;
     padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
+    flex-shrink: 0;
 
     &--active {
       background-color: #dcfce7;
@@ -973,7 +1291,7 @@ const confirmAction = () => {
   &__card-description {
     font-size: 0.9rem;
     color: #64748b;
-    margin: 0 0 1rem;
+    margin: 0 0 1.25rem;
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -981,16 +1299,88 @@ const confirmAction = () => {
     overflow: hidden;
   }
 
+  &__card-product {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    position: relative;
+  }
+
+  &__product-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-grow: 1;
+  }
+
+  &__product-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e293b;
+  }
+
+  &__discount-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    width: fit-content;
+
+    &--percentage {
+      background-color: #dbeafe;
+      color: #2563eb;
+    }
+
+    &--fixed {
+      background-color: #dcfce7;
+      color: #16a34a;
+    }
+
+    &--hot {
+      background-color: #fee2e2;
+      color: #dc2626;
+      animation: pulse 2s infinite;
+    }
+  }
+
+  &__hot-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.125rem 0.25rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    animation: pulse 2s infinite;
+  }
+
   &__card-details {
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
   }
 
   &__card-item {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     padding: 0.5rem 0;
     border-bottom: 1px solid #f1f5f9;
     font-size: 0.9rem;
+    gap: 1rem;
 
     &:last-child {
       border-bottom: none;
@@ -999,22 +1389,58 @@ const confirmAction = () => {
 
   &__item-label {
     color: #64748b;
+    font-weight: 500;
+    flex-shrink: 0;
   }
 
   &__item-value {
     font-weight: 500;
     color: #1e293b;
+    text-align: right;
+  }
 
-    &.promotion-code {
-      font-family: monospace;
-      background-color: #f1f5f9;
-      padding: 0.1rem 0.3rem;
-      border-radius: 4px;
+  &__validity-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+  }
+
+  &__time-remaining {
+    font-size: 0.75rem;
+    color: #10b981;
+    font-weight: 500;
+
+    &--urgent {
+      color: #ef4444;
+      animation: blink 1s infinite;
     }
   }
 
+  &__usage-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+    min-width: 120px;
+  }
+
+  &__usage-bar {
+    width: 100%;
+    height: 4px;
+    background-color: #e2e8f0;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &__usage-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    transition: width 0.3s ease;
+  }
+
   &__card-actions {
-    padding: 1rem 1.25rem;
+    padding: 1rem 1.5rem;
     border-top: 1px solid #f1f5f9;
     display: flex;
     flex-wrap: wrap;
@@ -1025,8 +1451,8 @@ const confirmAction = () => {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
     border: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -1100,7 +1526,7 @@ const confirmAction = () => {
 
   &__modal-content {
     background-color: white;
-    border-radius: 12px;
+    border-radius: 16px;
     max-width: 800px;
     width: 100%;
     max-height: 90vh;
@@ -1114,7 +1540,7 @@ const confirmAction = () => {
   }
 
   &__modal-header {
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem 2rem;
     border-bottom: 1px solid #e2e8f0;
     display: flex;
     justify-content: space-between;
@@ -1123,6 +1549,7 @@ const confirmAction = () => {
     top: 0;
     background-color: white;
     z-index: 10;
+    gap: 1rem;
   }
 
   &__modal-title {
@@ -1130,6 +1557,15 @@ const confirmAction = () => {
     font-weight: 600;
     margin: 0;
     color: #1e293b;
+  }
+
+  &__modal-restaurant {
+    font-size: 0.9rem;
+    color: #06a98d;
+    font-weight: 500;
+    background-color: #f0fdfa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
   }
 
   &__modal-close {
@@ -1141,7 +1577,7 @@ const confirmAction = () => {
     justify-content: center;
     color: #64748b;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 6px;
 
     &:hover {
       background-color: #f1f5f9;
@@ -1155,20 +1591,20 @@ const confirmAction = () => {
   }
 
   &__modal-body {
-    padding: 1.5rem;
+    padding: 2rem;
     flex-grow: 1;
   }
 
   &__form {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
 
   &__form-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
 
   &__form-group {
@@ -1186,11 +1622,12 @@ const confirmAction = () => {
   &__form-input,
   &__form-select,
   &__form-textarea {
-    padding: 0.6rem 0.75rem;
+    padding: 0.75rem 1rem;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.95rem;
     color: #1e293b;
+    transition: all 0.2s ease;
 
     &:focus {
       outline: none;
@@ -1204,30 +1641,8 @@ const confirmAction = () => {
     min-height: 100px;
   }
 
-  &__code-input {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  &__generate-btn {
-    background-color: #f1f5f9;
-    color: #475569;
-    border: none;
-    border-radius: 8px;
-    padding: 0 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #e2e8f0;
-      color: #1e293b;
-    }
-  }
-
   &__modal-footer {
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem 2rem;
     border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: flex-end;
@@ -1239,18 +1654,23 @@ const confirmAction = () => {
   }
 
   &__modal-btn {
-    padding: 0.6rem 1.25rem;
-    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
     &--primary {
       background-color: #06a98d;
       color: white;
       border: none;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #058a73;
       }
     }
@@ -1260,7 +1680,7 @@ const confirmAction = () => {
       color: #64748b;
       border: 1px solid #e2e8f0;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #f1f5f9;
         color: #1e293b;
       }
@@ -1271,7 +1691,7 @@ const confirmAction = () => {
       color: white;
       border: none;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #dc2626;
       }
     }
@@ -1281,7 +1701,7 @@ const confirmAction = () => {
       color: white;
       border: none;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #d97706;
       }
     }
@@ -1291,7 +1711,7 @@ const confirmAction = () => {
       color: white;
       border: none;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #059669;
       }
     }
@@ -1299,7 +1719,7 @@ const confirmAction = () => {
 
   &__confirmation-message {
     text-align: center;
-    margin: 1rem 0 2rem;
+    margin: 1.5rem 0 2rem;
     color: #1e293b;
     line-height: 1.5;
   }
@@ -1308,6 +1728,24 @@ const confirmAction = () => {
 @keyframes spinner {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
   }
 }
 </style>
