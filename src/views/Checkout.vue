@@ -398,7 +398,12 @@
                   </div>
                   <div class="order-success__detail">
                     <span class="order-success__label">Total:</span>
-                    <span class="order-success__value">${{ calculatedTotals.total.toFixed(2) }}</span>
+                    <span class="order-success__value">${{ finalOrderTotals.total.toFixed(2) }}</span>
+                  </div>
+                  <!-- NUEVO: Mostrar ahorros totales si existen -->
+                  <div v-if="finalOrderTotals.totalSavings > 0" class="order-success__detail">
+                    <span class="order-success__label">Total ahorrado:</span>
+                    <span class="order-success__value order-success__savings">-${{ finalOrderTotals.totalSavings.toFixed(2) }}</span>
                   </div>
                 </div>
                 <div class="order-success__actions">
@@ -410,7 +415,7 @@
           </div>
         </div>
 
-        <!-- Order summary sidebar - CON OFERTAS CORREGIDAS -->
+        <!-- Order summary sidebar - DESCUENTOS CORREGIDOS -->
         <div class="order-sidebar" v-if="currentStep < 3">
           <div class="order-summary">
             <div class="order-summary__header">
@@ -460,29 +465,29 @@
                 <button @click="removePromoCode" class="remove-promo">×</button>
               </div>
 
-              <!-- Order totals CON DESCUENTOS CALCULADOS -->
+              <!-- Order totals CORREGIDOS - SIN DOBLE DESCUENTO -->
               <div class="order-summary__totals">
                 <div class="order-summary__row">
-                  <span>Subtotal</span>
-                  <span>${{ calculatedTotals.subtotal.toFixed(2) }}</span>
+                  <span>Subtotal original</span>
+                  <span>${{ cartTotals.originalSubtotal.toFixed(2) }}</span>
                 </div>
                 <!-- Mostrar ahorros por ofertas -->
-                <div v-if="calculatedTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">
+                <div v-if="cartTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">
                   <span>Ahorros por ofertas</span>
-                  <span>-${{ calculatedTotals.totalOfferSavings.toFixed(2) }}</span>
+                  <span>-${{ cartTotals.totalOfferSavings.toFixed(2) }}</span>
                 </div>
                 <div v-if="promoDiscount > 0" class="order-summary__row order-summary__row--discount">
                   <span>Descuento promocional</span>
                   <span>-${{ promoDiscount.toFixed(2) }}</span>
                 </div>
                 <div class="order-summary__row">
+                  <span>Subtotal con descuentos</span>
+                  <span>${{ calculatedTotals.subtotalAfterDiscounts.toFixed(2) }}</span>
+                </div>
+                <div class="order-summary__row">
                   <span>Costo de envío</span>
                   <span v-if="deliveryFee > 0">${{ deliveryFee.toFixed(2) }}</span>
                   <span v-else class="free-delivery">Gratis</span>
-                </div>
-                <div class="order-summary__row">
-                  <span>Impuestos</span>
-                  <span>${{ calculatedTotals.tax.toFixed(2) }}</span>
                 </div>
                 <div class="order-summary__row order-summary__total">
                   <span>Total</span>
@@ -787,7 +792,6 @@ const validatingPromo = ref(false);
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() => cartStore.items);
-const taxRate = 0.16;
 const estimatedDeliveryTime = ref(30);
 
 const deliveryFee = ref(0);
@@ -818,7 +822,6 @@ const fetchRestaurantData = async (): Promise<void> => {
   }
 };
 
-
 // Helper function para números seguros
 const safeNumber = (value: any, defaultValue: number = 0): number => {
   if (value === null || value === undefined || value === '') {
@@ -848,7 +851,8 @@ const getApplicableOffer = (product: any): ProductOffer | null => {
     return null;
   }
   
-  const currentSubtotal = cartTotals.value.subtotal;
+  // CORREGIDO: Usar subtotal original (sin descuentos) para evaluar mínimo de pedido
+  const currentSubtotal = cartTotals.value.originalSubtotal;
   
   // Buscar ofertas para este producto específico
   const productOffers = activeOffers.value.filter(offer => {
@@ -917,35 +921,49 @@ const processedCartItems = computed((): ProcessedCartItem[] => {
   });
 });
 
+// CORREGIDO: Cálculo base de totales del carrito
 const cartTotals = computed(() => {
-  const subtotal = processedCartItems.value.reduce((sum, item) => {
-    return sum + (item.finalPrice * item.quantity);
-  }, 0);
-  
   const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
     return sum + (item.originalPrice * item.quantity);
   }, 0);
+
+  const subtotalWithOffers = processedCartItems.value.reduce((sum, item) => {
+    return sum + (item.finalPrice * item.quantity);
+  }, 0);
   
-  const totalOfferSavings = originalSubtotal - subtotal;
+  const totalOfferSavings = originalSubtotal - subtotalWithOffers;
   
   return {
-    subtotal,
     originalSubtotal,
+    subtotalWithOffers,
     totalOfferSavings
   };
 });
 
+// CORREGIDO: Cálculo final sin doble descuento
 const calculatedTotals = computed(() => {
-  const subtotalAfterPromo = Math.max(0, cartTotals.value.subtotal - promoDiscount.value);
-  const tax = subtotalAfterPromo * taxRate;
-  const total = subtotalAfterPromo + deliveryFee.value + tax;
+  // Subtotal después de ofertas pero antes de código promo
+  const subtotalAfterOffers = cartTotals.value.subtotalWithOffers;
+  
+  // Aplicar código promocional al subtotal con ofertas
+  const subtotalAfterDiscounts = Math.max(0, subtotalAfterOffers - promoDiscount.value);
+  
+  const total = subtotalAfterDiscounts + deliveryFee.value;
   
   return {
-    subtotal: cartTotals.value.subtotal,
-    originalSubtotal: cartTotals.value.originalSubtotal,
-    totalOfferSavings: cartTotals.value.totalOfferSavings,
-    tax,
+    subtotalAfterDiscounts,
     total
+  };
+});
+
+// NUEVO: Totales finales para mostrar en el paso 4
+const finalOrderTotals = computed(() => {
+  const totalSavings = cartTotals.value.totalOfferSavings + promoDiscount.value;
+  
+  return {
+    original: cartTotals.value.originalSubtotal + deliveryFee.value,
+    total: calculatedTotals.value.total,
+    totalSavings
   };
 });
 
@@ -985,9 +1003,9 @@ const canSavePayment = computed(() => {
   }
 });
 
-// ============= FUNCIONES AUXILIARES PARA OFERTAS =============
+// ============= FUNCIONES AUXILIARES PARA OFERTAS CORREGIDAS =============
 const formatOfferBadge = (offer: ProductOffer): string => {
-  if (offer.discountType === '%') {
+  if (offer.discountType === '%' || offer.discountType === 'percentage') {
     return `${offer.discountValue}% OFF`;
   } else {
     return `$${offer.discountValue} OFF`;
@@ -1097,6 +1115,7 @@ const getDeliveryTimeText = () => {
   return `${estimatedDeliveryTime.value}-${estimatedDeliveryTime.value + 15} minutos`;
 };
 
+// CORREGIDO: Aplicar código promocional al subtotal ya con ofertas
 const applyPromoCode = async () => {
   if (!promoCode.value.trim() || !restaurantId.value) return;
   validatingPromo.value = true;
@@ -1104,7 +1123,7 @@ const applyPromoCode = async () => {
     const result = await orderService.validatePromoCode(
       promoCode.value.trim(),
       restaurantId.value,
-      calculatedTotals.value.subtotal
+      cartTotals.value.subtotalWithOffers // Usar subtotal con ofertas aplicadas
     );
     if (result.valid) {
       promoDiscount.value = result.discount;
