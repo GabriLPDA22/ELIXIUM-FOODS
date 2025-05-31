@@ -1,4 +1,4 @@
-<!-- views/RestaurantList.vue - Version 2.0 -->
+<!-- views/RestaurantList.vue-->
 <template>
   <div class="restaurant-list-page">
     <!-- Hero section compacto -->
@@ -270,11 +270,12 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { restaurantService } from '@/services/restaurantService';
 
 // Router
 const router = useRouter();
+const route = useRoute();
 
 // Estado
 const restaurants = ref([]);
@@ -290,20 +291,20 @@ const itemsPerPage = 8;
 // Mobile detection
 const isMobile = ref(false);
 
-// Categorías
+// Categorías - ACTUALIZADAS para coincidir con las del Home
 const categories = [
   { id: 'all', name: 'Todos' },
-  { id: 1, name: 'Americana' },
-  { id: 2, name: 'Italiana' },
-  { id: 3, name: 'Mexicana' },
-  { id: 4, name: 'Asiática' },
+  { id: 1, name: 'Americano' },
+  { id: 2, name: 'Italiano' },
+  { id: 3, name: 'Mexicano' },
+  { id: 4, name: 'Asiático' },
   { id: 5, name: 'Fast Food' },
   { id: 6, name: 'Saludable' },
   { id: 7, name: 'Postres' },
-  { id: 8, name: 'Vegana' }
+  { id: 8, name: 'Vegano' }
 ];
 
-// Iconos para categorías
+// Iconos para categorías - ACTUALIZADOS
 const getCategoryIcon = (categoryId) => {
   const icons = {
     1: '🍔',
@@ -322,6 +323,17 @@ const getCategoryIcon = (categoryId) => {
 const getTipoName = (tipo) => {
   const category = categories.find(c => c.id === tipo);
   return category ? category.name : 'Variado';
+};
+
+// Leer parámetros de la URL
+const initializeFromURL = () => {
+  const categoryParam = route.query.category;
+  if (categoryParam && categoryParam !== 'all') {
+    const categoryId = parseInt(categoryParam);
+    if (categories.find(c => c.id === categoryId)) {
+      selectedCategory.value = categoryId;
+    }
+  }
 };
 
 // Obtener restaurantes
@@ -387,6 +399,15 @@ const paginationInfo = computed(() => {
 const selectCategory = (categoryId) => {
   selectedCategory.value = categoryId;
   currentPage.value = 1;
+  
+  // Actualizar URL sin recargar página
+  router.replace({ 
+    query: { 
+      ...route.query, 
+      category: categoryId === 'all' ? undefined : categoryId 
+    } 
+  });
+  
   fetchRestaurants();
 };
 
@@ -395,6 +416,10 @@ const resetFilters = () => {
   selectedCategory.value = 'all';
   sortBy.value = 'popularity';
   currentPage.value = 1;
+  
+  // Limpiar parámetros de URL
+  router.replace({ query: {} });
+  
   fetchRestaurants();
 };
 
@@ -496,6 +521,8 @@ const scrollCategories = (direction) => {
 
 // Inicialización
 onMounted(() => {
+  // Primero inicializar desde URL, luego cargar datos
+  initializeFromURL();
   fetchRestaurants();
   checkMobile();
   
@@ -520,6 +547,17 @@ watch(searchQuery, () => {
 
 watch(sortBy, () => {
   currentPage.value = 1;
+});
+
+// Watch para cambios en los parámetros de la URL
+watch(() => route.query.category, (newCategory) => {
+  if (newCategory && newCategory !== selectedCategory.value) {
+    const categoryId = newCategory === 'all' ? 'all' : parseInt(newCategory);
+    if (categories.find(c => c.id === categoryId)) {
+      selectedCategory.value = categoryId;
+      fetchRestaurants();
+    }
+  }
 });
 </script>
 
