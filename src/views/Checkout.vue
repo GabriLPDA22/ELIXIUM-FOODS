@@ -1,3 +1,4 @@
+<!-- src/views/Checkout.vue -->
 <template>
   <div class="checkout-page">
     <div class="container">
@@ -138,7 +139,6 @@
                              @change="selectAddress(address.id)">
                     </div>
                   </div>
-                  <!-- Botón funcional para agregar dirección -->
                   <button @click="showAddAddressModal = true" class="add-item-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -171,15 +171,18 @@
               </div>
             </div>
 
-            <!-- Payment methods step (step 2) -->
+            <!-- Payment methods step (step 2) - INTEGRADO CON BACKEND REAL -->
             <div v-else-if="currentStep === 1" class="step-panel">
               <h2 class="step-panel__title">Método de pago</h2>
 
               <div class="payment-methods">
+                <!-- Estado de carga -->
                 <div v-if="loadingPaymentMethods" class="loading-payment">
                   <div class="loading-spinner"></div>
                   <span>Cargando métodos de pago...</span>
                 </div>
+
+                <!-- Estado sin métodos de pago -->
                 <div v-else-if="paymentMethods.length === 0" class="no-payment-methods">
                   <div class="empty-state">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -197,24 +200,37 @@
                     Agregar primer método de pago
                   </button>
                 </div>
+
+                <!-- Lista de métodos de pago reales -->
                 <div v-else class="payment-method-list">
                   <div v-for="method in paymentMethods" :key="method.id"
                        class="payment-method"
                        :class="{ 'payment-method--selected': selectedPaymentMethod === method.id }"
                        @click="selectPaymentMethod(method.id)">
                     <div class="payment-method__icon">
-                      <svg v-if="method.type === 'card'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <!-- Iconos según el tipo de método -->
+                      <svg v-if="method.type === 'visa'" width="32" height="20" viewBox="0 0 32 20" fill="none">
+                        <rect width="32" height="20" rx="4" fill="#1434CB"/>
+                        <text x="16" y="14" text-anchor="middle" fill="white" font-size="8" font-weight="bold">VISA</text>
+                      </svg>
+                      <svg v-else-if="method.type === 'mastercard'" width="32" height="20" viewBox="0 0 32 20" fill="none">
+                        <rect width="32" height="20" rx="4" fill="#EB001B"/>
+                        <circle cx="12" cy="10" r="6" fill="#EB001B"/>
+                        <circle cx="20" cy="10" r="6" fill="#F79E1B"/>
+                      </svg>
+                      <svg v-else-if="method.type === 'paypal'" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.79A.859.859 0 0 1 5.79 2h8.3c2.02 0 3.596.298 4.731 1.255 1.16.98 1.596 2.644.775 4.97-.9 2.55-2.98 4.119-5.416 4.119H9.47a.75.75 0 0 0-.742.61l-.947 5.383z" fill="#003087"/>
+                        <path d="M19.825 7.967c.455-2.889-.634-4.467-3.24-4.467H9.47L7.076 21.337h4.606L13.97 12.4h2.71c3.24 0 5.69-1.31 6.144-4.433z" fill="#009CDE"/>
+                      </svg>
+                      <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                         <line x1="1" y1="10" x2="23" y2="10"></line>
                       </svg>
-                      <svg v-else-if="method.type === 'paypal'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M8 12h8"></path>
-                      </svg>
                     </div>
                     <div class="payment-method__details">
-                      <h5>{{ method.name }}</h5>
+                      <h5>{{ method.nickname }}</h5>
                       <p>{{ getPaymentMethodDescription(method) }}</p>
+                      <span v-if="method.isDefault" class="default-badge">Predeterminado</span>
                     </div>
                     <div class="radio-indicator">
                       <input type="radio"
@@ -222,7 +238,8 @@
                              @change="selectPaymentMethod(method.id)">
                     </div>
                   </div>
-                  <!-- Botón funcional para agregar método de pago -->
+
+                  <!-- Botón para agregar nuevo método -->
                   <button @click="showAddPaymentModal = true" class="add-item-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -230,6 +247,17 @@
                     </svg>
                     Agregar nuevo método de pago
                   </button>
+                </div>
+
+                <!-- Error de carga -->
+                <div v-if="paymentMethodsError" class="error-message">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
+                  <span>{{ paymentMethodsError }}</span>
+                  <button @click="loadPaymentMethods" class="retry-btn">Reintentar</button>
                 </div>
               </div>
 
@@ -276,7 +304,7 @@
                 <div class="review-section">
                   <h4>Método de pago</h4>
                   <div class="review-item">
-                    <strong>{{ getSelectedPaymentMethod()?.name }}</strong>
+                    <strong>{{ getSelectedPaymentMethod()?.nickname }}</strong>
                     <span>{{ getPaymentMethodDescription(getSelectedPaymentMethod()) }}</span>
                   </div>
                 </div>
@@ -308,7 +336,7 @@
               </div>
             </div>
 
-            <!-- Order confirmation step (step 4) - CON VIDEOS ALEATORIOS -->
+            <!-- Order confirmation step (step 4) -->
             <div v-else-if="currentStep === 3" class="step-panel step-panel--success">
               <div class="order-success">
                 <!-- Video aleatorio de delivery -->
@@ -511,46 +539,96 @@
         </div>
       </div>
 
-      <!-- Modal para agregar método de pago -->
+      <!-- Modal para agregar método de pago - INTEGRADO CON BACKEND -->
       <div v-if="showAddPaymentModal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
             <h3>Agregar Método de Pago</h3>
-            <button @click="showAddPaymentModal = false" class="modal-close">×</button>
+            <button @click="cancelAddPayment" class="modal-close">×</button>
           </div>
           <div class="modal-body">
+            <!-- Selector de tipo de pago -->
             <div class="form-group">
-              <label>Número de tarjeta</label>
-              <input v-model="newPayment.cardNumber"
+              <label>Tipo de método</label>
+              <select v-model="newPayment.type" @change="resetPaymentForm">
+                <option value="">Seleccionar tipo</option>
+                <option value="visa">Visa</option>
+                <option value="mastercard">Mastercard</option>
+                <option value="paypal">PayPal</option>
+                <option value="other">Otra tarjeta</option>
+              </select>
+            </div>
+
+            <!-- Nombre del método -->
+            <div class="form-group">
+              <label>Nombre del método *</label>
+              <input v-model="newPayment.nickname"
                      type="text"
-                     placeholder="1234 5678 9012 3456"
-                     maxlength="19"
-                     @input="formatCardNumber">
+                     placeholder="Mi tarjeta personal, PayPal trabajo, etc.">
             </div>
-            <div class="form-row">
+
+            <!-- Campos para PayPal -->
+            <template v-if="newPayment.type === 'paypal'">
               <div class="form-group">
-                <label>Fecha de vencimiento</label>
-                <input v-model="newPayment.expiryDate" type="text" placeholder="MM/AA" maxlength="5">
+                <label>Email de PayPal *</label>
+                <input v-model="newPayment.payPalEmail"
+                       type="email"
+                       placeholder="correo@ejemplo.com">
+              </div>
+            </template>
+
+            <!-- Campos para tarjetas -->
+            <template v-else-if="newPayment.type && newPayment.type !== 'paypal'">
+              <div class="form-group">
+                <label>Número de tarjeta *</label>
+                <input v-model="newPayment.cardNumber"
+                       type="text"
+                       placeholder="1234 5678 9012 3456"
+                       maxlength="19"
+                       @input="formatCardNumber">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Fecha de vencimiento *</label>
+                  <input v-model="newPayment.expiryDate"
+                         type="text"
+                         placeholder="MM/AA"
+                         maxlength="5"
+                         @input="formatExpiryDate">
+                </div>
+                <div class="form-group">
+                  <label>CVV *</label>
+                  <input v-model="newPayment.cvv"
+                         type="text"
+                         placeholder="123"
+                         maxlength="4">
+                </div>
               </div>
               <div class="form-group">
-                <label>CVV</label>
-                <input v-model="newPayment.cvv" type="text" placeholder="123" maxlength="3">
+                <label>Nombre en la tarjeta *</label>
+                <input v-model="newPayment.cardholderName"
+                       type="text"
+                       placeholder="Juan Pérez">
               </div>
-            </div>
-            <div class="form-group">
-              <label>Nombre en la tarjeta</label>
-              <input v-model="newPayment.cardholderName" type="text" placeholder="Juan Pérez">
-            </div>
+            </template>
+
             <div class="form-group">
               <label class="checkbox-label">
                 <input v-model="newPayment.isDefault" type="checkbox">
                 Establecer como método predeterminado
               </label>
             </div>
+
+            <!-- Mensaje de error -->
+            <div v-if="paymentError" class="error-message">
+              {{ paymentError }}
+            </div>
           </div>
           <div class="modal-footer">
-            <button @click="showAddPaymentModal = false" class="btn-secondary">Cancelar</button>
-            <button @click="saveNewPayment" class="btn-primary" :disabled="savingPayment">
+            <button @click="cancelAddPayment" class="btn-secondary">Cancelar</button>
+            <button @click="saveNewPayment"
+                    class="btn-primary"
+                    :disabled="savingPayment || !canSavePayment">
               <span v-if="!savingPayment">Guardar</span>
               <span v-else class="loading-spinner loading-spinner--small"></span>
             </button>
@@ -561,8 +639,7 @@
   </div>
 </template>
 
-// Checkout.vue - <script setup lang="ts">
-
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
@@ -570,6 +647,7 @@ import { useOrderStore } from '@/stores/orderStore';
 import { useAuthStore } from '@/stores/auth';
 import userService from '@/services/userService';
 import orderService from '@/services/orderService';
+import { paymentService, type PaymentMethodInfo, type CreatePaymentMethodRequest } from '@/services/paymentService';
 import type { Address } from '@/types';
 
 const router = useRouter();
@@ -618,11 +696,15 @@ const newAddress = ref({
   isDefault: false
 });
 
-const newPayment = ref({
+// Estado para métodos de pago con tipado del backend
+const newPayment = ref<CreatePaymentMethodRequest>({
+  nickname: '',
+  type: '',
   cardNumber: '',
   expiryDate: '',
   cvv: '',
   cardholderName: '',
+  payPalEmail: '',
   isDefault: false
 });
 
@@ -636,9 +718,12 @@ const addresses = ref<Address[]>([]);
 const selectedAddress = ref<number | null>(null);
 const loadingAddresses = ref(true);
 
-const paymentMethods = ref<any[]>([]);
+// Estado para métodos de pago reales del backend
+const paymentMethods = ref<PaymentMethodInfo[]>([]);
 const selectedPaymentMethod = ref<number | null>(null);
 const loadingPaymentMethods = ref(true);
+const paymentMethodsError = ref<string>('');
+const paymentError = ref<string>('');
 
 const promoCode = ref('');
 const promoDiscount = ref(0);
@@ -648,7 +733,7 @@ const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() => cartStore.items);
 const subtotal = computed(() => cartStore.totalAmount);
-const deliveryFee = ref(0); // Inicializar o obtener de forma más robusta
+const deliveryFee = ref(0);
 const taxRate = 0.16;
 const tax = computed(() => (subtotal.value - promoDiscount.value) * taxRate);
 const total = computed(() => subtotal.value - promoDiscount.value + deliveryFee.value + tax.value);
@@ -668,9 +753,26 @@ const maxDate = computed(() => {
 const canProceedToPayment = computed(() => {
   if (!selectedAddress.value) return false;
   if (deliveryType.value === 'scheduled') {
-    return !!(scheduledDate.value && scheduledTime.value); // Usar !! para convertir a booleano explícitamente
+    return !!(scheduledDate.value && scheduledTime.value);
   }
   return true;
+});
+
+// Validación para poder guardar método de pago
+const canSavePayment = computed(() => {
+  if (!newPayment.value.nickname?.trim()) return false;
+  if (!newPayment.value.type) return false;
+
+  if (newPayment.value.type === 'paypal') {
+    return !!(newPayment.value.payPalEmail?.trim());
+  } else {
+    return !!(
+      newPayment.value.cardNumber?.trim() &&
+      newPayment.value.expiryDate?.trim() &&
+      newPayment.value.cvv?.trim() &&
+      newPayment.value.cardholderName?.trim()
+    );
+  }
 });
 
 const goToStep = (step: number) => {
@@ -680,16 +782,16 @@ const goToStep = (step: number) => {
 
 const selectAddress = async (addressId: number) => {
   selectedAddress.value = addressId;
-  if (restaurantId.value && addressId) { // Asegurar que addressId también sea válido
+  if (restaurantId.value && addressId) {
     try {
       const fee = await orderService.getDeliveryFee(restaurantId.value, addressId);
       deliveryFee.value = fee;
     } catch (error) {
       console.error('Error fetching delivery fee:', error);
-      deliveryFee.value = 3.99; // Tarifa de respaldo
+      deliveryFee.value = 3.99;
     }
   } else {
-    deliveryFee.value = 0; // Resetear si no hay restaurante o dirección
+    deliveryFee.value = 0;
   }
 };
 
@@ -710,17 +812,15 @@ const formatAddress = (address: Address | null) => {
   return `${address.street} ${address.number || ''}, ${address.city}, ${address.state}`;
 };
 
-const getPaymentMethodDescription = (method: any) => {
+// Función para obtener descripción del método de pago usando el servicio
+const getPaymentMethodDescription = (method: PaymentMethodInfo | null | undefined) => {
   if (!method) return '';
-  if (method.type === 'card' && method.name && typeof method.name === 'string') {
-    return `Termina en ${method.name.slice(-4)}`;
-  }
-  return method.type || 'Método desconocido';
+  return paymentService.getPaymentMethodDescription(method);
 };
 
 const formatScheduledDelivery = () => {
   if (!scheduledDate.value || !scheduledTime.value) return '';
-  const date = new Date(scheduledDate.value + 'T00:00:00'); // Asegurar que se interprete como fecha local
+  const date = new Date(scheduledDate.value + 'T00:00:00');
   const today = new Date();
   today.setHours(0,0,0,0);
 
@@ -764,11 +864,11 @@ const applyPromoCode = async () => {
     } else {
       alert(result.message || 'Código promocional inválido');
       promoCode.value = '';
-      promoDiscount.value = 0; // Asegurar reseteo del descuento
+      promoDiscount.value = 0;
     }
   } catch (error) {
     alert('Error al validar el código promocional');
-    promoDiscount.value = 0; // Asegurar reseteo del descuento
+    promoDiscount.value = 0;
   } finally {
     validatingPromo.value = false;
   }
@@ -796,12 +896,12 @@ const placeOrder = async () => {
       restaurantId: restaurantId.value,
       deliveryAddressId: selectedAddress.value,
       items: cartItems.value.map(item => ({
-        productId: item.productId || item.id, // Usar productId si existe, sino id
+        productId: item.productId || item.id,
         quantity: item.quantity,
         name: item.name,
         price: item.price
       })),
-      paymentMethod: getSelectedPaymentMethod()?.type || 'card', // Podría ser más robusto
+      paymentMethod: getSelectedPaymentMethod()?.type || 'card',
       deliveryInstructions: deliveryInstructions.value || undefined,
       promoCode: promoCode.value.trim() || undefined,
       scheduledDeliveryTime: deliveryType.value === 'scheduled' && scheduledDate.value && scheduledTime.value
@@ -819,7 +919,7 @@ const placeOrder = async () => {
     const selectedVideo = deliveryGifFiles[randomIndex];
     randomDeliveryGifUrl.value = getVideoUrl(selectedVideo);
 
-    goToStep(3); // Ir a la pantalla de confirmación
+    goToStep(3);
 
   } catch (error: any) {
     console.error('Error placing order:', error);
@@ -839,7 +939,6 @@ const loadAddresses = async () => {
     } else if (addresses.value.length > 0) {
       await selectAddress(addresses.value[0].id);
     }
-    // Mover la carga de slots aquí para asegurar que selectedAddress esté seteado
     if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
       await loadAvailableTimeSlots();
     }
@@ -850,36 +949,42 @@ const loadAddresses = async () => {
   }
 };
 
+// Función real para cargar métodos de pago desde el backend
 const loadPaymentMethods = async () => {
-  loadingPaymentMethods.value = true; // Iniciar carga
   try {
-    // Simulación, reemplazar con llamada real si es necesario
-    // paymentMethods.value = await userService.getUserPaymentMethods();
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay
-    paymentMethods.value = [
-      { id: 1, type: 'card', name: 'Tarjeta **** 1234', isDefault: true }
-      // { id: 2, type: 'paypal', name: 'PayPal (user@example.com)' }
-    ];
-    const defaultPayment = paymentMethods.value.find(pm => pm.isDefault);
-    if (defaultPayment) {
-      selectedPaymentMethod.value = defaultPayment.id;
-    } else if (paymentMethods.value.length > 0) {
-      selectedPaymentMethod.value = paymentMethods.value[0].id;
+    loadingPaymentMethods.value = true;
+    paymentMethodsError.value = '';
+
+    console.log('🔄 Cargando métodos de pago desde backend...');
+
+    const methods = await paymentService.getUserPaymentMethods();
+    paymentMethods.value = methods;
+
+    console.log('✅ Métodos de pago cargados:', methods);
+
+    // Seleccionar método predeterminado
+    const defaultMethod = methods.find(method => method.isDefault);
+    if (defaultMethod) {
+      selectedPaymentMethod.value = defaultMethod.id;
+      console.log('🎯 Método predeterminado seleccionado:', defaultMethod.id);
+    } else if (methods.length > 0) {
+      selectedPaymentMethod.value = methods[0].id;
+      console.log('🎯 Primer método seleccionado:', methods[0].id);
     }
-  } catch (error) {
-    console.error('Error loading payment methods:', error);
+
+  } catch (error: any) {
+    console.error('❌ Error cargando métodos de pago:', error);
+    paymentMethodsError.value = error.message || 'Error al cargar métodos de pago';
   } finally {
     loadingPaymentMethods.value = false;
   }
 };
 
 const loadAvailableTimeSlots = async () => {
-  if (!restaurantId.value || !selectedAddress.value || !scheduledDate.value) return; // Asegurar que la fecha también esté
+  if (!restaurantId.value || !selectedAddress.value || !scheduledDate.value) return;
   try {
-    // Aquí deberías pasar scheduledDate.value a tu servicio
     const times = await orderService.getAvailableDeliveryTimes(restaurantId.value, selectedAddress.value, scheduledDate.value);
     availableTimeSlots.value = times;
-    // Si la hora seleccionada ya no está disponible, resetearla
     if (scheduledTime.value && !times.includes(scheduledTime.value)) {
         scheduledTime.value = '';
     }
@@ -887,12 +992,11 @@ const loadAvailableTimeSlots = async () => {
     console.warn('Error loading available time slots, using fallback:', error);
     const slots = [];
     const now = new Date();
-    // Considerar la fecha seleccionada para los slots, no solo la hora actual
     const selectedDay = new Date(scheduledDate.value + 'T00:00:00');
     const isToday = selectedDay.toDateString() === now.toDateString();
-    let startHour = 11; // Hora de inicio por defecto
+    let startHour = 11;
     if (isToday) {
-        startHour = Math.max(startHour, now.getHours() + 1); // Al menos una hora desde ahora si es hoy
+        startHour = Math.max(startHour, now.getHours() + 1);
     }
 
     for (let hour = startHour; hour <= 22; hour++) {
@@ -917,7 +1021,7 @@ const saveNewAddress = async () => {
     const savedAddress = await userService.addAddress(addressData);
     addresses.value.push(savedAddress);
     if (newAddress.value.isDefault || addresses.value.length === 1) {
-      await selectAddress(savedAddress.id); // Asegurar que se seleccione y se calcule la tarifa de envío
+      await selectAddress(savedAddress.id);
     }
     newAddress.value = { name: '', street: '', number: '', interior: '', neighborhood: '', city: '', state: '', zipCode: '', phone: '', isDefault: false };
     showAddAddressModal.value = false;
@@ -930,58 +1034,76 @@ const saveNewAddress = async () => {
   }
 };
 
+// Función real para guardar método de pago usando el backend
 const saveNewPayment = async () => {
-  if (!newPayment.value.cardNumber || !newPayment.value.expiryDate || !newPayment.value.cvv || !newPayment.value.cardholderName) {
-    alert('Por favor completa todos los campos del método de pago.');
-    return;
-  }
-  savingPayment.value = true;
   try {
-    // Simulación, reemplazar con lógica real de guardado (NO guardar CVV)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const newId = paymentMethods.value.length > 0 ? Math.max(...paymentMethods.value.map(pm => pm.id)) + 1 : 1;
-    const newMethodData = {
-      id: newId,
-      type: 'card',
-      name: `Tarjeta **** ${newPayment.value.cardNumber.slice(-4)}`, // No guardar número completo
-      isDefault: newPayment.value.isDefault
-      // No almacenar CVV ni fecha de expiración completa si no es necesario y seguro
-    };
-    paymentMethods.value.push(newMethodData);
-    if (newPayment.value.isDefault || paymentMethods.value.length === 1) {
-      selectPaymentMethod(newId);
+    savingPayment.value = true;
+    paymentError.value = '';
+
+    console.log('💳 Guardando método de pago:', newPayment.value);
+
+    const savedMethod = await paymentService.addPaymentMethod(newPayment.value);
+
+    console.log('✅ Método guardado exitosamente:', savedMethod);
+
+    // Agregar a la lista local
+    paymentMethods.value.push(savedMethod);
+
+    // Seleccionar como método actual si es predeterminado o es el primero
+    if (savedMethod.isDefault || paymentMethods.value.length === 1) {
+      selectedPaymentMethod.value = savedMethod.id;
     }
-    newPayment.value = { cardNumber: '', expiryDate: '', cvv: '', cardholderName: '', isDefault: false };
+
+    // Limpiar formulario y cerrar modal
+    resetPaymentForm();
     showAddPaymentModal.value = false;
-    alert('Método de pago agregado exitosamente (simulado)');
-  } catch (error) {
-    console.error('Error saving payment method:', error);
-    alert('Error al guardar el método de pago');
+
+    alert('Método de pago agregado exitosamente');
+
+  } catch (error: any) {
+    console.error('❌ Error guardando método de pago:', error);
+    paymentError.value = error.message || 'Error al guardar el método de pago';
   } finally {
     savingPayment.value = false;
   }
 };
 
-const formatCardNumber = (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  let value = input.value.replace(/\s+/g, '').replace(/[^0-9]/gi, ''); // Eliminar espacios y no dígitos
-  const parts = [];
-  for (let i = 0; i < value.length; i += 4) {
-    parts.push(value.substring(i, i + 4));
-  }
-  const formattedValue = parts.join(' ');
-  if (formattedValue !== input.value) { // Evitar bucle infinito de actualización
-    newPayment.value.cardNumber = formattedValue;
-  } else if (value.length > 19) { // Limitar a 16 dígitos + 3 espacios
-     newPayment.value.cardNumber = formattedValue.substring(0, 19);
-  } else {
-     newPayment.value.cardNumber = formattedValue;
-  }
+// Función para resetear el formulario de pago
+const resetPaymentForm = () => {
+  newPayment.value = {
+    nickname: '',
+    type: newPayment.value.type, // Mantener el tipo seleccionado
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardholderName: '',
+    payPalEmail: '',
+    isDefault: false
+  };
+  paymentError.value = '';
 };
 
+// Función para cancelar agregar pago
+const cancelAddPayment = () => {
+  resetPaymentForm();
+  showAddPaymentModal.value = false;
+};
+
+// Funciones de formateo usando el servicio
+const formatCardNumber = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const formatted = paymentService.formatCardNumber(input.value);
+  newPayment.value.cardNumber = formatted;
+};
+
+const formatExpiryDate = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const formatted = paymentService.formatExpiryDate(input.value);
+  newPayment.value.expiryDate = formatted;
+};
 
 // Watchers
-watch([deliveryType, scheduledDate, selectedAddress], async () => { // Hacerlo async
+watch([deliveryType, scheduledDate, selectedAddress], async () => {
   if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
     await loadAvailableTimeSlots();
   }
@@ -991,22 +1113,21 @@ watch([deliveryType, scheduledDate, selectedAddress], async () => { // Hacerlo a
 onMounted(async () => {
   if (cartStore.isEmpty) {
     alert('Tu carrito está vacío. Serás redirigido.');
-    router.push('/cart'); // O a la página de restaurantes
+    router.push('/cart');
     return;
   }
-  // Corregido: acceder a isAuthenticated como propiedad
   if (!authStore.isAuthenticated) {
     alert('Por favor, inicia sesión para continuar.');
     router.push('/login?redirect=/checkout');
     return;
   }
+
   // Cargar direcciones y métodos de pago en paralelo
   await Promise.all([
     loadAddresses(),
     loadPaymentMethods()
   ]);
 });
-
 </script>
 
 <style lang="scss" scoped>
@@ -1222,6 +1343,35 @@ $transition: all 0.2s ease;
     border-color: $primary-color;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
+  }
+}
+
+// Estados de error
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba($error-color, 0.1);
+  border: 1px solid rgba($error-color, 0.3);
+  color: $error-color;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+
+  .retry-btn {
+    margin-left: auto;
+    background: $error-color;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+
+    &:hover {
+      background: darken($error-color, 10%);
+    }
   }
 }
 
@@ -1729,6 +1879,11 @@ $transition: all 0.2s ease;
 .payment-method__icon {
   margin-right: 1rem;
   color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 32px;
 }
 
 .delivery-instructions {
