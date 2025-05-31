@@ -403,7 +403,7 @@ $transition: all 0.2s ease;
   }
 
   &::placeholder {
-    color: lighten($text-secondary, 15%);
+    color: $text-secondary;
   }
 }
 </style>

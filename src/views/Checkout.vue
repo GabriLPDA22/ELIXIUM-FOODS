@@ -1,4 +1,4 @@
-<!-- src/views/Checkout.vue -->
+<!-- src/views/Checkout.vue - ACTUALIZADO CON CÁLCULO DE DESCUENTOS -->
 <template>
   <div class="checkout-page">
     <div class="container">
@@ -171,7 +171,7 @@
               </div>
             </div>
 
-            <!-- Payment methods step (step 2) - INTEGRADO CON BACKEND REAL -->
+            <!-- Payment methods step (step 2) -->
             <div v-else-if="currentStep === 1" class="step-panel">
               <h2 class="step-panel__title">Método de pago</h2>
 
@@ -312,10 +312,27 @@
                 <div class="review-section">
                   <h4>Productos</h4>
                   <div class="review-items">
-                    <div v-for="item in cartItems" :key="item.id" class="review-product">
-                      <span class="quantity">{{ item.quantity }}×</span>
-                      <span class="name">{{ item.name }}</span>
-                      <span class="price">${{ (item.price * item.quantity).toFixed(2) }}</span>
+                    <div v-for="item in processedCartItems" :key="item.id" class="review-product">
+                      <div class="review-product__quantity">{{ item.quantity }}×</div>
+                      <div class="review-product__details">
+                        <div class="review-product__name">{{ item.name }}</div>
+                        <!-- Mostrar precio original y con descuento si aplica -->
+                        <div v-if="item.appliedOffer" class="review-product__price-with-offer">
+                          <div class="review-product__offer-info">
+                            <span class="review-product__offer-badge">{{ formatOfferBadge(item.appliedOffer) }}</span>
+                          </div>
+                          <div class="review-product__pricing">
+                            <span class="review-product__original-price">${{ item.originalPrice.toFixed(2) }}</span>
+                            <span class="review-product__discounted-price">${{ item.finalPrice.toFixed(2) }}</span>
+                          </div>
+                        </div>
+                        <div v-else class="review-product__price">
+                          ${{ item.finalPrice.toFixed(2) }}
+                        </div>
+                      </div>
+                      <div class="review-product__total">
+                        ${{ (item.finalPrice * item.quantity).toFixed(2) }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -382,7 +399,7 @@
                   </div>
                   <div class="order-success__detail">
                     <span class="order-success__label">Total:</span>
-                    <span class="order-success__value">${{ total.toFixed(2) }}</span>
+                    <span class="order-success__value">${{ calculatedTotals.total.toFixed(2) }}</span>
                   </div>
                 </div>
                 <div class="order-success__actions">
@@ -394,7 +411,7 @@
           </div>
         </div>
 
-        <!-- Order summary sidebar -->
+        <!-- Order summary sidebar - ACTUALIZADO CON DESCUENTOS -->
         <div class="order-sidebar" v-if="currentStep < 3">
           <div class="order-summary">
             <div class="order-summary__header">
@@ -410,28 +427,27 @@
                 </div>
               </div>
 
-              <!-- Cart item list -->
+              <!-- Cart item list CON DESCUENTOS -->
               <div class="order-summary__items">
-                <div v-for="item in cartItems" :key="item.id" class="order-summary__item">
+                <div v-for="item in processedCartItems" :key="item.id" class="order-summary__item">
                   <div class="item-quantity">{{ item.quantity }}×</div>
-                  <div class="item-name">{{ item.name }}</div>
-                  <div class="item-price">${{ (item.price * item.quantity).toFixed(2) }}</div>
+                  <div class="item-details">
+                    <div class="item-name">{{ item.name }}</div>
+                    <!-- Mostrar ofertas aplicadas -->
+                    <div v-if="item.appliedOffer" class="item-offer">
+                      <span class="offer-badge">{{ formatOfferBadge(item.appliedOffer) }}</span>
+                    </div>
+                  </div>
+                  <div class="item-pricing">
+                    <!-- Precio con descuento si aplica -->
+                    <div v-if="item.appliedOffer" class="item-price-with-discount">
+                      <span class="item-original-price">${{ item.originalPrice.toFixed(2) }}</span>
+                      <span class="item-discounted-price">${{ item.finalPrice.toFixed(2) }}</span>
+                    </div>
+                    <div v-else class="item-price">${{ item.finalPrice.toFixed(2) }}</div>
+                    <div class="item-total">${{ (item.finalPrice * item.quantity).toFixed(2) }}</div>
+                  </div>
                 </div>
-              </div>
-
-              <!-- Promo code -->
-              <div class="order-summary__promocode">
-                <input type="text"
-                       class="promocode-input"
-                       placeholder="Código promocional"
-                       v-model="promoCode"
-                       @keyup.enter="applyPromoCode">
-                <button class="promocode-button"
-                        @click="applyPromoCode"
-                        :disabled="validatingPromo">
-                  <span v-if="!validatingPromo">Aplicar</span>
-                  <span v-else class="loading-spinner loading-spinner--small"></span>
-                </button>
               </div>
 
               <!-- Promo discount display -->
@@ -445,14 +461,19 @@
                 <button @click="removePromoCode" class="remove-promo">×</button>
               </div>
 
-              <!-- Order totals -->
+              <!-- Order totals CON DESCUENTOS CALCULADOS -->
               <div class="order-summary__totals">
                 <div class="order-summary__row">
                   <span>Subtotal</span>
-                  <span>${{ subtotal.toFixed(2) }}</span>
+                  <span>${{ calculatedTotals.subtotal.toFixed(2) }}</span>
+                </div>
+                <!-- Mostrar ahorros por ofertas -->
+                <div v-if="calculatedTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">
+                  <span>Ahorros por ofertas</span>
+                  <span>-${{ calculatedTotals.totalOfferSavings.toFixed(2) }}</span>
                 </div>
                 <div v-if="promoDiscount > 0" class="order-summary__row order-summary__row--discount">
-                  <span>Descuento</span>
+                  <span>Descuento promocional</span>
                   <span>-${{ promoDiscount.toFixed(2) }}</span>
                 </div>
                 <div class="order-summary__row">
@@ -462,11 +483,11 @@
                 </div>
                 <div class="order-summary__row">
                   <span>Impuestos</span>
-                  <span>${{ tax.toFixed(2) }}</span>
+                  <span>${{ calculatedTotals.tax.toFixed(2) }}</span>
                 </div>
                 <div class="order-summary__row order-summary__total">
                   <span>Total</span>
-                  <span>${{ total.toFixed(2) }}</span>
+                  <span>${{ calculatedTotals.total.toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -539,7 +560,7 @@
         </div>
       </div>
 
-      <!-- Modal para agregar método de pago - INTEGRADO CON BACKEND -->
+      <!-- Modal para agregar método de pago -->
       <div v-if="showAddPaymentModal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
@@ -650,6 +671,37 @@ import orderService from '@/services/orderService';
 import { paymentService, type PaymentMethodInfo, type CreatePaymentMethodRequest } from '@/services/paymentService';
 import type { Address } from '@/types';
 
+// ============= INTERFACES PARA OFERTAS =============
+interface ProductOffer {
+  id: number
+  name: string
+  description: string
+  discountType: '%' | 'fixed'
+  discountValue: number
+  minimumOrderAmount: number
+  minimumQuantity: number
+  startDate: string
+  endDate: string
+  usageLimit: number
+  usageCount: number
+  status: string
+  restaurantId: number
+  restaurantName: string
+  productId: number
+  productName: string
+  productImageUrl: string
+}
+
+interface ProcessedCartItem {
+  id: number
+  productId: number
+  name: string
+  originalPrice: number
+  finalPrice: number
+  quantity: number
+  appliedOffer?: ProductOffer
+}
+
 const router = useRouter();
 const cartStore = useCartStore();
 const orderStore = useOrderStore();
@@ -671,6 +723,10 @@ const createdOrderId = ref('');
 // Videos de delivery aleatorios
 const deliveryGifFiles = ['Bici.mp4', 'Moto.mp4', 'Scooter.mp4'];
 const randomDeliveryGifUrl = ref<string | null>(null);
+
+// ============= ESTADO PARA OFERTAS =============
+const activeOffers = ref<ProductOffer[]>([]);
+const loadingOffers = ref(false);
 
 // Función para obtener la URL del video desde assets
 const getVideoUrl = (filename: string) => {
@@ -732,13 +788,187 @@ const validatingPromo = ref(false);
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() => cartStore.items);
-const subtotal = computed(() => cartStore.totalAmount);
 const deliveryFee = ref(0);
 const taxRate = 0.16;
-const tax = computed(() => (subtotal.value - promoDiscount.value) * taxRate);
-const total = computed(() => subtotal.value - promoDiscount.value + deliveryFee.value + tax.value);
 const estimatedDeliveryTime = ref(30);
 
+// ============= LÓGICA DE OFERTAS (COPIADA DE RESTAURANTDETAIL) =============
+
+// Helper function para números seguros
+const safeNumber = (value: any, defaultValue: number = 0): number => {
+  if (value === null || value === undefined || value === '') {
+    return defaultValue;
+  }
+  const num = typeof value === 'number' ? value : parseFloat(value);
+  return isNaN(num) ? defaultValue : num;
+};
+
+// Función para obtener el precio real del producto
+const getProductPrice = (product: any): number => {
+  const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost'];
+
+  for (let field of priceFields) {
+    if (product[field] !== null && product[field] !== undefined && product[field] !== '') {
+      const testPrice = typeof product[field] === 'number' ? product[field] : parseFloat(product[field]);
+      if (!isNaN(testPrice) && testPrice > 0) {
+        return testPrice;
+      }
+    }
+  }
+  return 0;
+};
+
+// Función para obtener oferta aplicable a un producto
+const getApplicableOffer = (product: any, currentSubtotal: number): ProductOffer | null => {
+  if (!activeOffers.value.length) {
+    return null;
+  }
+  
+  // Buscar ofertas para este producto específico
+  const productOffers = activeOffers.value.filter(offer => {
+    const matchesProduct = offer.productId === product.id || offer.productId === product.productId;
+    const meetsMinimumAmount = currentSubtotal >= offer.minimumOrderAmount;
+    const isActive = offer.status === 'active';
+    
+    return matchesProduct && meetsMinimumAmount && isActive;
+  });
+  
+  if (!productOffers.length) return null;
+  
+  // Devolver la mejor oferta (mayor descuento)
+  const bestOffer = productOffers.reduce((best, current) => {
+    const originalPrice = getProductPrice(product);
+    const bestDiscount = best.discountType === '%' ? 
+      (originalPrice * best.discountValue / 100) : 
+      best.discountValue;
+      
+    const currentDiscount = current.discountType === '%' ? 
+      (originalPrice * current.discountValue / 100) : 
+      current.discountValue;
+      
+    return currentDiscount > bestDiscount ? current : best;
+  });
+  
+  return bestOffer;
+};
+
+// Función para calcular precio con descuento
+const calculateDiscountedPrice = (product: any, offer: ProductOffer | null): number => {
+  const originalPrice = getProductPrice(product);
+  
+  if (!offer) {
+    return originalPrice;
+  }
+  
+  let discountedPrice: number;
+  
+  if (offer.discountType === '%') {
+    discountedPrice = originalPrice * (1 - offer.discountValue / 100);
+  } else {
+    discountedPrice = Math.max(0, originalPrice - offer.discountValue);
+  }
+  
+  return discountedPrice;
+};
+
+// ============= PRODUCTOS PROCESADOS CON OFERTAS =============
+const processedCartItems = computed((): ProcessedCartItem[] => {
+  if (!cartItems.value.length) return [];
+  
+  // Calcular subtotal actual para validar ofertas
+  const currentSubtotal = cartItems.value.reduce((sum, item) => {
+    return sum + (getProductPrice(item) * item.quantity);
+  }, 0);
+  
+  return cartItems.value.map(item => {
+    const originalPrice = getProductPrice(item);
+    const offer = getApplicableOffer(item, currentSubtotal);
+    const finalPrice = offer ? calculateDiscountedPrice(item, offer) : originalPrice;
+    
+    return {
+      id: item.id,
+      productId: item.productId || item.id,
+      name: item.name || 'Producto',
+      originalPrice,
+      finalPrice,
+      quantity: item.quantity,
+      appliedOffer: offer || undefined
+    };
+  });
+});
+
+// ============= TOTALES CALCULADOS CON OFERTAS =============
+const calculatedTotals = computed(() => {
+  const subtotalWithOffers = processedCartItems.value.reduce((sum, item) => {
+    return sum + (item.finalPrice * item.quantity);
+  }, 0);
+  
+  const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
+    return sum + (item.originalPrice * item.quantity);
+  }, 0);
+  
+  const totalOfferSavings = originalSubtotal - subtotalWithOffers;
+  const subtotalAfterPromo = Math.max(0, subtotalWithOffers - promoDiscount.value);
+  const tax = subtotalAfterPromo * taxRate;
+  const total = subtotalAfterPromo + deliveryFee.value + tax;
+  
+  return {
+    subtotal: subtotalWithOffers,
+    originalSubtotal,
+    totalOfferSavings,
+    tax,
+    total
+  };
+});
+
+// ============= FUNCIONES AUXILIARES PARA OFERTAS =============
+const formatOfferBadge = (offer: ProductOffer): string => {
+  if (offer.discountType === '%') {
+    return `${offer.discountValue}% OFF`;
+  } else {
+    return `$${offer.discountValue} OFF`;
+  }
+};
+
+// Función para cargar ofertas activas del restaurante
+const fetchActiveOffers = async (): Promise<void> => {
+  if (!restaurantId.value) return;
+  
+  try {
+    loadingOffers.value = true;
+    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
+    
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    };
+    
+    // Agregar token si está disponible
+    if (authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
+    });
+    
+    if (response.ok) {
+      const offers = await response.json();
+      activeOffers.value = offers || [];
+      console.log('✅ Ofertas cargadas en checkout:', offers.length);
+    } else {
+      activeOffers.value = [];
+    }
+  } catch (error) {
+    console.error('❌ Error cargando ofertas:', error);
+    activeOffers.value = [];
+  } finally {
+    loadingOffers.value = false;
+  }
+};
+
+// ============= RESTO DE COMPUTED PROPERTIES =============
 const minDate = computed(() => {
   const today = new Date();
   return today.toISOString().split('T')[0];
@@ -857,7 +1087,7 @@ const applyPromoCode = async () => {
     const result = await orderService.validatePromoCode(
       promoCode.value.trim(),
       restaurantId.value,
-      subtotal.value
+      calculatedTotals.value.subtotal
     );
     if (result.valid) {
       promoDiscount.value = result.discount;
@@ -892,14 +1122,15 @@ const placeOrder = async () => {
   placingOrder.value = true;
 
   try {
+    // Usar los productos procesados con precios finales (con descuentos)
     const orderRequest = {
       restaurantId: restaurantId.value,
       deliveryAddressId: selectedAddress.value,
-      items: cartItems.value.map(item => ({
-        productId: item.productId || item.id,
+      items: processedCartItems.value.map(item => ({
+        productId: item.productId,
         quantity: item.quantity,
         name: item.name,
-        price: item.price
+        price: item.finalPrice // Usar precio con descuento aplicado
       })),
       paymentMethod: getSelectedPaymentMethod()?.type || 'card',
       deliveryInstructions: deliveryInstructions.value || undefined,
@@ -908,6 +1139,8 @@ const placeOrder = async () => {
         ? `${scheduledDate.value}T${scheduledTime.value}:00`
         : undefined
     };
+
+    console.log('🚀 Enviando pedido con precios con descuento:', orderRequest);
 
     const order = await orderStore.createOrder(orderRequest);
     createdOrderId.value = order.id.toString();
@@ -1122,10 +1355,11 @@ onMounted(async () => {
     return;
   }
 
-  // Cargar direcciones y métodos de pago en paralelo
+  // Cargar direcciones, métodos de pago y ofertas en paralelo
   await Promise.all([
     loadAddresses(),
-    loadPaymentMethods()
+    loadPaymentMethods(),
+    fetchActiveOffers() // ⭐ NUEVA: Cargar ofertas
   ]);
 });
 </script>
@@ -1208,6 +1442,179 @@ $transition: all 0.2s ease;
 
   @media (max-width: 992px) {
     grid-template-columns: 1fr;
+  }
+}
+
+// ============= ESTILOS PARA OFERTAS EN REVIEW =============
+
+.review-product {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e8f0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__quantity {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 30px;
+  }
+
+  &__details {
+    flex: 1;
+  }
+
+  &__name {
+    font-weight: 500;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+  }
+
+  &__price-with-offer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__offer-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__offer-badge {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+  }
+
+  &__pricing {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__original-price {
+    font-size: 0.85rem;
+    color: $text-secondary;
+    text-decoration: line-through;
+  }
+
+  &__discounted-price {
+    font-weight: 600;
+    color: #059669;
+    font-size: 0.9rem;
+  }
+
+  &__price {
+    font-weight: 500;
+    color: #1e293b;
+    font-size: 0.9rem;
+  }
+
+  &__total {
+    font-weight: 600;
+    color: #1e293b;
+    text-align: right;
+    min-width: 70px;
+  }
+}
+
+// ============= ESTILOS PARA OFERTAS EN SIDEBAR =============
+
+.order-summary__item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid $light-gray;
+  gap: 8px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .item-quantity {
+    font-weight: 600;
+    margin-right: 8px;
+    min-width: 30px;
+    padding-top: 2px;
+  }
+
+  .item-details {
+    flex: 1;
+  }
+
+  .item-name {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .item-offer {
+    margin-top: 4px;
+  }
+
+  .offer-badge {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
+  }
+
+  .item-pricing {
+    text-align: right;
+    min-width: 80px;
+  }
+
+  .item-price-with-discount {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .item-original-price {
+    font-size: 0.75rem;
+    color: $text-secondary;
+    text-decoration: line-through;
+  }
+
+  .item-discounted-price {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #059669;
+  }
+
+  .item-price {
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .item-total {
+    font-size: 14px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.order-summary__row--savings {
+  color: #059669;
+  font-weight: 600;
+
+  span:last-child {
+    color: #059669;
   }
 }
 
@@ -1314,7 +1721,7 @@ $transition: all 0.2s ease;
 
     &.empty-state__subtitle {
       font-size: 0.9rem;
-      color: lighten($text-secondary, 10%);
+      color: $text-secondary;
     }
   }
 }
@@ -1370,7 +1777,7 @@ $transition: all 0.2s ease;
     font-size: 12px;
 
     &:hover {
-      background: darken($error-color, 10%);
+      background: #d32f2f;
     }
   }
 }
@@ -1541,7 +1948,7 @@ $transition: all 0.2s ease;
   min-width: 100px;
 
   &:hover:not(:disabled) {
-    background: $primary-color;
+    background: #059142;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(6, 193, 103, 0.3);
   }
@@ -1929,7 +2336,7 @@ $transition: all 0.2s ease;
   box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
 
   &:hover:not(:disabled) {
-    background-color: $primary-color;
+    background-color: #059142;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
   }
@@ -1976,7 +2383,7 @@ $transition: all 0.2s ease;
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background-color: $primary-color;
+    background-color: #059142;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
   }
@@ -2078,35 +2485,8 @@ $transition: all 0.2s ease;
 
   &__items {
     margin-bottom: 20px;
-    max-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
-  }
-
-  &__item {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid $light-gray;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    .item-quantity {
-      font-weight: 600;
-      margin-right: 8px;
-      min-width: 30px;
-    }
-
-    .item-name {
-      flex: 1;
-      font-size: 14px;
-    }
-
-    .item-price {
-      font-weight: 500;
-      font-size: 14px;
-    }
   }
 
   &__promocode {
@@ -2177,7 +2557,7 @@ $transition: all 0.2s ease;
   transition: $transition;
 
   &:hover:not(:disabled) {
-    background-color: $primary-color;
+    background-color: #059142;
   }
 
   &:disabled {
@@ -2355,25 +2735,114 @@ $transition: all 0.2s ease;
   gap: 0.5rem;
 }
 
-.review-product {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-
-  .quantity {
-    font-weight: 600;
-    color: #1e293b;
-    min-width: 30px;
+// Responsive
+@media (max-width: 768px) {
+  .checkout-content {
+    gap: 16px;
   }
-
-  .name {
-    flex: 1;
-    color: #1e293b;
+  
+  .step-progress {
+    margin-bottom: 24px;
+    
+    &::before {
+      left: 16px;
+      right: 16px;
+      top: 20px;
+    }
   }
+  
+  .step-item {
+    &__indicator {
+      width: 40px;
+      height: 40px;
+    }
+    
+    &__name {
+      font-size: 12px;
+    }
+    
+    &::before {
+      top: 20px;
+    }
+  }
+  
+  .step-panel {
+    padding: 16px;
+    
+    &__title {
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+    
+    &__actions {
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }
+  }
+  
+  .order-summary {
+    &__restaurant {
+      gap: 8px;
+      
+      .restaurant-placeholder {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+      }
+    }
+    
+    &__restaurant-name {
+      font-size: 14px;
+    }
+    
+    &__delivery-time {
+      font-size: 12px;
+    }
+  }
+  
+  .delivery-options {
+    gap: 0.75rem;
+  }
+  
+  .delivery-option {
+    padding: 0.75rem;
+  }
+  
+  .btn-next,
+  .btn-back,
+  .btn-place-order {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
-  .price {
-    font-weight: 500;
-    color: #1e293b;
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+  }
+  
+  .checkout-page {
+    padding: 20px 0 40px;
+    
+    &__title {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+  }
+  
+  .breadcrumb {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .modal-content {
+    margin: 1rem 0.5rem;
+    max-width: none;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>
