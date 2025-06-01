@@ -12,6 +12,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/RestaurantList.vue'),
     meta: { requiresAuth: false },
   },
+  // NUEVA RUTA: Búsqueda
+  {
+    path: '/search',
+    name: 'search',
+    component: () => import('@/views/SearchResults.vue'),
+    meta: { requiresAuth: false },
+  },
   {
     path: '/restaurant/:id',
     redirect: (to) => ({ path: `/restaurants/${to.params.id}` }),

@@ -17,26 +17,40 @@
         </router-link>
       </div>
 
-      <div v-if="isLoading" class="popular-restaurants__loading">
+      <div v-if="loading" class="popular-restaurants__loading">
         <div class="loading-spinner"></div>
-        <p>Cargando restaurantes...</p>
+        <p>Cargando restaurantes populares...</p>
+      </div>
+
+      <div v-else-if="error" class="popular-restaurants__error">
+        <div class="popular-restaurants__error-icon">⚠️</div>
+        <h3>Error al cargar restaurantes</h3>
+        <p>{{ error }}</p>
+        <button @click="fetchPopularRestaurants" class="retry-button">Intentar de nuevo</button>
       </div>
 
       <div v-else-if="restaurants.length === 0" class="popular-restaurants__empty">
-        <p>No hay restaurantes disponibles en este momento.</p>
+        <div class="popular-restaurants__empty-icon">🍽️</div>
+        <h3>No hay restaurantes disponibles</h3>
+        <p>No se encontraron restaurantes populares en este momento.</p>
       </div>
 
+      <!-- AQUÍ SÍ USO EL COMPONENTE RestaurantCard -->
       <div v-else class="restaurant-grid">
-        <restaurant-card v-for="restaurant in restaurants" :key="restaurant.id" :restaurant="restaurant" />
+        <RestaurantCard
+          v-for="restaurant in restaurants"
+          :key="restaurant.id"
+          :restaurant="restaurant"
+        />
       </div>
 
-      <div v-if="!isLoading" class="popular-restaurants__cta">
+      <div v-if="!loading && restaurants.length > 0" class="popular-restaurants__cta">
         <div class="cta-card">
           <div class="cta-card__content">
             <h3 class="cta-card__title">¿Tienes hambre?</h3>
             <p class="cta-card__text">Descubre más restaurantes y encuentra tu nueva comida favorita</p>
             <router-link to="/restaurants" class="cta-card__button">
-              Explorar restaurantes
+              Explorar todos los restaurantes
             </router-link>
           </div>
           <div class="cta-card__decoration">
@@ -52,15 +66,100 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { api } from '@/services/api'
 import RestaurantCard from '@/components/feature/restaurant/RestaurantCard.vue'
-import { type RestaurantCard as RestaurantType } from '@/services/restaurantService'
 
-interface Props {
-  restaurants: RestaurantType[]
-  isLoading: boolean
+// Estado
+const loading = ref(true)
+const error = ref<string | null>(null)
+const restaurants = ref([])
+
+// Simulación de estado para testing (hasta que tengas el backend listo)
+const simulateRestaurantStatus = (restaurant: any) => {
+  // Simular algunos restaurantes cerrados aleatoriamente
+  const isClosed = Math.random() > 0.7 // 30% de probabilidad de estar cerrado
+  const now = new Date()
+  const hour = now.getHours()
+
+  return {
+    ...restaurant,
+    isCurrentlyOpen: !isClosed && hour >= 11 && hour <= 23,
+    isOpen: !isClosed && hour >= 11 && hour <= 23, // Backup
+    statusMessage: isClosed || hour < 11 || hour > 23
+      ? (hour < 11 ? 'Abre a las 11:00' : hour > 23 ? 'Abre mañana' : 'Cerrado temporalmente')
+      : 'Abierto ahora',
+    // Asegurar valores por defecto
+    averageRating: restaurant.averageRating || (4.2 + Math.random() * 0.8),
+    reviewCount: restaurant.reviewCount || Math.floor(Math.random() * 200) + 50,
+    estimatedDeliveryTime: restaurant.estimatedDeliveryTime || (20 + Math.floor(Math.random() * 20)),
+    deliveryFee: restaurant.deliveryFee ?? (Math.random() > 0.3 ? 0 : 2.99 + Math.random() * 2),
+    distance: restaurant.distance || (0.8 + Math.random() * 2.5),
+    // Simular características especiales
+    featured: Math.random() > 0.8, // 20% destacados
+    isNew: Math.random() > 0.9, // 10% nuevos
+    promoText: Math.random() > 0.85 ? '20% OFF primer pedido' : null,
+    // Ensure image URLs
+    coverImageUrl: restaurant.coverImageUrl || restaurant.logoUrl || '/placeholder-restaurant.jpg',
+    logoUrl: restaurant.logoUrl || restaurant.coverImageUrl || '/placeholder-restaurant.jpg'
+  }
 }
 
-const props = defineProps<Props>()
+const generatePlaceholderImage = (restaurantName: string): string => {
+  // Generar una imagen placeholder consistente
+  const colors = ['FF6B6B', '4ECDC4', '45B7D1', 'FFA07A', '98D8C8', 'F7DC6F', 'BB8FCE']
+  const colorIndex = restaurantName.length % colors.length
+  const color = colors[colorIndex]
+  const encodedName = encodeURIComponent(restaurantName.substring(0, 2).toUpperCase())
+
+  return `https://via.placeholder.com/400x300/${color}/FFFFFF?text=${encodedName}`
+}
+
+// Cargar solo restaurantes populares limitados (EFICIENTE)
+const fetchPopularRestaurants = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    console.log('🔥 Cargando restaurantes populares limitados...')
+
+    // Llamar al endpoint específico de populares con límite
+    const response = await api.get('/api/Restaurants/popular', {
+      params: {
+        limit: 6, // Solo cargar 6 restaurantes
+        includeStatus: true // Incluir información de estado
+      }
+    })
+
+    if (response.data && Array.isArray(response.data)) {
+      // Procesar cada restaurante con simulación de estado
+      restaurants.value = response.data.map(restaurant => simulateRestaurantStatus(restaurant))
+
+      console.log('✅ Restaurantes populares cargados:', restaurants.value.length)
+      console.log('📊 Muestra de estados:', restaurants.value.slice(0, 3).map(r => ({
+        name: r.name,
+        isOpen: r.isCurrentlyOpen,
+        status: r.statusMessage,
+        featured: r.featured,
+        isNew: r.isNew
+      })))
+    } else {
+      throw new Error('Respuesta inválida del servidor')
+    }
+
+  } catch (err: any) {
+    console.error('❌ Error al cargar restaurantes populares:', err)
+    error.value = err.response?.data?.message || err.message || 'Error al cargar restaurantes'
+    restaurants.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// Inicialización
+onMounted(() => {
+  fetchPopularRestaurants()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -141,13 +240,75 @@ const props = defineProps<Props>()
       margin: 0 auto 1rem;
       animation: spin 1s linear infinite;
     }
+
+    p {
+      color: #64748b;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+  }
+
+  &__error {
+    text-align: center;
+    padding: 4rem 0;
+
+    &-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    h3 {
+      color: #1e293b;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 1.1rem;
+      margin: 0 0 1.5rem;
+    }
+
+    .retry-button {
+      background: #FFA502;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #FF6B2B;
+        transform: translateY(-2px);
+      }
+    }
   }
 
   &__empty {
     text-align: center;
     padding: 4rem 0;
-    color: #64748b;
-    font-size: 1.1rem;
+
+    &-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.5;
+    }
+
+    h3 {
+      color: #1e293b;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 1.1rem;
+      margin: 0;
+    }
   }
 
   &__all-link {
@@ -181,26 +342,29 @@ const props = defineProps<Props>()
   }
 }
 
+// Grid optimizado para 6 restaurantes
 .restaurant-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 2rem;
+  max-width: 1200px; // Limitar ancho para mejor distribución con 6 elementos
+  margin: 0 auto;
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(3, 1fr); // 3 columnas en pantallas grandes
+  }
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr); // 2 columnas en tablets
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr; // 1 columna en móvil
+    gap: 1.5rem;
   }
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
+// CTA Card
 .cta-card {
   background: linear-gradient(135deg, #0652DD, #12CBC4);
   color: white;
@@ -211,6 +375,10 @@ const props = defineProps<Props>()
   justify-content: space-between;
   position: relative;
   box-shadow: 0 20px 40px rgba(#0652DD, 0.15);
+
+  @media (max-width: 768px) {
+    padding: 2rem;
+  }
 
   &__content {
     max-width: 60%;
@@ -318,6 +486,11 @@ const props = defineProps<Props>()
   }
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @media (max-width: 768px) {
   .popular-restaurants {
     padding: 5rem 0;
@@ -325,10 +498,6 @@ const props = defineProps<Props>()
     .container {
       padding: 0 1.5rem;
     }
-  }
-
-  .cta-card {
-    padding: 2rem;
   }
 }
 </style>

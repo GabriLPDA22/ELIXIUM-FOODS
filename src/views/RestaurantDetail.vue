@@ -1,6 +1,5 @@
 <template>
   <div class="restaurant-detail-page">
-    <!-- Error message -->
     <div v-if="error" class="error-container">
       <div class="error-container__icon">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -15,17 +14,14 @@
       <router-link to="/" class="error-container__button">Volver a la lista de restaurantes</router-link>
     </div>
 
-    <!-- Loader -->
     <div v-else-if="loading" class="loading-container">
       <div class="loading-container__spinner"></div>
       <p class="loading-container__text">Cargando información del restaurante</p>
     </div>
 
     <template v-else-if="restaurant">
-      <!-- Hero section limpio -->
       <section class="restaurant-hero" :style="{ backgroundImage: `url(${restaurant.coverImageUrl})` }">
         <div class="restaurant-hero__overlay"></div>
-        
         <div class="container">
           <div class="restaurant-hero__content">
             <div class="restaurant-hero__logo-wrapper">
@@ -33,26 +29,31 @@
                 <img :src="restaurant.logoUrl" :alt="restaurant.name" />
               </div>
             </div>
-            
             <div class="restaurant-hero__info">
               <div class="restaurant-hero__badge-container">
-                <span v-if="restaurant.isOpen" class="restaurant-hero__status restaurant-hero__status--open">
+                <span v-if="restaurantStatus.isCurrentlyOpen" class="restaurant-hero__status restaurant-hero__status--open">
                   <span class="restaurant-hero__status-dot"></span>
-                  Abierto ahora
+                  {{ restaurantStatus.statusMessage }}
                 </span>
                 <span v-else class="restaurant-hero__status restaurant-hero__status--closed">
                   <span class="restaurant-hero__status-dot"></span>
-                  Cerrado
+                  {{ restaurantStatus.statusMessage }}
                 </span>
+                <div v-if="!restaurantStatus.isCurrentlyOpen" class="restaurant-hero__closed-banner">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
+                  <span>Este restaurante está cerrado. No es posible realizar pedidos en este momento.</span>
+                </div>
               </div>
-
               <h1 class="restaurant-hero__name">{{ restaurant.name }}</h1>
-              
               <div class="restaurant-hero__meta">
                 <div class="restaurant-hero__rating-wrapper">
                   <div class="restaurant-hero__rating">
                     <div class="restaurant-hero__stars">
-                      <svg v-for="i in 5" :key="i" width="16" height="16" viewBox="0 0 24 24" 
+                      <svg v-for="i in 5" :key="i" width="16" height="16" viewBox="0 0 24 24"
                            :class="i <= Math.floor(safeNumber(restaurant.averageRating, 0)) ? 'star--filled' : 'star--empty'"
                            fill="currentColor" stroke="currentColor" stroke-width="0.5">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -64,7 +65,6 @@
                     <span class="restaurant-hero__rating-count">({{ safeNumber(restaurant.reviewCount, 0) }} opiniones)</span>
                   </div>
                 </div>
-
                 <div class="restaurant-hero__delivery-stats">
                   <div class="restaurant-hero__stat">
                     <div class="restaurant-hero__stat-icon">
@@ -75,7 +75,6 @@
                     </div>
                     <span>{{ safeNumber(restaurant.estimatedDeliveryTime, 30) }}-{{ safeNumber(restaurant.estimatedDeliveryTime, 30) + 15 }} min</span>
                   </div>
-                  
                   <div class="restaurant-hero__stat">
                     <div class="restaurant-hero__stat-icon">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -89,7 +88,6 @@
                   </div>
                 </div>
               </div>
-
               <p v-if="restaurant.description" class="restaurant-hero__description">
                 {{ restaurant.description }}
               </p>
@@ -98,20 +96,19 @@
         </div>
       </section>
 
-      <!-- Category filters -->
       <section class="category-filters">
         <div class="container">
           <div class="category-filters__wrapper">
-            <button 
+            <button
               class="category-filter"
               :class="{ 'category-filter--active': selectedCategoryFilter === 'all' }"
               @click="filterByCategory('all')">
               <span class="category-filter__text">Todos</span>
               <span class="category-filter__count">({{ menuItems.length }})</span>
             </button>
-            <button 
-              v-for="category in menuCategories" 
-              :key="category.id" 
+            <button
+              v-for="category in menuCategories"
+              :key="category.id"
               class="category-filter"
               :class="{ 'category-filter--active': selectedCategoryFilter === category.id }"
               @click="filterByCategory(category.id)">
@@ -122,11 +119,9 @@
         </div>
       </section>
 
-      <!-- Main content -->
       <section class="restaurant-content">
         <div class="container">
           <div class="restaurant-content__wrapper">
-            <!-- Menu items filtrados -->
             <div class="menu-sections">
               <div class="menu-section">
                 <div class="menu-section__header">
@@ -135,14 +130,26 @@
                   </h2>
                   <div class="menu-section__count">{{ filteredMenuItems.length }} productos</div>
                 </div>
-
+                <div v-if="!restaurantStatus.isCurrentlyOpen" class="menu-section__closed-notice">
+                  <div class="menu-section__closed-notice-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                  </div>
+                  <div class="menu-section__closed-notice-content">
+                    <h3>Restaurante Cerrado</h3>
+                    <p>{{ restaurantStatus.statusMessage }}. Los productos están deshabilitados hasta que abra.</p>
+                  </div>
+                </div>
                 <div class="menu-items">
-                  <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item">
+                  <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item"
+                       :class="{ 'menu-item--disabled': !restaurantStatus.isCurrentlyOpen }">
                     <div class="menu-item__content">
                       <div class="menu-item__header">
                         <h3 class="menu-item__name">{{ item.name || 'Producto' }}</h3>
                         <div class="menu-item__price-wrapper">
-                          <!-- Mostrar precio original y con descuento -->
                           <div v-if="getApplicableOffer(item)" class="menu-item__price-with-offer">
                             <div class="menu-item__offer-badge">
                               <span v-if="getApplicableOffer(item)?.discountType === '%'">
@@ -162,16 +169,21 @@
                           </span>
                         </div>
                       </div>
-                      
                       <p v-if="item.description" class="menu-item__description">{{ item.description }}</p>
-                      
                       <div class="menu-item__tags" v-if="item.isVegetarian || item.isSpicy || item.isNew">
                         <span v-if="item.isVegetarian" class="menu-item__tag menu-item__tag--vegetarian">🌱 Vegetariano</span>
                         <span v-if="item.isSpicy" class="menu-item__tag menu-item__tag--spicy">🌶️ Picante</span>
                         <span v-if="item.isNew" class="menu-item__tag menu-item__tag--new">✨ Nuevo</span>
                       </div>
+                      <div v-if="!restaurantStatus.isCurrentlyOpen" class="menu-item__unavailable">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="15" y1="9" x2="9" y2="15"></line>
+                          <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                        <span>No disponible - Restaurante cerrado</span>
+                      </div>
                     </div>
-
                     <div class="menu-item__image-wrapper">
                       <div class="menu-item__image">
                         <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name">
@@ -183,13 +195,18 @@
                           </svg>
                         </div>
                       </div>
-                      
-                      <button class="menu-item__add-btn" 
-                              @click="addToCart(item)" 
-                              :disabled="getProductPrice(item) <= 0 || !item.isAvailable">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <button class="menu-item__add-btn"
+                              @click="addToCart(item)"
+                              :disabled="getProductPrice(item) <= 0 || !item.isAvailable || !restaurantStatus.isCurrentlyOpen"
+                              :title="!restaurantStatus.isCurrentlyOpen ? 'El restaurante está cerrado' : ''">
+                        <svg v-if="restaurantStatus.isCurrentlyOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <line x1="12" y1="5" x2="12" y2="19"></line>
                           <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="15" y1="9" x2="9" y2="15"></line>
+                          <line x1="9" y1="9" x2="15" y2="15"></line>
                         </svg>
                       </button>
                     </div>
@@ -198,7 +215,6 @@
               </div>
             </div>
 
-            <!-- Cart sidebar optimizado -->
             <div class="cart-sidebar">
               <div class="cart">
                 <div class="cart__header">
@@ -210,11 +226,10 @@
                     <button v-if="localCartItems.length > 0" class="cart__clear" @click="clearCart">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v4a2 2 0 0 1 2 2v2"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                       </svg>
                     </button>
                   </div>
-                  
                   <div v-if="localCartItems.length > 0" class="cart__restaurant-info">
                     <div class="cart__restaurant-logo">{{ restaurant.name[0] }}</div>
                     <div class="cart__restaurant-details">
@@ -223,7 +238,6 @@
                     </div>
                   </div>
                 </div>
-
                 <div v-if="localCartItems.length === 0" class="cart__empty">
                   <div class="cart__empty-icon">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
@@ -233,40 +247,56 @@
                     </svg>
                   </div>
                   <h3 class="cart__empty-title">Tu carrito está vacío</h3>
-                  <p class="cart__empty-text">Agrega deliciosos productos para empezar tu pedido</p>
+                  <p class="cart__empty-text">
+                    {{ restaurantStatus.isCurrentlyOpen ?
+                      'Agrega deliciosos productos para empezar tu pedido' :
+                      'El restaurante está cerrado. No puedes agregar productos.' }}
+                  </p>
                 </div>
-
                 <div v-else class="cart__content">
+                  <div v-if="!restaurantStatus.isCurrentlyOpen && localCartItems.length > 0" class="cart__closed-warning">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <div>
+                      <strong>Restaurante cerrado</strong><br>
+                      <small>{{ restaurantStatus.statusMessage }}</small>
+                    </div>
+                  </div>
                   <div class="cart__items">
                     <div v-for="item in localCartItems" :key="item.id" class="cart-item">
                       <div class="cart-item__quantity-controls">
-                        <button class="cart-item__quantity-btn cart-item__quantity-btn--minus" @click="decrementItem(item.id)">
+                        <button class="cart-item__quantity-btn cart-item__quantity-btn--minus"
+                                @click="decrementItem(item.id)"
+                                :disabled="!restaurantStatus.isCurrentlyOpen">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
                         </button>
                         <span class="cart-item__quantity">{{ safeNumber(item.quantity, 0) }}</span>
-                        <button class="cart-item__quantity-btn cart-item__quantity-btn--plus" @click="incrementItem(item.id)">
+                        <button class="cart-item__quantity-btn cart-item__quantity-btn--plus"
+                                @click="incrementItem(item.id)"
+                                :disabled="!restaurantStatus.isCurrentlyOpen">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
                         </button>
                       </div>
-
                       <div class="cart-item__details">
                         <h4 class="cart-item__name">{{ item.name || 'Producto' }}</h4>
                         <div class="cart-item__actions">
                           <button class="cart-item__remove" @click="removeItem(item.id)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v4a2 2 0 0 1 2 2v2"></path>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                             </svg>
                             Eliminar
                           </button>
                         </div>
                       </div>
-
                       <div class="cart-item__price-info">
                         <div v-if="item.appliedOffer" class="cart-item__price-with-discount">
                           <div class="cart-item__original-price">${{ item.originalPrice.toFixed(2) }}</div>
@@ -277,7 +307,6 @@
                       </div>
                     </div>
                   </div>
-
                   <div class="cart__summary">
                     <div class="cart__summary-row">
                       <span>Subtotal</span>
@@ -299,10 +328,14 @@
                       <span>${{ cartTotals.total.toFixed(2) }}</span>
                     </div>
                   </div>
-
-                  <button class="cart__checkout-btn" @click="proceedToCheckout" :disabled="localCartItems.length === 0">
+                  <button class="cart__checkout-btn"
+                          @click="proceedToCheckout"
+                          :disabled="localCartItems.length === 0 || !restaurantStatus.isCurrentlyOpen">
                     <span class="cart__checkout-icon">🚀</span>
-                    <span>{{ localCartItems.length > 0 ? 'Realizar pedido' : 'Agrega productos' }}</span>
+                    <span v-if="restaurantStatus.isCurrentlyOpen">
+                      {{ localCartItems.length > 0 ? 'Realizar pedido' : 'Agrega productos' }}
+                    </span>
+                    <span v-else>Restaurante cerrado</span>
                   </button>
                 </div>
               </div>
@@ -312,7 +345,6 @@
       </section>
     </template>
 
-    <!-- Not found state -->
     <div v-else-if="!loading && !restaurant && !error" class="not-found">
       <div class="not-found__icon">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
@@ -334,8 +366,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuItem } from '@/services/restaurantService'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
+import { api } from '@/services/api'
 
-// Interfaces
 interface ProductOffer {
   id: number
   name: string
@@ -356,6 +388,22 @@ interface ProductOffer {
   productImageUrl: string
 }
 
+interface RestaurantStatus {
+  isCurrentlyOpen: boolean
+  status: string
+  statusMessage: string
+  hours?: RestaurantHour[]
+}
+
+interface RestaurantHour {
+  id: number
+  dayOfWeek: string
+  isOpen: boolean
+  openTime: string
+  closeTime: string
+  restaurantId: number
+}
+
 interface LocalCartItem {
   id: number
   productId: number
@@ -374,228 +422,201 @@ interface LocalCartItem {
   appliedOffer?: ProductOffer
 }
 
-// Router y route
 const route = useRoute()
 const router = useRouter()
-
-// Stores
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 
-// Estado principal
 const loading = ref(true)
 const error = ref<string | null>(null)
 const restaurantId = ref<number | null>(null)
 const restaurant = ref<RestaurantDetail | null>(null)
+const restaurantStatus = ref<RestaurantStatus>({
+  isCurrentlyOpen: false,
+  status: 'Cerrado',
+  statusMessage: 'Estado desconocido'
+})
 const menuItems = ref<MenuItem[]>([])
 const menuCategories = ref<MenuCategory[]>([])
 const selectedCategoryFilter = ref<string | number>('all')
 const activeOffers = ref<ProductOffer[]>([])
-
-// Estado local del carrito (evitar llamadas constantes)
 const localCartItems = ref<LocalCartItem[]>([])
 
-// Helper function for safe numbers
 const safeNumber = (value: any, defaultValue: number = 0): number => {
   if (value === null || value === undefined || value === '') {
-    return defaultValue;
+    return defaultValue
   }
-  const num = typeof value === 'number' ? value : parseFloat(value);
-  return isNaN(num) ? defaultValue : num;
-};
+  const num = typeof value === 'number' ? value : parseFloat(value)
+  return isNaN(num) ? defaultValue : num
+}
 
-// Función para obtener el precio real del producto
 const getProductPrice = (product: any): number => {
-  const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost'];
-
+  const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost']
   for (let field of priceFields) {
     if (product[field] !== null && product[field] !== undefined && product[field] !== '') {
-      const testPrice = typeof product[field] === 'number' ? product[field] : parseFloat(product[field]);
+      const testPrice = typeof product[field] === 'number' ? product[field] : parseFloat(product[field])
       if (!isNaN(testPrice) && testPrice > 0) {
-        return testPrice;
+        return testPrice
       }
     }
   }
-  return 0;
-};
+  return 0
+}
 
-// Función para obtener oferta aplicable a un producto
 const getApplicableOffer = (product: MenuItem): ProductOffer | null => {
-  if (!activeOffers.value.length) {
-    return null;
-  }
-  
-  const currentSubtotal = cartTotals.value.subtotal;
-  
-  // Buscar ofertas para este producto específico
-  const productOffers = activeOffers.value.filter(offer => {
-    const matchesProduct = offer.productId === product.id;
-    const meetsMinimumAmount = currentSubtotal >= offer.minimumOrderAmount;
-    const isActive = offer.status === 'active';
-    
-    return matchesProduct && meetsMinimumAmount && isActive;
-  });
-  
-  if (!productOffers.length) return null;
-  
-  // Devolver la mejor oferta (mayor descuento)
-  const bestOffer = productOffers.reduce((best, current) => {
-    const bestDiscount = best.discountType === '%' ? 
-      (getProductPrice(product) * best.discountValue / 100) : 
-      best.discountValue;
-      
-    const currentDiscount = current.discountType === '%' ? 
-      (getProductPrice(product) * current.discountValue / 100) : 
-      current.discountValue;
-      
-    return currentDiscount > bestDiscount ? current : best;
-  });
-  
-  return bestOffer;
-};
+  if (!activeOffers.value.length) return null
+  const currentSubtotal = cartTotals.value.subtotal
+  const productOffers = activeOffers.value.filter(offer =>
+    offer.productId === product.id &&
+    currentSubtotal >= offer.minimumOrderAmount &&
+    offer.status === 'active'
+  )
+  if (!productOffers.length) return null
+  return productOffers.reduce((best, current) => {
+    const bestDiscount =
+      best.discountType === '%'
+        ? (getProductPrice(product) * best.discountValue) / 100
+        : best.discountValue
+    const currentDiscount =
+      current.discountType === '%'
+        ? (getProductPrice(product) * current.discountValue) / 100
+        : current.discountValue
+    return currentDiscount > bestDiscount ? current : best
+  })
+}
 
-// Función para calcular precio con descuento
 const calculateDiscountedPrice = (product: MenuItem): number => {
-  const offer = getApplicableOffer(product);
-  const originalPrice = getProductPrice(product);
-  
-  if (!offer) {
-    return originalPrice;
-  }
-  
-  let discountedPrice: number;
-  
+  const offer = getApplicableOffer(product)
+  const originalPrice = getProductPrice(product)
+  if (!offer) return originalPrice
+  let discountedPrice: number
   if (offer.discountType === '%') {
-    discountedPrice = originalPrice * (1 - offer.discountValue / 100);
+    discountedPrice = originalPrice * (1 - offer.discountValue / 100)
   } else {
-    discountedPrice = Math.max(0, originalPrice - offer.discountValue);
+    discountedPrice = Math.max(0, originalPrice - offer.discountValue)
   }
-  
-  return discountedPrice;
-};
+  return discountedPrice
+}
 
-// Productos filtrados
 const filteredMenuItems = computed(() => {
-  if (selectedCategoryFilter.value === 'all') {
-    return menuItems.value;
-  }
-  
-  return menuItems.value.filter(item => {
-    return item.categoryId === selectedCategoryFilter.value;
-  });
-});
+  if (selectedCategoryFilter.value === 'all') return menuItems.value
+  return menuItems.value.filter(item => item.categoryId === selectedCategoryFilter.value)
+})
 
-// Totales del carrito calculados localmente
 const cartTotals = computed(() => {
-  const subtotal = localCartItems.value.reduce((sum, item) => {
-    return sum + (item.price * item.quantity);
-  }, 0);
-  
-  const originalSubtotal = localCartItems.value.reduce((sum, item) => {
-    return sum + (item.originalPrice * item.quantity);
-  }, 0);
-  
-  const totalSavings = originalSubtotal - subtotal;
-  const deliveryFee = restaurant.value ? safeNumber(restaurant.value.deliveryFee) : 0;
-  const total = subtotal + deliveryFee;
-  
-  return {
-    subtotal,
-    originalSubtotal,
-    totalSavings,
-    deliveryFee,
-    total
-  };
-});
+  const subtotal = localCartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const originalSubtotal = localCartItems.value.reduce(
+    (sum, item) => sum + item.originalPrice * item.quantity,
+    0
+  )
+  const totalSavings = originalSubtotal - subtotal
+  const deliveryFeeValue = restaurant.value ? safeNumber(restaurant.value.deliveryFee) : 0
+  const total = subtotal + deliveryFeeValue
+  return { subtotal, originalSubtotal, totalSavings, deliveryFee: deliveryFeeValue, total }
+})
 
-// Función para obtener el nombre de la categoría seleccionada
 const getSelectedCategoryName = () => {
-  const category = menuCategories.value.find(cat => cat.id === selectedCategoryFilter.value);
-  return category ? category.name : 'Productos';
-};
+  const category = menuCategories.value.find(cat => cat.id === selectedCategoryFilter.value)
+  return category ? category.name : 'Productos'
+}
 
-// Función para filtrar por categoría
 const filterByCategory = (categoryId: string | number) => {
-  selectedCategoryFilter.value = categoryId;
-};
+  selectedCategoryFilter.value = categoryId
+}
 
-// Función para cargar ofertas activas del restaurante
 const fetchActiveOffers = async (): Promise<void> => {
-  if (!restaurantId.value) return;
-  
+  if (!restaurantId.value) return
   try {
-    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
-    
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    };
-    
-    // Agregar token si está disponible
-    if (authStore.token) {
-      headers['Authorization'] = `Bearer ${authStore.token}`;
-    }
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers
-    });
-    
-    if (response.ok) {
-      const offers = await response.json();
-      activeOffers.value = offers || [];
-    } else {
-      activeOffers.value = [];
-    }
-  } catch (error) {
-    activeOffers.value = [];
+    // Incluimos el prefijo /api para que la ruta coincida con el backend
+    const relativeUrl = `/api/restaurants/${restaurantId.value}/offers/active`
+    const response = await api.get(relativeUrl)
+    activeOffers.value = response.data || []
+  } catch (error: any) {
+    console.error('Error fetching active offers:', error.response?.data || error.message)
+    activeOffers.value = []
   }
-};
+}
 
-// Cargar datos del restaurante
+const fetchRestaurantStatus = async (id: number): Promise<RestaurantStatus> => {
+  try {
+    // Incluimos el prefijo /api para que la ruta coincida con el backend
+    const response = await api.get(`/api/restaurants/${id}/with-status`)
+    if (response.data) {
+      return {
+        isCurrentlyOpen: response.data.isCurrentlyOpen || false,
+        status: response.data.status || 'Cerrado',
+        statusMessage: response.data.statusMessage || 'Estado desconocido',
+        hours: response.data.hours || []
+      }
+    }
+    throw new Error('No data received for restaurant status')
+  } catch (err: any) {
+    console.error(
+      `Failed to fetch restaurant status for ID ${id} from /with-status:`,
+      err.response?.data || err.message
+    )
+    return {
+      isCurrentlyOpen: false,
+      status: 'Desconocido',
+      statusMessage: 'No se pudo determinar el estado del restaurante.',
+      hours: []
+    }
+  }
+}
+
 const fetchRestaurantData = async (): Promise<void> => {
   loading.value = true
   error.value = null
-
   try {
-    const routeId = route.params.id
-    if (!routeId) {
-      throw new Error('ID de restaurante no encontrado en la URL')
-    }
-
-    const id = parseInt(routeId as string)
+    const routeIdStr = route.params.id as string
+    if (!routeIdStr) throw new Error('ID de restaurante no encontrado en la URL')
+    const id = parseInt(routeIdStr)
+    if (isNaN(id)) throw new Error('ID de restaurante inválido')
     restaurantId.value = id
 
-    if (isNaN(id)) {
-      throw new Error('ID de restaurante inválido')
+    const [restaurantDataResult, productsResult, statusDataResult] = await Promise.allSettled([
+      restaurantService.getRestaurantById(id),
+      restaurantService.getProductsByRestaurant(id),
+      fetchRestaurantStatus(id)
+    ])
+
+    if (restaurantDataResult.status === 'rejected' || !restaurantDataResult.value) {
+      throw new Error(
+        restaurantDataResult.status === 'rejected'
+          ? restaurantDataResult.reason?.message || `Restaurante con ID ${id} no encontrado.`
+          : `Restaurante con ID ${id} no encontrado.`
+      )
+    }
+    restaurant.value = restaurantDataResult.value
+
+    if (statusDataResult.status === 'fulfilled') {
+      restaurantStatus.value = statusDataResult.value
+    } else {
+      restaurantStatus.value = {
+        isCurrentlyOpen: false,
+        status: 'Desconocido',
+        statusMessage: 'Error al obtener estado.',
+        hours: []
+      }
     }
 
-    // Cargar restaurante y productos en paralelo
-    const [restaurantData, products] = await Promise.all([
-      restaurantService.getRestaurantById(id),
-      restaurantService.getProductsByRestaurant(id)
-    ]);
-    
-    restaurant.value = restaurantData;
-
-    menuItems.value = products.map((product) => {
-      return {
+    if (productsResult.status === 'fulfilled') {
+      menuItems.value = productsResult.value.map(product => ({
         ...product,
         name: product.name || 'Producto sin nombre',
         description: product.description || '',
         imageUrl: product.imageUrl || '',
         isAvailable: product.isAvailable !== false
-      };
-    });
+      }))
+      menuCategories.value = restaurantService.organizeProductsByCategory(menuItems.value)
+    } else {
+      menuItems.value = []
+      menuCategories.value = []
+      console.warn('No se pudieron cargar los productos del restaurante.')
+    }
 
-    menuCategories.value = restaurantService.organizeProductsByCategory(menuItems.value);
-
-    // Cargar ofertas después de tener los productos
-    await fetchActiveOffers();
-    
-    // Sincronizar carrito local con el store inicial
-    syncLocalCart();
-
+    await fetchActiveOffers()
+    syncLocalCart()
   } catch (err: any) {
     error.value = err.message || 'Error al cargar los datos del restaurante'
     restaurant.value = null
@@ -604,84 +625,68 @@ const fetchRestaurantData = async (): Promise<void> => {
   }
 }
 
-// Sincronizar carrito local con el store
 const syncLocalCart = (): void => {
-  const storeItems = cartStore.items.filter(item => item.restaurantId === restaurantId.value);
-  
+  const storeItems = cartStore.items.filter(item => item.restaurantId === restaurantId.value)
   localCartItems.value = storeItems.map(item => {
-    const product = menuItems.value.find(p => p.id === item.id);
-    const originalPrice = product ? getProductPrice(product) : item.price;
-    const offer = product ? getApplicableOffer(product) : null;
-    const finalPrice = offer ? calculateDiscountedPrice(product!) : originalPrice;
-    
+    const product = menuItems.value.find(p => p.id === item.productId)
+    const originalPrice = product ? getProductPrice(product) : item.price
+    const offer = product ? getApplicableOffer(product) : null
+    const finalPrice = offer && product ? calculateDiscountedPrice(product) : originalPrice
     return {
       ...item,
       originalPrice,
       price: finalPrice,
       appliedOffer: offer || undefined
-    };
-  });
-};
+    }
+  })
+}
 
-// Recalcular precios cuando cambien las ofertas o cantidades
 const recalculateCartPrices = (): void => {
   localCartItems.value = localCartItems.value.map(item => {
-    const product = menuItems.value.find(p => p.id === item.productId);
-    if (!product) return item;
-    
-    const originalPrice = getProductPrice(product);
-    const offer = getApplicableOffer(product);
-    const finalPrice = offer ? calculateDiscountedPrice(product) : originalPrice;
-    
-    return {
-      ...item,
-      originalPrice,
-      price: finalPrice,
-      appliedOffer: offer || undefined
-    };
-  });
-};
+    const product = menuItems.value.find(p => p.id === item.productId)
+    if (!product) return item
+    const originalPrice = getProductPrice(product)
+    const offer = getApplicableOffer(product)
+    const finalPrice = offer ? calculateDiscountedPrice(product) : originalPrice
+    return { ...item, originalPrice, price: finalPrice, appliedOffer: offer || undefined }
+  })
+}
 
-// Función para agregar al carrito (optimizada)
 const addToCart = async (item: MenuItem): Promise<void> => {
-  if (!item || !item.id) {
-    return;
+  if (!item || !item.id) return
+  if (!restaurantStatus.value.isCurrentlyOpen) {
+    alert(
+      `No puedes agregar productos al carrito porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`
+    )
+    return
   }
-
-  const realPrice = getProductPrice(item);
-
+  const realPrice = getProductPrice(item)
   if (realPrice <= 0) {
-    alert('Este producto no tiene un precio válido o no está disponible.');
-    return;
+    alert('Este producto no tiene un precio válido o no está disponible.')
+    return
   }
-
   if (item.isAvailable === false) {
-    alert('Este producto no está disponible en este momento.');
-    return;
+    alert('Este producto no está disponible en este momento.')
+    return
   }
-
-  // Verificar si es de otro restaurante
   if (cartStore.restaurantId && cartStore.restaurantId !== restaurantId.value) {
-    if (confirm(`Tu carrito contiene elementos de "${cartStore.restaurantName}". ¿Deseas vaciarlo para pedir de "${restaurant.value?.name}"?`)) {
-      await cartStore.clearCart();
-      localCartItems.value = [];
+    if (
+      confirm(
+        `Tu carrito contiene elementos de "${cartStore.restaurantName}". ¿Deseas vaciarlo para pedir de "${restaurant.value?.name}"?`
+      )
+    ) {
+      await cartStore.clearCart()
+      localCartItems.value = []
     } else {
-      return;
+      return
     }
   }
-
-  // Calcular precio con ofertas
-  const offer = getApplicableOffer(item);
-  const finalPrice = offer ? calculateDiscountedPrice(item) : realPrice;
-
-  // Verificar si el item ya existe en el carrito local
-  const existingItemIndex = localCartItems.value.findIndex(cartItem => cartItem.id === item.id);
-  
+  const offer = getApplicableOffer(item)
+  const finalPrice = offer ? calculateDiscountedPrice(item) : realPrice
+  const existingItemIndex = localCartItems.value.findIndex(cartItem => cartItem.id === item.id)
   if (existingItemIndex !== -1) {
-    // Incrementar cantidad
-    localCartItems.value[existingItemIndex].quantity += 1;
+    localCartItems.value[existingItemIndex].quantity += 1
   } else {
-    // Agregar nuevo item
     const newCartItem: LocalCartItem = {
       id: item.id,
       productId: item.id,
@@ -698,26 +703,19 @@ const addToCart = async (item: MenuItem): Promise<void> => {
       businessName: restaurant.value?.name || '',
       quantity: 1,
       appliedOffer: offer || undefined
-    };
-    
-    localCartItems.value.push(newCartItem);
+    }
+    localCartItems.value.push(newCartItem)
   }
-  
-  // Recalcular precios después de agregar
-  recalculateCartPrices();
-  
-  // Sincronizar con el store (sin await para evitar lentitud)
-  syncToStore();
-};
+  recalculateCartPrices()
+  syncToStore()
+}
 
-// Función para sincronizar al store (llamada sin await)
 const syncToStore = (): void => {
-  // Convertir items locales al formato del store
   const storeItems = localCartItems.value.map(item => ({
     id: item.id,
     productId: item.productId,
     name: item.name,
-    price: item.price, // Usar precio con descuento
+    price: item.price,
     imageUrl: item.imageUrl,
     restaurantId: item.restaurantId,
     restaurantName: item.restaurantName,
@@ -727,90 +725,103 @@ const syncToStore = (): void => {
     businessId: item.businessId,
     businessName: item.businessName,
     quantity: item.quantity
-  }));
-  
-  // Actualizar store sin esperar
+  }))
   cartStore.$patch({
     items: storeItems,
     restaurantId: restaurantId.value,
     restaurantName: restaurant.value?.name || ''
-  });
-};
+  })
+}
 
 const incrementItem = (itemId: number): void => {
-  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId);
-  if (itemIndex !== -1) {
-    localCartItems.value[itemIndex].quantity += 1;
-    recalculateCartPrices();
-    syncToStore();
+  if (!restaurantStatus.value.isCurrentlyOpen) {
+    alert('No puedes modificar el carrito mientras el restaurante está cerrado.')
+    return
   }
-};
+  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
+  if (itemIndex !== -1) {
+    localCartItems.value[itemIndex].quantity += 1
+    recalculateCartPrices()
+    syncToStore()
+  }
+}
 
 const decrementItem = (itemId: number): void => {
-  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId);
+  if (!restaurantStatus.value.isCurrentlyOpen) {
+    alert('No puedes modificar el carrito mientras el restaurante está cerrado.')
+    return
+  }
+  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
   if (itemIndex !== -1) {
     if (localCartItems.value[itemIndex].quantity > 1) {
-      localCartItems.value[itemIndex].quantity -= 1;
-      recalculateCartPrices();
-      syncToStore();
+      localCartItems.value[itemIndex].quantity -= 1
+      recalculateCartPrices()
+      syncToStore()
     } else {
-      removeItem(itemId);
+      removeItem(itemId)
     }
   }
-};
+}
 
 const removeItem = (itemId: number): void => {
-  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId);
+  const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
   if (itemIndex !== -1) {
-    localCartItems.value.splice(itemIndex, 1);
-    recalculateCartPrices();
-    syncToStore();
+    localCartItems.value.splice(itemIndex, 1)
+    recalculateCartPrices()
+    syncToStore()
   }
-};
+}
 
 const clearCart = (): void => {
   if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
-    localCartItems.value = [];
-    cartStore.clearCart();
+    localCartItems.value = []
+    cartStore.clearCart()
   }
-};
+}
 
 const proceedToCheckout = (): void => {
   if (!authStore.isAuthenticated) {
-    alert('Por favor, inicia sesión para continuar con tu pedido.');
-    router.push('/login');
-    return;
+    alert('Por favor, inicia sesión para continuar con tu pedido.')
+    router.push('/login')
+    return
   }
-
   if (localCartItems.value.length === 0) {
-    alert('Tu carrito está vacío. Agrega productos antes de continuar.');
-    return;
+    alert('Tu carrito está vacío. Agrega productos antes de continuar.')
+    return
   }
-
-  // Sincronizar una última vez antes del checkout
-  syncToStore();
-  router.push('/checkout');
-};
-
-// Watcher para recalcular cuando cambien las ofertas
-watch(activeOffers, () => {
-  if (localCartItems.value.length > 0) {
-    recalculateCartPrices();
+  if (!restaurantStatus.value.isCurrentlyOpen) {
+    alert(
+      `No puedes continuar con el pedido porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`
+    )
+    return
   }
-}, { deep: true });
+  syncToStore()
+  router.push('/checkout')
+}
 
-// Handler para cambio de ruta
-watch(() => route.params.id, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    fetchRestaurantData()
-  }
-}, { immediate: false })
+watch(
+  activeOffers,
+  () => {
+    if (localCartItems.value.length > 0) recalculateCartPrices()
+  },
+  { deep: true }
+)
 
-// Inicialización
+watch(
+  () => route.params.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId && newId !== restaurantId.value?.toString()) {
+      fetchRestaurantData()
+    }
+  },
+  { immediate: false }
+)
+
 onMounted(async () => {
   await fetchRestaurantData()
 })
 </script>
+
 
 <style lang="scss" scoped>
 // Variables elegantes
@@ -818,6 +829,7 @@ $primary-gradient: linear-gradient(135deg, #FF416C, #FF4B2B);
 $secondary-gradient: linear-gradient(135deg, #667eea, #764ba2);
 $success-gradient: linear-gradient(135deg, #06C167, #04A653);
 $warning-gradient: linear-gradient(135deg, #FFC837, #FF8008);
+$danger-gradient: linear-gradient(135deg, #EF4444, #DC2626);
 $light-gradient: linear-gradient(135deg, #f8fafc, #e2e8f0);
 
 $white: #FFFFFF;
@@ -959,6 +971,32 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 
   &__badge-container {
     margin-bottom: 1rem;
+  }
+
+  &__closed-banner {
+    background: $danger-gradient;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 15px;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    animation: pulse-warning 2s infinite;
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      font-size: 0.9rem;
+      padding: 0.8rem 1.2rem;
+    }
   }
 
   &__status {
@@ -1218,9 +1256,49 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     font-weight: 600;
     border: 1px solid $medium-gray;
   }
+
+  // Aviso de restaurante cerrado
+  &__closed-notice {
+    background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+    border: 2px solid #FECACA;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+
+    &-icon {
+      flex-shrink: 0;
+      color: #DC2626;
+      background: rgba(239, 68, 68, 0.1);
+      padding: 0.75rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &-content {
+      flex: 1;
+
+      h3 {
+        color: #DC2626;
+        font-weight: 700;
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+      }
+
+      p {
+        color: #7F1D1D;
+        margin: 0;
+        line-height: 1.5;
+      }
+    }
+  }
 }
 
-// Menu items con precios limpios
+// Menu items con estado de cerrado
 .menu-items {
   display: grid;
   gap: 1.5rem;
@@ -1244,7 +1322,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     box-shadow: $shadow-medium, 0 0 0 4px #FF8A00;
     background: rgba(255, 248, 245, 0.95);
 
-    .menu-item__add-btn {
+    .menu-item__add-btn:not(:disabled) {
       opacity: 1;
       transform: scale(1);
     }
@@ -1256,6 +1334,27 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     .menu-item__price,
     .menu-item__price-discounted {
       transform: scale(1.02);
+    }
+  }
+
+  // Estado deshabilitado cuando está cerrado
+  &--disabled {
+    opacity: 0.6;
+    background: rgba(248, 250, 252, 0.8);
+
+    &:hover {
+      transform: none;
+      box-shadow: $shadow-soft;
+      background: rgba(248, 250, 252, 0.8);
+    }
+
+    .menu-item__name {
+      color: $dark-gray;
+    }
+
+    .menu-item__price,
+    .menu-item__price-discounted {
+      color: $dark-gray;
     }
   }
 
@@ -1381,6 +1480,20 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     }
   }
 
+  // Mensaje de no disponible
+  &__unavailable {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #DC2626;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
   &__image-wrapper {
     position: relative;
     width: 140px;
@@ -1433,7 +1546,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: $transition;
     box-shadow: $shadow-medium;
 
-    &:hover {
+    &:hover:not(:disabled) {
       transform: scale(1.1);
       box-shadow: $shadow-elevated;
     }
@@ -1442,6 +1555,11 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
       opacity: 0.5;
       cursor: not-allowed;
       background: $medium-gray;
+
+      &:hover {
+        transform: none;
+        box-shadow: none;
+      }
     }
   }
 
@@ -1589,11 +1707,39 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     padding: 0 0 2rem;
   }
 
+  // Alerta de cerrado en el carrito
+  &__closed-warning {
+    background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+    border: 2px solid #FECACA;
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 2rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    color: #DC2626;
+    font-size: 0.9rem;
+
+    svg {
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    small {
+      color: #7F1D1D;
+    }
+  }
+
   &__items {
     max-height: 400px;
     overflow-y: auto;
     padding: 1rem 2rem 0;
-    
+
     &::-webkit-scrollbar {
       width: 6px;
     }
@@ -1671,6 +1817,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
       opacity: 0.5;
       cursor: not-allowed;
       transform: none;
+      background: $medium-gray;
     }
 
     &-icon {
@@ -1679,7 +1826,7 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
-// Cart items limpios
+// Cart items con estado de cerrado
 .cart-item {
   display: flex;
   align-items: center;
@@ -1716,16 +1863,22 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: $transition;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: $primary-gradient;
       color: white;
     }
 
-    &--minus:hover {
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: $medium-gray;
+    }
+
+    &--minus:hover:not(:disabled) {
       background: linear-gradient(135deg, #EF4444, #DC2626);
     }
 
-    &--plus:hover {
+    &--plus:hover:not(:disabled) {
       background: $success-gradient;
     }
   }
@@ -1868,45 +2021,55 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 }
 
+// Animaciones para estado cerrado
+@keyframes pulse-warning {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+  }
+}
+
 // Responsive
 @media (max-width: 768px) {
   .restaurant-hero {
     padding: 4rem 0 3rem;
-    
+
     &__name {
       font-size: 2rem;
     }
-    
+
     &__meta {
       flex-direction: column;
       gap: 1rem;
     }
   }
-  
+
   .menu-section__title {
     font-size: 1.5rem;
   }
-  
+
   .menu-item {
     padding: 1rem;
-    
+
     &__name {
       font-size: 1.1rem;
     }
-    
+
     &__price,
     &__price-discounted {
       font-size: 1.2rem;
     }
   }
-  
+
   .cart {
     border-radius: 15px;
-    
+
     &__header {
       padding: 1.5rem;
     }
-    
+
     &__title {
       font-size: 1.2rem;
     }

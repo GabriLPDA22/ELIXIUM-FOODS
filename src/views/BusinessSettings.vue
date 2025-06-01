@@ -607,9 +607,9 @@ const passwordError = ref('')
 
 // Datos adicionales
 const restaurantTypes = [
-  { id: 1, name: 'Italiano' }, { id: 2, name: 'Asiático' }, { id: 3, name: 'Mexicano' },
-  { id: 4, name: 'Hamburguesas' }, { id: 5, name: 'Pizzas' }, { id: 6, name: 'Vegano' },
-  { id: 7, name: 'Saludable' }, { id: 8, name: 'Postres' }
+  { id: 1, name: 'Americano' }, { id: 2, name: 'Italiano' }, { id: 3, name: 'Mexicano' },
+  { id: 4, name: 'Asiático' }, { id: 5, name: 'Fast Food' }, { id: 6, name: 'Saludable' },
+  { id: 7, name: 'Postres' }, { id: 8, name: 'Vegano' }
 ]
 
 // Horarios
@@ -696,11 +696,58 @@ const loadRestaurants = async () => {
   }
 }
 
+// Cargar horarios reales del restaurante
+const loadRestaurantHours = async (restaurantId: number): Promise<void> => {
+  try {
+    const response = await api.get(`/api/restaurants/${restaurantId}/hours`);
+    if (response.data && response.data.length > 0) {
+      // Mapear los horarios del backend al formato local
+      restaurantHours.value = [
+        'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+      ].map(day => {
+        const dayLabels = {
+          monday: 'Lunes',
+          tuesday: 'Martes',
+          wednesday: 'Miércoles',
+          thursday: 'Jueves',
+          friday: 'Viernes',
+          saturday: 'Sábado',
+          sunday: 'Domingo'
+        };
+
+        const backendHour = response.data.find((h: any) => h.dayOfWeek.toLowerCase() === day);
+
+        if (backendHour) {
+          return {
+            day,
+            label: dayLabels[day as keyof typeof dayLabels],
+            isOpen: backendHour.isOpen,
+            openTime: backendHour.openTime,
+            closeTime: backendHour.closeTime
+          };
+        }
+
+        // Valores por defecto si no existe
+        return {
+          day,
+          label: dayLabels[day as keyof typeof dayLabels],
+          isOpen: true,
+          openTime: day === 'saturday' || day === 'sunday' ? '11:00' : '10:00',
+          closeTime: day === 'friday' || day === 'saturday' ? '23:00' : '22:00'
+        };
+      });
+    }
+  } catch (error) {
+    console.error('Error cargando horarios del restaurante:', error);
+    // Mantener horarios por defecto si hay error
+  }
+};
+
 const loadRestaurantDetails = async (restaurantId: number) => {
   try {
-    const response = await api.get(`/api/Restaurants/${restaurantId}`)
+    const response = await api.get(`/api/Restaurants/${restaurantId}`);
     if (response.data) {
-      const restaurant = response.data
+      const restaurant = response.data;
 
       restaurantProfile.value = {
         name: restaurant.name || '',
@@ -709,7 +756,7 @@ const loadRestaurantDetails = async (restaurantId: number) => {
         deliveryFee: restaurant.deliveryFee || 2.99,
         tipo: restaurant.tipo || 1,
         isOpen: restaurant.isOpen ?? true
-      }
+      };
 
       if (restaurant.address) {
         restaurantAddress.value = {
@@ -720,25 +767,17 @@ const loadRestaurantDetails = async (restaurantId: number) => {
           phone: restaurant.address.phone || '',
           latitude: restaurant.address.latitude,
           longitude: restaurant.address.longitude
-        }
+        };
       }
 
-      // Resetear horarios del restaurante (puedes cargar desde API si existe)
-      restaurantHours.value = [
-        { day: 'monday', label: 'Lunes', isOpen: true, openTime: '10:00', closeTime: '22:00' },
-        { day: 'tuesday', label: 'Martes', isOpen: true, openTime: '10:00', closeTime: '22:00' },
-        { day: 'wednesday', label: 'Miércoles', isOpen: true, openTime: '10:00', closeTime: '22:00' },
-        { day: 'thursday', label: 'Jueves', isOpen: true, openTime: '10:00', closeTime: '22:00' },
-        { day: 'friday', label: 'Viernes', isOpen: true, openTime: '10:00', closeTime: '23:00' },
-        { day: 'saturday', label: 'Sábado', isOpen: true, openTime: '11:00', closeTime: '23:00' },
-        { day: 'sunday', label: 'Domingo', isOpen: true, openTime: '11:00', closeTime: '22:00' }
-      ]
+      // Cargar horarios del restaurante
+      await loadRestaurantHours(restaurantId);
     }
   } catch (err: any) {
-    console.error('Error cargando detalles del restaurante:', err)
-    throw new Error('Error cargando detalles del restaurante')
+    console.error('Error cargando detalles del restaurante:', err);
+    throw new Error('Error cargando detalles del restaurante');
   }
-}
+};
 
 // Métodos de guardado
 const saveBusinessProfile = async () => {
@@ -1054,28 +1093,53 @@ const applyMondayToAll = () => {
   }
 }
 
-const saveHours = async () => {
-  if (saving.value) return
+// Modificar el método saveHours existente para guardar en el backend
+const saveHours = async (): Promise<void> => {
+  if (saving.value) return;
 
-  saving.value = true
+  saving.value = true;
   try {
-    const entityName = selectedEntity.value === 'business' ? 'negocio' : 'restaurante'
+    const hoursToSave = currentHours.value.map(hour => ({
+      dayOfWeek: hour.day,
+      isOpen: hour.isOpen,
+      openTime: hour.openTime,
+      closeTime: hour.closeTime
+    }));
 
-    // Aquí puedes implementar el guardado real en el backend
-    // Por ahora solo simulamos
-    console.log(`Guardando horarios del ${entityName}:`, currentHours.value)
+    let apiUrl = '';
+    let entityName = '';
 
-    // Simulamos una llamada a la API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (selectedEntity.value === 'business') {
+      // Para horarios de negocio (si decides implementarlo más tarde)
+      apiUrl = `/api/Business/${business.value?.id}/hours`;
+      entityName = 'negocio';
+    } else if (selectedEntity.value.startsWith('restaurant-')) {
+      // Para horarios de restaurante
+      const restaurantId = parseInt(selectedEntity.value.replace('restaurant-', ''));
+      apiUrl = `/api/restaurants/${restaurantId}/hours`;
+      entityName = 'restaurante';
+    }
 
-    showSuccess(`Horarios del ${entityName} guardados correctamente`)
+    if (apiUrl) {
+      await api.post(apiUrl, { hours: hoursToSave });
+      showSuccess(`Horarios del ${entityName} guardados correctamente`);
+
+      // Recargar horarios para mostrar los datos actualizados
+      if (selectedEntity.value.startsWith('restaurant-')) {
+        const restaurantId = parseInt(selectedEntity.value.replace('restaurant-', ''));
+        await loadRestaurantHours(restaurantId);
+      }
+    } else {
+      throw new Error('No se pudo determinar la entidad para guardar horarios');
+    }
   } catch (err: any) {
-    console.error('Error guardando horarios:', err)
-    showError('Error al guardar los horarios')
+    console.error('Error guardando horarios:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
+    showError(`Error al guardar los horarios: ${errorMessage}`);
   } finally {
-    saving.value = false
+    saving.value = false;
   }
-}
+};
 
 // Cambio de contraseña
 const changePassword = async () => {
@@ -1191,12 +1255,14 @@ onMounted(() => {
 })
 
 // Watchers
-watch(selectedEntity, (newEntity) => {
+watch(selectedEntity, async (newEntity) => {
   if (newEntity.startsWith('restaurant-')) {
     const restaurantId = parseInt(newEntity.replace('restaurant-', ''))
-    loadRestaurantDetails(restaurantId).catch(err => {
+    try {
+      await loadRestaurantDetails(restaurantId)
+    } catch (err) {
       showError('Error cargando detalles del restaurante')
-    })
+    }
   }
 }, { immediate: false })
 </script>

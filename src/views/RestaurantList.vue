@@ -11,7 +11,7 @@
         <div class="hero__floating-element hero__floating-element--5">🥗</div>
         <div class="hero__floating-element hero__floating-element--6">🍣</div>
       </div>
-      
+
       <div class="container">
         <div class="hero__content">
           <h1 class="hero__title">
@@ -103,10 +103,10 @@
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
               </div>
-              <input 
-                type="text" 
-                v-model="searchQuery" 
-                placeholder="Buscar restaurantes..." 
+              <input
+                type="text"
+                v-model="searchQuery"
+                placeholder="Buscar restaurantes..."
                 class="filter-search__input"
               >
               <button v-if="searchQuery" @click="searchQuery = ''" class="filter-search__clear">
@@ -155,29 +155,63 @@
           <!-- Grid con overflow y altura fija -->
           <div class="restaurant-grid-container">
             <div class="restaurant-grid">
-              <div v-for="restaurant in paginatedRestaurants" :key="restaurant.id" class="restaurant-card" @click="goToRestaurant(restaurant.id)">
+              <!-- Restaurant card actualizada con estado -->
+              <div v-for="restaurant in paginatedRestaurants" :key="restaurant.id" class="restaurant-card"
+                   :class="{ 'restaurant-card--closed': !restaurant.isCurrentlyOpen }"
+                   @click="goToRestaurant(restaurant.id)">
+
+                <!-- Imagen del restaurante con overlay si está cerrado -->
                 <div class="restaurant-card__image-wrapper">
                   <img :src="restaurant.coverImageUrl" :alt="restaurant.name" class="restaurant-card__image">
-                  
+
+                  <!-- Overlay para restaurantes cerrados -->
+                  <div v-if="!restaurant.isCurrentlyOpen" class="restaurant-card__closed-overlay">
+                    <div class="restaurant-card__closed-badge">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                      </svg>
+                      CERRADO
+                    </div>
+                  </div>
+
                   <div class="restaurant-card__overlay"></div>
 
+                  <!-- Badges actualizados -->
                   <div class="restaurant-card__badges">
+                    <!-- Status badge prominente -->
+                    <span v-if="restaurant.isCurrentlyOpen" class="restaurant-card__badge restaurant-card__badge--open">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Abierto
+                    </span>
+                    <span v-else class="restaurant-card__badge restaurant-card__badge--closed">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                      </svg>
+                      Cerrado
+                    </span>
+
+                    <!-- Otros badges existentes -->
                     <span v-if="isNew(restaurant)" class="restaurant-card__badge restaurant-card__badge--new">
                       <span class="restaurant-card__badge-icon">✨</span>
                       Nuevo
                     </span>
                     <span v-if="isFastDelivery(restaurant)" class="restaurant-card__badge restaurant-card__badge--fast">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                       </svg>
                       Rápido
                     </span>
                   </div>
 
+                  <!-- Delivery time existente -->
                   <div class="restaurant-card__delivery-time">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
@@ -185,31 +219,42 @@
                   </div>
                 </div>
 
+                <!-- Content del restaurante -->
                 <div class="restaurant-card__content">
                   <div class="restaurant-card__header">
-                    <h3 class="restaurant-card__name">{{ restaurant.name }}</h3>
+                    <h3 class="restaurant-card__name" :class="{ 'restaurant-card__name--closed': !restaurant.isCurrentlyOpen }">
+                      {{ restaurant.name }}
+                    </h3>
                     <div class="restaurant-card__rating">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFCC00" stroke="#FFCC00" stroke-width="0.5"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <polygon
-                          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-                        </polygon>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFCC00" stroke="#FFCC00" stroke-width="0.5">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                       </svg>
                       <span>{{ restaurant.averageRating }}</span>
                       <span class="restaurant-card__reviews">({{ restaurant.reviewCount || 0 }})</span>
                     </div>
                   </div>
 
+                  <!-- Status message -->
+                  <div class="restaurant-card__status">
+                    <span v-if="restaurant.isCurrentlyOpen" class="restaurant-card__status-text restaurant-card__status-text--open">
+                      {{ restaurant.statusMessage }}
+                    </span>
+                    <span v-else class="restaurant-card__status-text restaurant-card__status-text--closed">
+                      {{ restaurant.statusMessage }}
+                    </span>
+                  </div>
+
+                  <!-- Info existente -->
                   <div class="restaurant-card__info">
                     <span class="restaurant-card__cuisine">{{ getTipoName(restaurant.tipo) }}</span>
                     <span class="restaurant-card__separator">•</span>
                     <span class="restaurant-card__distance">{{ restaurant.distance || '1.0' }} km</span>
                   </div>
 
+                  <!-- Delivery info existente -->
                   <div class="restaurant-card__delivery-info">
                     <div v-if="restaurant.deliveryFee === 0" class="restaurant-card__free-delivery">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                       Envío gratis
@@ -225,8 +270,8 @@
 
           <!-- Paginación -->
           <div v-if="totalPages > 1" class="pagination">
-            <button 
-              @click="previousPage" 
+            <button
+              @click="previousPage"
               :disabled="currentPage === 1"
               class="pagination__button pagination__button--prev"
             >
@@ -239,7 +284,7 @@
 
             <div class="pagination__pages">
               <template v-for="page in getVisiblePages()" :key="page">
-                <button 
+                <button
                   v-if="page !== '...'"
                   @click="goToPage(page)"
                   :class="['pagination__page', { 'pagination__page--active': page === currentPage }]"
@@ -250,8 +295,8 @@
               </template>
             </div>
 
-            <button 
-              @click="nextPage" 
+            <button
+              @click="nextPage"
               :disabled="currentPage === totalPages"
               class="pagination__button pagination__button--next"
             >
@@ -272,6 +317,7 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { restaurantService } from '@/services/restaurantService';
+import { api } from '@/services/api';
 
 // Router
 const router = useRouter();
@@ -336,22 +382,61 @@ const initializeFromURL = () => {
   }
 };
 
-// Obtener restaurantes
+// Obtener restaurantes con estado
 const fetchRestaurants = async () => {
   loading.value = true;
-  
+
   try {
     let data;
-    
+
     if (selectedCategory.value !== 'all') {
-      data = await restaurantService.getRestaurantsByTipo(selectedCategory.value);
+      // Para categorías específicas, usar el endpoint con status y filtrar
+      try {
+        const response = await api.get('/api/Restaurants/with-status');
+        console.log('✅ Restaurantes con estado cargados:', response.data);
+        data = response.data.filter(r => r.tipo === selectedCategory.value);
+      } catch (statusError) {
+        console.warn('⚠️ Endpoint with-status falló, usando fallback:', statusError.message);
+        // Fallback al endpoint por tipo
+        data = await restaurantService.getRestaurantsByTipo(selectedCategory.value);
+        data = data.map(restaurant => ({
+          ...restaurant,
+          isCurrentlyOpen: restaurant.isOpen,
+          status: restaurant.isOpen ? 'Abierto' : 'Cerrado',
+          statusMessage: restaurant.isOpen ? 'Abierto ahora' : 'Cerrado'
+        }));
+      }
     } else {
-      data = await restaurantService.getAllRestaurants();
+      // Para "todos", usar el endpoint con status
+      try {
+        const response = await api.get('/api/Restaurants/with-status');
+        console.log('✅ Todos los restaurantes con estado cargados:', response.data);
+        data = response.data;
+      } catch (statusError) {
+        console.warn('⚠️ Endpoint with-status falló, usando fallback:', statusError.message);
+        // Fallback al endpoint original
+        data = await restaurantService.getAllRestaurants();
+        data = data.map(restaurant => ({
+          ...restaurant,
+          isCurrentlyOpen: restaurant.isOpen,
+          status: restaurant.isOpen ? 'Abierto' : 'Cerrado',
+          statusMessage: restaurant.isOpen ? 'Abierto ahora' : 'Cerrado'
+        }));
+      }
     }
-    
+
     restaurants.value = data;
+    console.log('📍 Restaurantes finales:', restaurants.value.map(r => ({
+      id: r.id,
+      name: r.name,
+      isOpen: r.isOpen,
+      isCurrentlyOpen: r.isCurrentlyOpen,
+      statusMessage: r.statusMessage
+    })));
+
   } catch (error) {
-    console.error('Error al cargar restaurantes:', error);
+    console.error('❌ Error general al cargar restaurantes:', error);
+    restaurants.value = [];
   } finally {
     loading.value = false;
   }
@@ -360,15 +445,15 @@ const fetchRestaurants = async () => {
 // Filtrar restaurantes
 const filteredRestaurants = computed(() => {
   let result = restaurants.value;
-  
+
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    result = result.filter(restaurant => 
-      restaurant.name.toLowerCase().includes(query) || 
+    result = result.filter(restaurant =>
+      restaurant.name.toLowerCase().includes(query) ||
       (restaurant.description && restaurant.description.toLowerCase().includes(query))
     );
   }
-  
+
   if (sortBy.value === 'rating') {
     result = [...result].sort((a, b) => b.averageRating - a.averageRating);
   } else if (sortBy.value === 'delivery') {
@@ -376,7 +461,7 @@ const filteredRestaurants = computed(() => {
   } else if (sortBy.value === 'price') {
     result = [...result].sort((a, b) => a.deliveryFee - b.deliveryFee);
   }
-  
+
   return result;
 });
 
@@ -399,15 +484,15 @@ const paginationInfo = computed(() => {
 const selectCategory = (categoryId) => {
   selectedCategory.value = categoryId;
   currentPage.value = 1;
-  
+
   // Actualizar URL sin recargar página
-  router.replace({ 
-    query: { 
-      ...route.query, 
-      category: categoryId === 'all' ? undefined : categoryId 
-    } 
+  router.replace({
+    query: {
+      ...route.query,
+      category: categoryId === 'all' ? undefined : categoryId
+    }
   });
-  
+
   fetchRestaurants();
 };
 
@@ -416,10 +501,10 @@ const resetFilters = () => {
   selectedCategory.value = 'all';
   sortBy.value = 'popularity';
   currentPage.value = 1;
-  
+
   // Limpiar parámetros de URL
   router.replace({ query: {} });
-  
+
   fetchRestaurants();
 };
 
@@ -525,7 +610,7 @@ onMounted(() => {
   initializeFromURL();
   fetchRestaurants();
   checkMobile();
-  
+
   window.addEventListener('resize', checkMobile);
 
   setTimeout(() => {
@@ -1068,7 +1153,7 @@ watch(() => route.query.category, (newCategory) => {
   &::-webkit-scrollbar-thumb {
     background: linear-gradient(135deg, #FF416C, #FF4B2B);
     border-radius: 4px;
-    
+
     &:hover {
       background: linear-gradient(135deg, #e63946, #FF4B2B);
     }
@@ -1100,7 +1185,7 @@ watch(() => route.query.category, (newCategory) => {
   }
 }
 
-// Restaurant cards - MÁS COMPACTAS
+// Restaurant cards - MÁS COMPACTAS CON ESTADO
 .restaurant-card {
   background: white;
   border-radius: 15px;
@@ -1115,11 +1200,11 @@ watch(() => route.query.category, (newCategory) => {
     content: '';
     position: absolute;
     inset: -1px;
-    background: linear-gradient(45deg, 
-      transparent 30%, 
-      rgba(255, 65, 108, 0.1) 40%, 
-      rgba(255, 75, 43, 0.15) 50%, 
-      rgba(255, 65, 108, 0.1) 60%, 
+    background: linear-gradient(45deg,
+      transparent 30%,
+      rgba(255, 65, 108, 0.1) 40%,
+      rgba(255, 75, 43, 0.15) 50%,
+      rgba(255, 65, 108, 0.1) 60%,
       transparent 70%
     );
     border-radius: 16px;
@@ -1134,9 +1219,9 @@ watch(() => route.query.category, (newCategory) => {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, 
-      rgba(255, 255, 255, 0.1) 0%, 
-      transparent 50%, 
+    background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 50%,
       rgba(255, 65, 108, 0.05) 100%
     );
     border-radius: 15px;
@@ -1148,7 +1233,7 @@ watch(() => route.query.category, (newCategory) => {
 
   &:hover {
     transform: translateY(-8px) rotateX(1deg) rotateY(-1deg);
-    box-shadow: 
+    box-shadow:
       0 15px 30px rgba(0, 0, 0, 0.15),
       0 0 0 1px rgba(255, 65, 108, 0.1),
       0 0 40px rgba(255, 65, 108, 0.15);
@@ -1172,6 +1257,15 @@ watch(() => route.query.category, (newCategory) => {
     }
   }
 
+  // Estado cerrado
+  &--closed {
+    opacity: 0.85;
+
+    &:hover {
+      transform: translateY(-4px) rotateX(0.5deg) rotateY(-0.5deg); // Menos hover effect
+    }
+  }
+
   &__image-wrapper {
     position: relative;
     height: 140px; // Más compacto
@@ -1189,12 +1283,39 @@ watch(() => route.query.category, (newCategory) => {
   &__overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, 
-      rgba(0, 0, 0, 0) 0%, 
+    background: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0) 0%,
       rgba(0, 0, 0, 0.1) 50%,
       rgba(0, 0, 0, 0.2) 100%);
     opacity: 0;
     transition: opacity 0.4s ease;
+  }
+
+  // Overlay para restaurantes cerrados
+  &__closed-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    backdrop-filter: blur(2px);
+  }
+
+  &__closed-badge {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.5px;
   }
 
   &__badges {
@@ -1217,6 +1338,20 @@ watch(() => route.query.category, (newCategory) => {
     font-weight: 600;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+
+    &--open {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95));
+      color: white;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    &--closed {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+      color: white;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
 
     &--new {
       background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.9));
@@ -1272,6 +1407,10 @@ watch(() => route.query.category, (newCategory) => {
     line-height: 1.3;
     flex: 1;
     transition: color 0.3s ease;
+
+    &--closed {
+      color: #64748B;
+    }
   }
 
   &__rating {
@@ -1288,6 +1427,41 @@ watch(() => route.query.category, (newCategory) => {
     color: #64748b;
     font-weight: 400;
     font-size: 0.7rem;
+  }
+
+  // Status message
+  &__status {
+    margin-bottom: 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__status-text {
+    &--open {
+      color: #059669;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+
+      &::before {
+        content: '●';
+        color: #10B981;
+        font-size: 0.6rem;
+      }
+    }
+
+    &--closed {
+      color: #DC2626;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+
+      &::before {
+        content: '●';
+        color: #EF4444;
+        font-size: 0.6rem;
+      }
+    }
   }
 
   &__info {
@@ -1333,6 +1507,22 @@ watch(() => route.query.category, (newCategory) => {
   }
   100% {
     background-position: 200% 0;
+  }
+}
+
+// Animación para estados cerrados
+@keyframes pulse-closed {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+.restaurant-card--closed {
+  .restaurant-card__badge--closed {
+    animation: pulse-closed 2s infinite;
   }
 }
 

@@ -8,16 +8,16 @@
       <div class="business-home__header-right">
         <div class="business-home__restaurant-selector" v-if="restaurants.length > 1">
           <label for="restaurantSelect" class="business-home__selector-label">Restaurante:</label>
-          <select 
-            id="restaurantSelect" 
-            v-model="selectedRestaurantId" 
+          <select
+            id="restaurantSelect"
+            v-model="selectedRestaurantId"
             @change="onRestaurantChange"
             class="business-home__selector"
           >
             <option value="all">Todos los restaurantes</option>
-            <option 
-              v-for="restaurant in restaurants" 
-              :key="restaurant.id" 
+            <option
+              v-for="restaurant in restaurants"
+              :key="restaurant.id"
               :value="restaurant.id"
             >
               {{ restaurant.name }}
@@ -181,9 +181,9 @@
         </router-link>
       </div>
       <div class="business-home__restaurants-grid">
-        <div 
-          v-for="restaurant in restaurants" 
-          :key="restaurant.id" 
+        <div
+          v-for="restaurant in restaurants"
+          :key="restaurant.id"
           :class="['business-home__restaurant-card', { 'business-home__restaurant-card--selected': selectedRestaurantId === restaurant.id }]"
           @click="selectRestaurant(restaurant.id)"
         >
@@ -429,7 +429,7 @@ const selectedRestaurantName = computed(() => {
 
 // Pedidos filtrados según el estado
 const pendingOrders = computed(() => {
-  return allOrders.value.filter(order => 
+  return allOrders.value.filter(order =>
     ['Pending', 'Accepted', 'Preparing'].includes(order.status)
   ).filter(order => {
     // Filtrar por restaurante si está seleccionado
@@ -446,22 +446,22 @@ const pendingOrdersCount = computed(() => {
 const currentStats = computed(() => {
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  
+
   let filteredOrders = allOrders.value
-  
+
   // Filtrar por restaurante si está seleccionado
   if (selectedRestaurantId.value !== 'all') {
     filteredOrders = filteredOrders.filter(order => order.restaurantId === selectedRestaurantId.value)
   }
-  
+
   // Pedidos de hoy
-  const todayOrders = filteredOrders.filter(order => 
+  const todayOrders = filteredOrders.filter(order =>
     new Date(order.createdAt) >= todayStart
   )
-  
+
   // Ingresos de hoy
   const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0)
-  
+
   // Calcular productos totales
   let totalProducts = 0
   if (selectedRestaurantId.value === 'all') {
@@ -469,14 +469,14 @@ const currentStats = computed(() => {
   } else {
     totalProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value).length
   }
-  
+
   // Rating promedio (hardcodeado por ahora)
   let averageRating = 4.5
   if (selectedRestaurantId.value !== 'all') {
     const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
     averageRating = restaurant?.averageRating || 4.5
   }
-  
+
   return {
     todayOrders: todayOrders.length,
     todayRevenue: todayRevenue,
@@ -513,7 +513,7 @@ const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     'Pending': 'Pendiente',
     'Accepted': 'Aceptado',
-    'Preparing': 'En preparación', 
+    'Preparing': 'En preparación',
     'ReadyForPickup': 'Listo',
     'OnTheWay': 'En reparto',
     'Delivered': 'Entregado',
@@ -538,6 +538,140 @@ const getRestaurantProductCount = (restaurantId: number): number => {
   return allProducts.value.filter(p => p.restaurantId === restaurantId).length
 }
 
+// MEJORADA: Función para calcular estadísticas reales con fallbacks
+const calculateRealProductStats = (products: any[], orders: any[]) => {
+  console.log('🔍 Debug: Calculando estadísticas de productos...')
+  console.log('📦 Productos disponibles:', products.length)
+  console.log('📋 Pedidos a procesar:', orders.length)
+
+  if (products.length === 0) {
+    console.log('❌ No hay productos para procesar')
+    return []
+  }
+
+  const productMap = new Map()
+
+  // Inicializar productos con 0 pedidos
+  products.forEach(product => {
+    productMap.set(product.id, {
+      ...product,
+      ordersCount: 0,
+      revenue: 0
+    })
+  })
+
+  console.log('🗂️ ProductMap inicializado con:', productMap.size, 'productos')
+
+  if (orders.length === 0) {
+    console.log('⚠️ No hay pedidos para procesar, devolviendo productos con 0 pedidos')
+    return Array.from(productMap.values())
+  }
+
+  // Debug: Ver estructura de un pedido
+  console.log('🔍 Estructura del primer pedido:', {
+    id: orders[0].id,
+    hasOrderItems: !!orders[0].orderItems,
+    orderItemsLength: orders[0].orderItems?.length || 0,
+    firstItem: orders[0].orderItems?.[0] || 'No items'
+  })
+
+  let totalItemsProcessed = 0
+  let itemsMatched = 0
+  const unmatchedProductIds = new Set()
+
+  // Contar pedidos reales de cada producto
+  orders.forEach((order, orderIndex) => {
+    if (order.orderItems && Array.isArray(order.orderItems)) {
+      order.orderItems.forEach((item: any, itemIndex: number) => {
+        totalItemsProcessed++
+
+        // Intentar diferentes formas de obtener el productId
+        let productId = null
+
+        // Múltiples opciones para encontrar el ID del producto
+        if (item.productId) {
+          productId = parseInt(item.productId) // Asegurar que sea número
+        } else if (item.product && item.product.id) {
+          productId = parseInt(item.product.id)
+        } else if (item.id && !item.productId && !item.product) {
+          productId = parseInt(item.id)
+        } else if (item.Product && item.Product.Id) { // PascalCase
+          productId = parseInt(item.Product.Id)
+        }
+
+        // Debug del primer item para ver la estructura
+        if (orderIndex === 0 && itemIndex === 0) {
+          console.log('🔍 Estructura del primer item:', {
+            item_keys: Object.keys(item),
+            productId_found: productId,
+            productId_prop: item.productId,
+            product_prop: item.product,
+            item_id: item.id,
+            quantity: item.quantity,
+            subtotal: item.subtotal
+          })
+        }
+
+        if (productId && productMap.has(productId)) {
+          const productStats = productMap.get(productId)
+          const quantity = parseInt(item.quantity) || 1
+          const subtotal = parseFloat(item.subtotal) || (parseFloat(item.unitPrice) * quantity) || (productStats.price * quantity) || 0
+
+          productStats.ordersCount += quantity
+          productStats.revenue += subtotal
+          productMap.set(productId, productStats)
+          itemsMatched++
+
+          // Debug para el primer match
+          if (itemsMatched === 1) {
+            console.log('✅ Primer match encontrado:', {
+              productId: productId,
+              productName: productStats.name,
+              quantity: quantity,
+              subtotal: subtotal,
+              newOrdersCount: productStats.ordersCount
+            })
+          }
+        } else {
+          if (productId) {
+            unmatchedProductIds.add(productId)
+          }
+
+          // Debug para items no encontrados (solo primeros 3)
+          if (totalItemsProcessed <= 3) {
+            console.log('❌ Item no encontrado:', {
+              productId: productId,
+              available_product_ids: Array.from(productMap.keys()).slice(0, 5),
+              item_keys: Object.keys(item)
+            })
+          }
+        }
+      })
+    }
+  })
+
+  console.log('📊 Resumen del procesamiento:', {
+    totalItemsProcessed,
+    itemsMatched,
+    matchRate: totalItemsProcessed > 0 ? `${((itemsMatched / totalItemsProcessed) * 100).toFixed(1)}%` : '0%',
+    unmatchedProductIds: Array.from(unmatchedProductIds).slice(0, 5)
+  })
+
+  const results = Array.from(productMap.values())
+  const productsWithOrders = results.filter(p => p.ordersCount > 0)
+
+  console.log('📈 Productos con pedidos encontrados:', productsWithOrders.length)
+  if (productsWithOrders.length > 0) {
+    console.log('🏆 Top 3 productos:', productsWithOrders
+      .sort((a, b) => b.ordersCount - a.ordersCount)
+      .slice(0, 3)
+      .map(p => ({ name: p.name, orders: p.ordersCount, revenue: p.revenue.toFixed(2) }))
+    )
+  }
+
+  return results
+}
+
 // Cargar business REAL usando tu endpoint
 const loadBusiness = async () => {
   try {
@@ -554,15 +688,49 @@ const loadBusiness = async () => {
   }
 }
 
-// Cargar restaurantes REALES del business
+// ARREGLADO: Cargar restaurantes con estado real de horarios
 const loadRestaurants = async () => {
   try {
     if (!business.value?.id) return
 
     const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
     if (response.data) {
-      restaurants.value = response.data
-      console.log('Restaurantes cargados:', restaurants.value)
+      const restaurantData = response.data
+
+      // Para cada restaurante, verificar su estado real usando horarios
+      const restaurantsWithStatus = await Promise.all(
+        restaurantData.map(async (restaurant: any) => {
+          let isCurrentlyOpen = restaurant.isOpen || false // Fallback
+          let statusMessage = 'Estado desconocido'
+
+          try {
+            // Verificar estado real usando el endpoint de horarios
+            const statusResponse = await api.get(`/api/restaurants/${restaurant.id}/hours/status`)
+            if (statusResponse.data) {
+              isCurrentlyOpen = statusResponse.data.isOpen
+              statusMessage = statusResponse.data.status
+            }
+          } catch (error) {
+            console.warn(`Error verificando estado del restaurante ${restaurant.id}:`, error)
+            // Usar valor por defecto si falla
+          }
+
+          return {
+            ...restaurant,
+            isCurrentlyOpen,
+            statusMessage,
+            // Mantener compatibilidad
+            isOpen: isCurrentlyOpen
+          }
+        })
+      )
+
+      restaurants.value = restaurantsWithStatus
+      console.log('Restaurantes cargados con estado real:', restaurants.value.map(r => ({
+        name: r.name,
+        isOpen: r.isCurrentlyOpen,
+        status: r.statusMessage
+      })))
     }
   } catch (error) {
     console.error('Error cargando restaurantes:', error)
@@ -570,41 +738,84 @@ const loadRestaurants = async () => {
   }
 }
 
-// Cargar productos REALES usando tus endpoints
+// ARREGLADO: Cargar productos REALES usando tus endpoints SIN DUPLICADOS
 const loadProducts = async () => {
   try {
     if (!business.value?.id) return
 
     const allProductsData = []
-    
+    const seenProductIds = new Set() // Para evitar duplicados
+
     for (const restaurant of restaurants.value) {
       try {
         const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
         if (productsResponse.data) {
-          const restaurantProducts = productsResponse.data.map((product: any) => ({
-            ...product,
-            restaurantId: restaurant.id,
-            restaurantName: restaurant.name,
-            image: product.imageUrl,
-            price: product.basePrice
-          }))
+          const restaurantProducts = productsResponse.data
+            .filter((product: any) => !seenProductIds.has(product.id)) // Evitar duplicados
+            .map((product: any) => {
+              seenProductIds.add(product.id) // Marcar como visto
+              return {
+                ...product,
+                restaurantId: restaurant.id,
+                restaurantName: restaurant.name,
+                image: product.imageUrl,
+                price: product.basePrice
+              }
+            })
           allProductsData.push(...restaurantProducts)
         }
       } catch (error) {
         console.error(`Error productos restaurante ${restaurant.id}:`, error)
       }
     }
-    
+
     allProducts.value = allProductsData
-    
-    // Filtrar productos populares (simulado por ahora)
-    popularProducts.value = allProductsData.slice(0, 8).map(product => ({
-      ...product,
-      ordersCount: Math.floor(Math.random() * 50) + 5,
-      revenue: product.price * (Math.floor(Math.random() * 50) + 5)
-    }))
-    
-    console.log('Productos cargados:', allProducts.value.length)
+    console.log('📦 Productos únicos cargados:', allProductsData.length)
+    console.log('🔍 IDs de productos:', allProductsData.map(p => p.id).slice(0, 10))
+
+    // MEJORADO: Calcular productos populares SIN DUPLICADOS
+    if (allProductsData.length > 0) {
+      const productStats = calculateRealProductStats(allProductsData, allOrders.value)
+
+      // Filtrar duplicados por ID antes de mostrar
+      const uniqueProductStats = productStats.filter((product, index, array) => {
+        return array.findIndex(p => p.id === product.id) === index
+      })
+
+      // Si no hay estadísticas reales, mostrar productos con datos simulados básicos
+      if (uniqueProductStats.every(p => p.ordersCount === 0)) {
+        console.log('⚠️ No se encontraron estadísticas reales, usando datos básicos')
+        popularProducts.value = uniqueProductStats
+          .slice(0, 8) // Tomar los primeros 8
+          .map((product, index) => ({
+            ...product,
+            ordersCount: Math.max(1, 10 - index), // Al menos 1 pedido, decreciente
+            revenue: (product.price || 10) * Math.max(1, 10 - index)
+          }))
+      } else {
+        // Usar estadísticas reales si las hay
+        const productsWithOrders = uniqueProductStats.filter(p => p.ordersCount > 0)
+        const productsWithoutOrders = uniqueProductStats.filter(p => p.ordersCount === 0)
+
+        if (productsWithOrders.length >= 4) {
+          // Si hay suficientes productos con pedidos reales
+          popularProducts.value = productsWithOrders
+            .sort((a, b) => b.ordersCount - a.ordersCount)
+            .slice(0, 8)
+        } else {
+          // Mezclar productos con pedidos reales + algunos sin pedidos
+          const topReal = productsWithOrders.sort((a, b) => b.ordersCount - a.ordersCount)
+          const remaining = productsWithoutOrders.slice(0, 8 - topReal.length)
+          popularProducts.value = [...topReal, ...remaining]
+        }
+      }
+    } else {
+      popularProducts.value = []
+    }
+
+    console.log('🏆 Productos populares finales (únicos):', popularProducts.value.length)
+    console.log('📊 IDs productos populares:', popularProducts.value.map(p => ({ id: p.id, name: p.name, orders: p.ordersCount })))
+
   } catch (error) {
     console.error('Error cargando productos:', error)
     allProducts.value = []
@@ -615,11 +826,11 @@ const loadProducts = async () => {
 // Cargar pedidos REALES desde la API
 const loadOrders = async () => {
   if (restaurants.value.length === 0) return
-  
+
   loadingOrders.value = true
   try {
     const allOrdersData = []
-    
+
     for (const restaurant of restaurants.value) {
       try {
         const ordersResponse = await api.get(`/api/Orders/restaurant/${restaurant.id}`)
@@ -635,7 +846,7 @@ const loadOrders = async () => {
         console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
       }
     }
-    
+
     allOrders.value = allOrdersData
     console.log('Pedidos cargados:', allOrders.value.length)
   } catch (error) {
@@ -655,13 +866,14 @@ const onRestaurantChange = () => {
   console.log('Cambio de restaurante:', selectedRestaurantId.value)
 }
 
+// ARREGLADO: Función refreshData sin duplicación
 const refreshData = async () => {
   isRefreshing.value = true
   try {
     await loadBusiness()
-    await loadRestaurants()
-    await loadProducts()
-    await loadOrders()
+    await loadRestaurants() // Primero restaurantes
+    await loadOrders()      // Luego pedidos
+    await loadProducts()    // Finalmente productos (usa pedidos para stats)
   } finally {
     isRefreshing.value = false
   }
@@ -679,6 +891,7 @@ const closeOrderDetails = () => {
   selectedOrder.value = null
 }
 
+// ARREGLADO: onMounted con orden correcto
 onMounted(async () => {
   if (!authStore.isAuthenticated) {
     const isAuth = await authStore.checkAuth()
@@ -688,11 +901,11 @@ onMounted(async () => {
     }
   }
 
-  // Cargar todo en secuencia
+  // Cargar todo en secuencia CORRECTA
   await loadBusiness()
-  await loadRestaurants()
-  await loadProducts()
-  await loadOrders()
+  await loadRestaurants() // Primero restaurantes con estado
+  await loadOrders()      // Luego pedidos
+  await loadProducts()    // Finalmente productos (necesita pedidos para stats)
 })
 </script>
 
@@ -730,7 +943,7 @@ onMounted(async () => {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    
+
     @media (max-width: 480px) {
       width: 100%;
     }
@@ -795,7 +1008,7 @@ onMounted(async () => {
     &--selected {
       border-color: #06a98d;
       background-color: rgba(6, 169, 141, 0.05);
-      
+
       &:hover {
         border-color: #058a73;
       }
