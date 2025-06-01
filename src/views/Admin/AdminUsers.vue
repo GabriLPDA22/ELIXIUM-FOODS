@@ -315,7 +315,7 @@
 
           <div class="flex justify-end gap-4">
             <button @click="goToJWTDebug" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-              🔧 Ir a JWT Debug
+              🔧 Ir a ManagerSecurity
             </button>
             <button @click="closeSecretModal"
               class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
@@ -473,6 +473,13 @@ const paginatedUsers = computed(() => {
 // Métodos simplificados
 const searchUsers = async () => {
   currentPage.value = 1;
+  console.log('🔍 Iniciando búsqueda de usuarios...');
+  console.log('📊 Filtros aplicados:', {
+    búsqueda: userSearch.value,
+    rol: userFilter.value,
+    estado: statusFilter.value
+  });
+
   emit('refresh');
 };
 
@@ -515,6 +522,7 @@ const editUser = (user) => {
   showUserModal.value = true;
 };
 
+// ✅ CORREGIDO: Cambiar endpoint de /api/Users a /api/User
 const saveUser = async () => {
   loading.value = true;
   try {
@@ -528,12 +536,15 @@ const saveUser = async () => {
         isActive: editingUser.isActive
       };
 
-      const response = await api.put(`/api/Users/${editingUser.id}`, userData);
+      console.log(`🔄 Actualizando usuario ${editingUser.id}...`, userData);
+      const response = await api.put(`/api/User/${editingUser.id}`, userData);
 
       // Actualizar en la lista local
       const index = props.users.findIndex(u => u.id === editingUser.id);
       if (index !== -1) {
-        Object.assign(props.users[index], response.data);
+        // Mantener datos existentes y aplicar cambios
+        Object.assign(props.users[index], { ...props.users[index], ...userData });
+        console.log('✅ Usuario actualizado en lista local');
       }
 
       emit('add-alert', 'Usuario actualizado correctamente', 'success');
@@ -549,10 +560,20 @@ const saveUser = async () => {
         isActive: editingUser.isActive
       };
 
-      const response = await api.post('/api/Users', newUserData);
+      console.log('📝 Creando nuevo usuario...', { ...newUserData, password: '[HIDDEN]' });
+      const response = await api.post('/api/User', newUserData);
 
-      if (response.data) {
-        props.users.push(response.data);
+      // Manejar diferentes estructuras de respuesta
+      let createdUser;
+      if (response.data?.data) {
+        createdUser = response.data.data;
+      } else if (response.data) {
+        createdUser = response.data;
+      }
+
+      if (createdUser) {
+        props.users.push(createdUser);
+        console.log('✅ Usuario creado y añadido a lista local');
       }
 
       emit('add-alert', 'Usuario creado correctamente', 'success');
@@ -560,30 +581,62 @@ const saveUser = async () => {
 
     showUserModal.value = false;
     emit('update');
+
   } catch (error) {
-    console.error('Error al guardar usuario:', error);
-    emit('add-alert', 'Error al guardar usuario: ' + (error.response?.data?.message || error.message), 'error');
+    console.error('❌ Error al guardar usuario:', error);
+    console.error('Details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url
+    });
+
+    const errorMessage = error.response?.data?.message ||
+                        error.response?.data?.errors?.join(', ') ||
+                        error.message ||
+                        'Error desconocido';
+
+    emit('add-alert', 'Error al guardar usuario: ' + errorMessage, 'error');
   } finally {
     loading.value = false;
   }
 };
 
+// ✅ CORREGIDO: Mejorar toggle de estado de usuario
 const toggleUserStatus = async (user) => {
   loading.value = true;
   try {
-    const response = await api.put(`/api/Users/${user.id}/toggle-status`);
+    console.log(`🔄 Cambiando estado de usuario ${user.id} de ${user.isActive} a ${!user.isActive}...`);
+
+    // Preparar datos para actualización
+    const userData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber || '',
+      role: user.role,
+      isActive: !user.isActive // Toggle del estado
+    };
+
+    const response = await api.put(`/api/User/${user.id}`, userData);
 
     // Actualizar el usuario en la lista local
     const index = props.users.findIndex(u => u.id === user.id);
     if (index !== -1) {
-      Object.assign(props.users[index], response.data);
+      Object.assign(props.users[index], userData);
+      console.log('✅ Estado actualizado en lista local');
     }
 
-    emit('add-alert', `Usuario ${response.data.isActive ? 'activado' : 'desactivado'} correctamente`, 'success');
+    const statusText = userData.isActive ? 'activado' : 'desactivado';
+    emit('add-alert', `Usuario ${statusText} correctamente`, 'success');
     emit('update');
+
   } catch (error) {
-    console.error('Error al cambiar estado del usuario:', error);
-    emit('add-alert', 'Error al cambiar estado del usuario: ' + (error.response?.data?.message || error.message), 'error');
+    console.error('❌ Error al cambiar estado del usuario:', error);
+
+    const errorMessage = error.response?.data?.message ||
+                        error.message ||
+                        'Error desconocido al cambiar estado';
+
+    emit('add-alert', 'Error al cambiar estado del usuario: ' + errorMessage, 'error');
   } finally {
     loading.value = false;
   }
@@ -657,24 +710,36 @@ const cancelDelete = () => {
   itemToDelete.value = null;
 };
 
+// ✅ CORREGIDO: Cambiar endpoint de eliminación
 const handleDelete = async () => {
   if (!itemToDelete.value) return;
 
   loading.value = true;
   try {
-    await api.delete(`/api/Users/${itemToDelete.value.id}`);
+    console.log(`🗑️ Eliminando usuario ${itemToDelete.value.id}...`);
+
+    await api.delete(`/api/User/${itemToDelete.value.id}`);
 
     const index = props.users.findIndex(u => u.id === itemToDelete.value.id);
     if (index !== -1) {
       props.users.splice(index, 1);
+      console.log('✅ Usuario eliminado de lista local');
     }
 
     showConfirmDelete.value = false;
+    itemToDelete.value = null;
+
     emit('add-alert', 'Usuario eliminado con éxito', 'success');
     emit('update');
+
   } catch (error) {
-    console.error('Error al eliminar usuario:', error);
-    emit('add-alert', 'Error al eliminar usuario: ' + (error.response?.data?.message || error.message), 'error');
+    console.error('❌ Error al eliminar usuario:', error);
+
+    const errorMessage = error.response?.data?.message ||
+                        error.message ||
+                        'Error desconocido al eliminar usuario';
+
+    emit('add-alert', 'Error al eliminar usuario: ' + errorMessage, 'error');
   } finally {
     loading.value = false;
   }
@@ -709,4 +774,33 @@ const getRoleBadgeColor = (role) => {
   };
   return colors[role] || 'bg-gray-100 text-gray-800';
 };
+
+// 🔧 FUNCIÓN DE DEBUGGING para AdminUsers
+const debugUserOperations = () => {
+  console.log('🔍 === DEBUG ADMIN USERS ===');
+  console.log('Total usuarios en props:', props.users.length);
+  console.log('Usuarios filtrados:', filteredUsers.value.length);
+  console.log('Usuarios paginados:', paginatedUsers.value.length);
+  console.log('Filtros actuales:', {
+    búsqueda: userSearch.value,
+    rol: userFilter.value,
+    estado: statusFilter.value,
+    ordenación: `${sortBy.value} ${sortDirection.value}`
+  });
+  console.log('Paginación:', {
+    página: currentPage.value,
+    totalPáginas: totalPages.value,
+    usuariosPorPágina: usersPerPage
+  });
+
+  if (props.users.length > 0) {
+    console.log('Muestra de usuario:', props.users[0]);
+  }
+};
+
+// Exportar función de debug
+if (typeof window !== 'undefined') {
+  window.debugAdminUsers = debugUserOperations;
+  console.log('🛠️ Debug function available at window.debugAdminUsers()');
+}
 </script>

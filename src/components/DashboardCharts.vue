@@ -11,14 +11,6 @@
         </div>
       </div>
 
-      <!-- Gráfica de ventas por día de la semana -->
-      <div class="bg-white rounded-xl shadow-md p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Ventas por día de la semana</h3>
-        <div class="h-64">
-          <canvas ref="salesChart"></canvas>
-        </div>
-      </div>
-
       <!-- Gráfica de pedidos por estado -->
       <div class="bg-white rounded-xl shadow-md p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Pedidos por estado</h3>
@@ -27,20 +19,20 @@
         </div>
       </div>
 
-      <!-- Gráfica de restaurantes por categoría -->
+      <!-- Gráfica de restaurantes por estado -->
       <div class="bg-white rounded-xl shadow-md p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Restaurantes por categoría</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Estado de restaurantes</h3>
         <div class="h-64">
-          <canvas ref="restaurantCategoryChart"></canvas>
+          <canvas ref="restaurantStatusChart"></canvas>
         </div>
       </div>
-    </div>
 
-    <!-- Análisis de ingresos mensuales -->
-    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Ingresos mensuales</h3>
-      <div class="h-64">
-        <canvas ref="revenueChart"></canvas>
+      <!-- Gráfica de ingresos por día -->
+      <div class="bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Ingresos últimos 7 días</h3>
+        <div class="h-64">
+          <canvas ref="revenueChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -59,8 +51,8 @@
             <span class="font-semibold text-blue-600">{{ customerCount }}</span>
           </div>
           <div class="flex justify-between items-center border-b pb-2">
-            <span class="text-gray-600">Restaurantes:</span>
-            <span class="font-semibold text-blue-600">{{ restaurantUserCount }}</span>
+            <span class="text-gray-600">Propietarios:</span>
+            <span class="font-semibold text-blue-600">{{ businessOwnerCount }}</span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Repartidores:</span>
@@ -86,8 +78,8 @@
             <span class="font-semibold text-red-600">{{ cancelledOrdersCount }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-gray-600">Tiempo medio de entrega:</span>
-            <span class="font-semibold text-purple-600">{{ avgDeliveryTime }} min</span>
+            <span class="text-gray-600">Ticket promedio:</span>
+            <span class="font-semibold text-purple-600">€{{ avgOrderValue.toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -100,17 +92,17 @@
         <div class="bg-gray-50 p-4 rounded-lg">
           <div class="text-sm text-gray-600 mb-1">Ingresos totales</div>
           <div class="text-2xl font-semibold text-indigo-600">€{{ totalRevenue.toFixed(2) }}</div>
-          <div class="text-xs text-green-500 mt-1">+{{ revenueIncrease }}% vs mes anterior</div>
+          <div class="text-xs text-green-500 mt-1">{{ orders.length }} pedidos</div>
         </div>
         <div class="bg-gray-50 p-4 rounded-lg">
           <div class="text-sm text-gray-600 mb-1">Ticket medio</div>
           <div class="text-2xl font-semibold text-indigo-600">€{{ avgOrderValue.toFixed(2) }}</div>
-          <div class="text-xs text-green-500 mt-1">+{{ avgOrderIncrease }}% vs mes anterior</div>
+          <div class="text-xs text-blue-500 mt-1">Por pedido</div>
         </div>
         <div class="bg-gray-50 p-4 rounded-lg">
-          <div class="text-sm text-gray-600 mb-1">Ventas por restaurante</div>
-          <div class="text-2xl font-semibold text-indigo-600">{{ ordersPerRestaurant.toFixed(1) }}</div>
-          <div class="text-xs text-green-500 mt-1">+{{ restaurantOrderIncrease }}% vs mes anterior</div>
+          <div class="text-sm text-gray-600 mb-1">Restaurantes activos</div>
+          <div class="text-2xl font-semibold text-indigo-600">{{ activeRestaurantsCount }}</div>
+          <div class="text-xs text-green-500 mt-1">De {{ restaurants.length }} totales</div>
         </div>
       </div>
     </div>
@@ -118,14 +110,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onBeforeUnmount, nextTick } from 'vue';
 import Chart from 'chart.js/auto';
 
 // Referencias para los canvas de las gráficas
 const usersChart = ref(null);
-const salesChart = ref(null);
 const ordersStatusChart = ref(null);
-const restaurantCategoryChart = ref(null);
+const restaurantStatusChart = ref(null);
 const revenueChart = ref(null);
 
 // Propiedades para recibir datos del componente padre
@@ -141,76 +132,114 @@ const props = defineProps({
   restaurants: {
     type: Array,
     default: () => []
+  },
+  users: {
+    type: Array,
+    default: () => []
+  },
+  businesses: {
+    type: Array,
+    default: () => []
   }
 });
 
 // Referencias a las instancias de Chart.js
 let userChartInstance = null;
-let salesChartInstance = null;
 let ordersStatusChartInstance = null;
-let restaurantCategoryChartInstance = null;
+let restaurantStatusChartInstance = null;
 let revenueChartInstance = null;
 
 // Calcular estadísticas basadas en los datos recibidos
 const customerCount = computed(() => {
-  // Suponiendo que users es un array de objetos con propiedad role
-  return 156; // Valor de ejemplo, en un caso real se calcularía dinámicamente
+  return props.users.filter(user =>
+    user.role === 'Customer' || user.role === 'User' || !user.role
+  ).length;
 });
 
-const restaurantUserCount = computed(() => {
-  return props.restaurants.length || 42; // Usar valor real o ejemplo
+const businessOwnerCount = computed(() => {
+  return props.users.filter(user =>
+    user.role === 'Restaurant' || user.role === 'Business' || user.role === 'Admin'
+  ).length;
 });
 
 const deliveryPersonCount = computed(() => {
-  return 24; // Valor de ejemplo
+  return props.users.filter(user => user.role === 'DeliveryPerson').length;
 });
 
 const completedOrdersCount = computed(() => {
-  return props.orders.filter(order => order.status === 'Delivered').length || 675;
+  return props.orders.filter(order =>
+    order.status === 'Delivered' || order.status === 'Completed'
+  ).length;
 });
 
 const cancelledOrdersCount = computed(() => {
-  return props.orders.filter(order => order.status === 'Cancelled').length || 55;
+  return props.orders.filter(order =>
+    order.status === 'Cancelled' || order.status === 'Canceled'
+  ).length;
 });
 
-const avgDeliveryTime = computed(() => {
-  // En un caso real, calcularías esto basado en los tiempos de entrega
-  return 28;
+const activeRestaurantsCount = computed(() => {
+  return props.restaurants.filter(restaurant => restaurant.isOpen).length;
 });
 
 const totalRevenue = computed(() => {
-  if (props.orders.length) {
-    return props.orders.reduce((sum, order) => sum + order.total, 0);
-  }
-  return 82450.75; // Valor de ejemplo
+  if (props.orders.length === 0) return 0;
+  return props.orders.reduce((sum, order) => {
+    // Manejar diferentes formas de representar el total
+    const total = order.total || order.totalAmount || order.price || 0;
+    return sum + (typeof total === 'number' ? total : parseFloat(total) || 0);
+  }, 0);
 });
 
 const avgOrderValue = computed(() => {
-  if (props.orders.length) {
-    return totalRevenue.value / props.orders.length;
-  }
-  return 24.35; // Valor de ejemplo
+  if (props.orders.length === 0) return 0;
+  return totalRevenue.value / props.orders.length;
 });
 
-const ordersPerRestaurant = computed(() => {
-  if (props.restaurants.length) {
-    return props.orders.length / props.restaurants.length;
+// Datos para las gráficas basados en datos reales
+const getUsersData = () => {
+  if (props.users.length === 0) {
+    return {
+      labels: ['Sin datos'],
+      datasets: [{
+        label: 'Usuarios',
+        data: [0],
+        borderColor: 'rgb(203, 213, 225)',
+        backgroundColor: 'rgba(203, 213, 225, 0.5)',
+        tension: 0.3
+      }]
+    };
   }
-  return 14.8; // Valor de ejemplo
-});
 
-// Valores de ejemplo para incrementos
-const revenueIncrease = 8.2;
-const avgOrderIncrease = 3.5;
-const restaurantOrderIncrease = 6.7;
+  // Agrupar usuarios por mes de creación
+  const monthlyUsers = {};
+  const last6Months = [];
+  const now = new Date();
 
-// Datos para las gráficas
-const getNewUsersData = () => {
+  // Generar últimos 6 meses
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+    last6Months.push(key);
+    monthlyUsers[key] = 0;
+  }
+
+  // Contar usuarios por mes
+  props.users.forEach(user => {
+    if (user.createdAt) {
+      const userDate = new Date(user.createdAt);
+      const key = userDate.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+      if (monthlyUsers.hasOwnProperty(key)) {
+        monthlyUsers[key]++;
+      }
+    }
+  });
+
   return {
-    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+    labels: last6Months,
     datasets: [{
       label: 'Nuevos usuarios',
-      data: [25, 32, 41, 37, 45, 52],
+      data: last6Months.map(month => monthlyUsers[month]),
       borderColor: 'rgb(53, 162, 235)',
       backgroundColor: 'rgba(53, 162, 235, 0.5)',
       tension: 0.3
@@ -218,81 +247,125 @@ const getNewUsersData = () => {
   };
 };
 
-const getSalesByDayData = () => {
-  return {
-    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-    datasets: [{
-      label: 'Ventas diarias (€)',
-      data: [1450, 1782, 1695, 2105, 2540, 3250, 2870],
-      backgroundColor: 'rgba(103, 58, 183, 0.5)',
-      borderColor: 'rgb(103, 58, 183)',
-      borderWidth: 1
-    }]
-  };
-};
-
 const getOrderStatusData = () => {
+  if (props.orders.length === 0) {
+    return {
+      labels: ['Sin pedidos'],
+      datasets: [{
+        data: [1],
+        backgroundColor: ['#e2e8f0'],
+        borderWidth: 0
+      }]
+    };
+  }
+
+  // Contar pedidos por estado
+  const statusCounts = {};
+  const statusLabels = {
+    'Pending': 'Pendiente',
+    'Accepted': 'Aceptado',
+    'Preparing': 'Preparando',
+    'Ready': 'Listo',
+    'ReadyForPickup': 'Listo para recoger',
+    'OnTheWay': 'En camino',
+    'Delivered': 'Entregado',
+    'Completed': 'Completado',
+    'Cancelled': 'Cancelado',
+    'Canceled': 'Cancelado'
+  };
+
+  props.orders.forEach(order => {
+    const status = order.status || 'Unknown';
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  });
+
+  const labels = Object.keys(statusCounts).map(status => statusLabels[status] || status);
+  const data = Object.values(statusCounts);
+  const colors = [
+    '#fbbf24', '#3b82f6', '#8b5cf6', '#0ea5e9', '#10b981', '#ef4444', '#f97316'
+  ];
+
   return {
-    labels: ['Pendiente', 'Aceptado', 'Preparando', 'Listo', 'En camino', 'Entregado', 'Cancelado'],
+    labels: labels,
     datasets: [{
-      label: 'Pedidos por estado',
-      data: [15, 28, 22, 12, 18, 675, 55],
-      backgroundColor: [
-        'rgba(158, 158, 158, 0.7)',
-        'rgba(33, 150, 243, 0.7)',
-        'rgba(76, 175, 80, 0.7)',
-        'rgba(156, 39, 176, 0.7)',
-        'rgba(255, 193, 7, 0.7)',
-        'rgba(76, 175, 80, 0.7)',
-        'rgba(244, 67, 54, 0.7)'
-      ],
-      borderColor: [
-        'rgb(158, 158, 158)',
-        'rgb(33, 150, 243)',
-        'rgb(76, 175, 80)',
-        'rgb(156, 39, 176)',
-        'rgb(255, 193, 7)',
-        'rgb(76, 175, 80)',
-        'rgb(244, 67, 54)'
-      ],
+      data: data,
+      backgroundColor: colors.slice(0, data.length),
       borderWidth: 1
     }]
   };
 };
 
-const getRestaurantCategoryData = () => {
+const getRestaurantStatusData = () => {
+  if (props.restaurants.length === 0) {
+    return {
+      labels: ['Sin restaurantes'],
+      datasets: [{
+        data: [1],
+        backgroundColor: ['#e2e8f0'],
+        borderWidth: 0
+      }]
+    };
+  }
+
+  const openCount = props.restaurants.filter(r => r.isOpen).length;
+  const closedCount = props.restaurants.length - openCount;
+
   return {
-    labels: ['Hamburguesas', 'Pizza', 'Mexicana', 'China', 'Italiana', 'Saludable'],
+    labels: ['Abiertos', 'Cerrados'],
     datasets: [{
-      label: 'Distribución por categoría',
-      data: [12, 9, 8, 7, 11, 9],
-      backgroundColor: [
-        'rgba(244, 67, 54, 0.7)',
-        'rgba(255, 193, 7, 0.7)',
-        'rgba(76, 175, 80, 0.7)',
-        'rgba(33, 150, 243, 0.7)',
-        'rgba(156, 39, 176, 0.7)',
-        'rgba(0, 188, 212, 0.7)'
-      ],
-      borderColor: [
-        'rgb(244, 67, 54)',
-        'rgb(255, 193, 7)',
-        'rgb(76, 175, 80)',
-        'rgb(33, 150, 243)',
-        'rgb(156, 39, 176)',
-        'rgb(0, 188, 212)'
-      ],
+      data: [openCount, closedCount],
+      backgroundColor: ['#10b981', '#ef4444'],
       borderWidth: 1
     }]
   };
 };
 
-const getMonthlyRevenueData = () => {
+const getRevenueData = () => {
+  if (props.orders.length === 0) {
+    return {
+      labels: ['Sin datos'],
+      datasets: [{
+        label: 'Ingresos',
+        data: [0],
+        borderColor: 'rgb(203, 213, 225)',
+        backgroundColor: 'rgba(203, 213, 225, 0.5)',
+        tension: 0.2,
+        fill: true
+      }]
+    };
+  }
+
+  // Agrupar ingresos por día de los últimos 7 días
+  const dailyRevenue = {};
+  const last7Days = [];
+  const now = new Date();
+
+  // Generar últimos 7 días
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const key = date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+    last7Days.push(key);
+    dailyRevenue[key] = 0;
+  }
+
+  // Sumar ingresos por día
+  props.orders.forEach(order => {
+    if (order.createdAt) {
+      const orderDate = new Date(order.createdAt);
+      const key = orderDate.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+      if (dailyRevenue.hasOwnProperty(key)) {
+        const total = order.total || order.totalAmount || order.price || 0;
+        dailyRevenue[key] += (typeof total === 'number' ? total : parseFloat(total) || 0);
+      }
+    }
+  });
+
   return {
-    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+    labels: last7Days,
     datasets: [{
-      label: 'Ingresos mensuales (€)',
-      data: [12500, 13800, 14500, 15200, 16950, 19500],
+      label: 'Ingresos (€)',
+      data: last7Days.map(day => dailyRevenue[day]),
       borderColor: 'rgb(76, 175, 80)',
       backgroundColor: 'rgba(76, 175, 80, 0.5)',
       tension: 0.2,
@@ -302,8 +375,8 @@ const getMonthlyRevenueData = () => {
 };
 
 // Opciones comunes para los gráficos
-const getChartOptions = (title) => {
-  return {
+const getChartOptions = (title, type = 'default') => {
+  const baseOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -311,83 +384,147 @@ const getChartOptions = (title) => {
         position: 'top',
       },
       title: {
-        display: true,
-        text: title,
-        font: {
-          size: 16
-        }
+        display: false
       },
     },
+  };
+
+  if (type === 'doughnut') {
+    return {
+      ...baseOptions,
+      plugins: {
+        ...baseOptions.plugins,
+        legend: {
+          position: 'bottom',
+        }
+      }
+    };
+  }
+
+  if (type === 'currency') {
+    return {
+      ...baseOptions,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '€' + value.toFixed(2);
+            }
+          }
+        }
+      }
+    };
+  }
+
+  return {
+    ...baseOptions,
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
   };
 };
 
 // Inicializar todas las gráficas
-const initCharts = () => {
+const initCharts = async () => {
+  await nextTick();
+
   // Destruir cualquier instancia previa
   destroyCharts();
 
-  // Gráfica de usuarios nuevos
-  userChartInstance = new Chart(usersChart.value, {
-    type: 'line',
-    data: getNewUsersData(),
-    options: getChartOptions('Crecimiento de usuarios')
-  });
+  // Verificar que los elementos existen
+  if (!usersChart.value || !ordersStatusChart.value ||
+      !restaurantStatusChart.value || !revenueChart.value) {
+    console.warn('Elementos de canvas no disponibles');
+    return;
+  }
 
-  // Gráfica de ventas por día
-  salesChartInstance = new Chart(salesChart.value, {
-    type: 'bar',
-    data: getSalesByDayData(),
-    options: getChartOptions('Ventas por día de la semana')
-  });
+  try {
+    // Gráfica de usuarios nuevos
+    userChartInstance = new Chart(usersChart.value, {
+      type: 'line',
+      data: getUsersData(),
+      options: getChartOptions('Crecimiento de usuarios')
+    });
 
-  // Gráfica de pedidos por estado
-  ordersStatusChartInstance = new Chart(ordersStatusChart.value, {
-    type: 'doughnut',
-    data: getOrderStatusData(),
-    options: getChartOptions('Distribución de pedidos')
-  });
+    // Gráfica de pedidos por estado
+    ordersStatusChartInstance = new Chart(ordersStatusChart.value, {
+      type: 'doughnut',
+      data: getOrderStatusData(),
+      options: getChartOptions('Distribución de pedidos', 'doughnut')
+    });
 
-  // Gráfica de restaurantes por categoría
-  restaurantCategoryChartInstance = new Chart(restaurantCategoryChart.value, {
-    type: 'pie',
-    data: getRestaurantCategoryData(),
-    options: getChartOptions('Distribución por categoría')
-  });
+    // Gráfica de restaurantes por estado
+    restaurantStatusChartInstance = new Chart(restaurantStatusChart.value, {
+      type: 'pie',
+      data: getRestaurantStatusData(),
+      options: getChartOptions('Estado de restaurantes', 'doughnut')
+    });
 
-  // Gráfica de ingresos mensuales
-  revenueChartInstance = new Chart(revenueChart.value, {
-    type: 'line',
-    data: getMonthlyRevenueData(),
-    options: getChartOptions('Evolución de ingresos')
-  });
+    // Gráfica de ingresos
+    revenueChartInstance = new Chart(revenueChart.value, {
+      type: 'line',
+      data: getRevenueData(),
+      options: getChartOptions('Evolución de ingresos', 'currency')
+    });
+
+    console.log('✅ Gráficas inicializadas correctamente');
+  } catch (error) {
+    console.error('❌ Error inicializando gráficas:', error);
+  }
 };
 
 // Destruir las instancias de Chart.js para evitar fugas de memoria
 const destroyCharts = () => {
-  if (userChartInstance) userChartInstance.destroy();
-  if (salesChartInstance) salesChartInstance.destroy();
-  if (ordersStatusChartInstance) ordersStatusChartInstance.destroy();
-  if (restaurantCategoryChartInstance) restaurantCategoryChartInstance.destroy();
-  if (revenueChartInstance) revenueChartInstance.destroy();
+  if (userChartInstance) {
+    userChartInstance.destroy();
+    userChartInstance = null;
+  }
+  if (ordersStatusChartInstance) {
+    ordersStatusChartInstance.destroy();
+    ordersStatusChartInstance = null;
+  }
+  if (restaurantStatusChartInstance) {
+    restaurantStatusChartInstance.destroy();
+    restaurantStatusChartInstance = null;
+  }
+  if (revenueChartInstance) {
+    revenueChartInstance.destroy();
+    revenueChartInstance = null;
+  }
 };
 
 // Observar cambios en las propiedades para actualizar las gráficas
-watch([() => props.totalUsers, () => props.orders, () => props.restaurants], () => {
-  // En una implementación real, actualizarías los datos de las gráficas
-  // basándote en los cambios en las propiedades
-  initCharts();
-});
+watch([
+  () => props.totalUsers,
+  () => props.orders,
+  () => props.restaurants,
+  () => props.users,
+  () => props.businesses
+], async () => {
+  console.log('🔄 Datos cambiaron, actualizando gráficas...');
+  await initCharts();
+}, { deep: true });
 
 // Inicializar las gráficas al montar el componente
-onMounted(() => {
+onMounted(async () => {
+  console.log('📊 Montando DashboardCharts con datos:', {
+    users: props.users.length,
+    orders: props.orders.length,
+    restaurants: props.restaurants.length
+  });
+
   // Esperar a que Vue renderice los elementos
-  setTimeout(initCharts, 100);
+  await nextTick();
+  await initCharts();
 });
 
 // Limpiar al desmontar
-const onBeforeUnmount = () => {
+onBeforeUnmount(() => {
   destroyCharts();
-};
+});
 </script>
 
 <style scoped>
