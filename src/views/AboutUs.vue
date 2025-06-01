@@ -269,7 +269,7 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img
-                  src="../../images/Abuelo.jpg"
+                  src="/images/Abuelo.jpg"
                   alt="CEO"
                 />
               </div>
@@ -282,7 +282,7 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img
-                  src="../../images/BigBoss.jpg"
+                  src="/images/BigBoss.jpg"
                   alt="BIG BOSS"
                 />
               </div>
@@ -295,7 +295,7 @@
             <div class="about-team__member">
               <div class="about-team__member-image">
                 <img
-                  src="../../images/Claudia.png"
+                  src="/images/Claudia.png"
                   alt="COO"
                 />
               </div>
