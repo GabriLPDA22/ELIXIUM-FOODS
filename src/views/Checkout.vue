@@ -20,643 +20,687 @@
 
       <h1 class="checkout-page__title">Finalizar pedido</h1>
 
-      <!-- Main checkout content -->
-      <div class="checkout-content">
-        <div class="checkout-steps">
-          <!-- Step progress indicator -->
-          <div class="step-progress">
-            <div v-for="(step, index) in steps" :key="step.id" class="step-item"
-              :class="{ 'step-item--active': currentStep >= index, 'step-item--completed': currentStep > index }">
-              <div class="step-item__indicator">
-                <template v-if="currentStep > index">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </template>
-                <template v-else>
-                  {{ index + 1 }}
-                </template>
-              </div>
-              <span class="step-item__name">{{ step.name }}</span>
+      <!-- Progress indicator -->
+      <div class="progress-indicator">
+        <div class="progress-indicator__track">
+          <div class="progress-indicator__fill" :style="{ width: `${(step / 4) * 100}%` }"></div>
+        </div>
+        <div class="progress-steps">
+          <div
+            v-for="(stepInfo, index) in progressSteps"
+            :key="index"
+            class="progress-step"
+            :class="{
+              'progress-step--active': step === index + 1,
+              'progress-step--completed': step > index + 1
+            }"
+          >
+            <div class="progress-step__circle">
+              <svg
+                v-if="step > index + 1"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span v-else>{{ index + 1 }}</span>
             </div>
-          </div>
-
-          <!-- Step content container -->
-          <div class="step-content">
-            <!-- Delivery options step (step 1) -->
-            <div v-if="currentStep === 0" class="step-panel">
-              <h2 class="step-panel__title">Opciones de entrega</h2>
-
-              <!-- Delivery time options -->
-              <div class="delivery-options">
-                <div class="delivery-option"
-                     :class="{ 'delivery-option--active': deliveryType === 'now' }"
-                     @click="deliveryType = 'now'">
-                  <input type="radio" v-model="deliveryType" value="now" id="delivery-now">
-                  <label for="delivery-now">
-                    <div class="delivery-option__main">
-                      <h4>Entregar ahora</h4>
-                      <p>{{ estimatedDeliveryTime }}-{{ estimatedDeliveryTime + 15 }} min</p>
-                    </div>
-                  </label>
-                </div>
-
-                <div class="delivery-option"
-                     :class="{ 'delivery-option--active': deliveryType === 'scheduled' }"
-                     @click="deliveryType = 'scheduled'">
-                  <input type="radio" v-model="deliveryType" value="scheduled" id="delivery-scheduled">
-                  <label for="delivery-scheduled">
-                    <div class="delivery-option__main">
-                      <h4>Programar para más tarde</h4>
-                      <p>Elige día y hora</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Scheduled delivery time picker -->
-              <div v-if="deliveryType === 'scheduled'" class="scheduled-delivery">
-                <h4>Selecciona fecha y hora de entrega</h4>
-                <div class="scheduled-delivery__inputs">
-                  <div class="input-group">
-                    <label for="delivery-date">Fecha</label>
-                    <input type="date"
-                           id="delivery-date"
-                           v-model="scheduledDate"
-                           :min="minDate"
-                           :max="maxDate">
-                  </div>
-                  <div class="input-group">
-                    <label for="delivery-time">Hora</label>
-                    <select id="delivery-time" v-model="scheduledTime" class="time-selector">
-                      <option value="">Seleccionar hora</option>
-                      <option v-for="time in availableTimeSlots" :key="time" :value="time">
-                        {{ time }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Address selection -->
-              <div class="address-section">
-                <h4>Dirección de entrega</h4>
-                <div v-if="loadingAddresses" class="loading-addresses">
-                  <div class="loading-spinner"></div>
-                  <span>Cargando direcciones...</span>
-                </div>
-                <div v-else-if="addresses.length === 0" class="no-addresses">
-                  <div class="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                      <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                    <p>No tienes direcciones guardadas</p>
-                    <p class="empty-state__subtitle">Agrega una dirección para continuar con tu pedido</p>
-                  </div>
-                  <button @click="showAddAddressModal = true" class="add-item-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Agregar primera dirección
-                  </button>
-                </div>
-                <div v-else class="address-list">
-                  <div v-for="address in addresses" :key="address.id"
-                       class="address-item"
-                       :class="{ 'address-item--selected': selectedAddress === address.id }"
-                       @click="selectAddress(address.id)">
-                    <div class="address-content">
-                      <h5>{{ address.name }}</h5>
-                      <p>{{ formatAddress(address) }}</p>
-                      <span v-if="address.isDefault" class="default-badge">Predeterminada</span>
-                    </div>
-                    <div class="radio-indicator">
-                      <input type="radio"
-                             :checked="selectedAddress === address.id"
-                             @change="selectAddress(address.id)">
-                    </div>
-                  </div>
-                  <button @click="showAddAddressModal = true" class="add-item-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Agregar nueva dirección
-                  </button>
-                </div>
-              </div>
-
-              <!-- Delivery instructions -->
-              <div class="delivery-instructions">
-                <label for="instructions">Instrucciones para la entrega (opcional)</label>
-                <textarea id="instructions"
-                          v-model="deliveryInstructions"
-                          placeholder="Ej. Timbre no funciona, llamar por teléfono..."
-                          rows="3"></textarea>
-              </div>
-
-              <div class="step-panel__actions">
-                <button @click="goToStep(1)"
-                        class="btn-next"
-                        :disabled="!canProceedToPayment">
-                  Continuar al pago
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Payment methods step (step 2) -->
-            <div v-else-if="currentStep === 1" class="step-panel">
-              <h2 class="step-panel__title">Método de pago</h2>
-
-              <div class="payment-methods">
-                <!-- Estado de carga -->
-                <div v-if="loadingPaymentMethods" class="loading-payment">
-                  <div class="loading-spinner"></div>
-                  <span>Cargando métodos de pago...</span>
-                </div>
-
-                <!-- Estado sin métodos de pago -->
-                <div v-else-if="paymentMethods.length === 0" class="no-payment-methods">
-                  <div class="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                      <line x1="1" y1="10" x2="23" y2="10"></line>
-                    </svg>
-                    <p>No tienes métodos de pago guardados</p>
-                    <p class="empty-state__subtitle">Agrega un método de pago para finalizar tu pedido</p>
-                  </div>
-                  <button @click="showAddPaymentModal = true" class="add-item-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Agregar primer método de pago
-                  </button>
-                </div>
-
-                <!-- Lista de métodos de pago reales -->
-                <div v-else class="payment-method-list">
-                  <div v-for="method in paymentMethods" :key="method.id"
-                       class="payment-method"
-                       :class="{ 'payment-method--selected': selectedPaymentMethod === method.id }"
-                       @click="selectPaymentMethod(method.id)">
-                    <div class="payment-method__icon">
-                      <!-- Iconos según el tipo de método -->
-                      <svg v-if="method.type === 'visa'" width="32" height="20" viewBox="0 0 32 20" fill="none">
-                        <rect width="32" height="20" rx="4" fill="#1434CB"/>
-                        <text x="16" y="14" text-anchor="middle" fill="white" font-size="8" font-weight="bold">VISA</text>
-                      </svg>
-                      <svg v-else-if="method.type === 'mastercard'" width="32" height="20" viewBox="0 0 32 20" fill="none">
-                        <rect width="32" height="20" rx="4" fill="#EB001B"/>
-                        <circle cx="12" cy="10" r="6" fill="#EB001B"/>
-                        <circle cx="20" cy="10" r="6" fill="#F79E1B"/>
-                      </svg>
-                      <svg v-else-if="method.type === 'paypal'" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.79A.859.859 0 0 1 5.79 2h8.3c2.02 0 3.596.298 4.731 1.255 1.16.98 1.596 2.644.775 4.97-.9 2.55-2.98 4.119-5.416 4.119H9.47a.75.75 0 0 0-.742.61l-.947 5.383z" fill="#003087"/>
-                        <path d="M19.825 7.967c.455-2.889-.634-4.467-3.24-4.467H9.47L7.076 21.337h4.606L13.97 12.4h2.71c3.24 0 5.69-1.31 6.144-4.433z" fill="#009CDE"/>
-                      </svg>
-                      <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                        <line x1="1" y1="10" x2="23" y2="10"></line>
-                      </svg>
-                    </div>
-                    <div class="payment-method__details">
-                      <h5>{{ method.nickname }}</h5>
-                      <p>{{ getPaymentMethodDescription(method) }}</p>
-                      <span v-if="method.isDefault" class="default-badge">Predeterminado</span>
-                    </div>
-                    <div class="radio-indicator">
-                      <input type="radio"
-                             :checked="selectedPaymentMethod === method.id"
-                             @change="selectPaymentMethod(method.id)">
-                    </div>
-                  </div>
-
-                  <!-- Botón para agregar nuevo método -->
-                  <button @click="showAddPaymentModal = true" class="add-item-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Agregar nuevo método de pago
-                  </button>
-                </div>
-
-                <!-- Error de carga -->
-                <div v-if="paymentMethodsError" class="error-message">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                  </svg>
-                  <span>{{ paymentMethodsError }}</span>
-                  <button @click="loadPaymentMethods" class="retry-btn">Reintentar</button>
-                </div>
-              </div>
-
-              <div class="step-panel__actions">
-                <button @click="goToStep(0)" class="btn-back">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                  </svg>
-                  Volver
-                </button>
-                <button @click="goToStep(2)" class="btn-next" :disabled="!selectedPaymentMethod">
-                  Revisar pedido
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Order review step (step 3) -->
-            <div v-else-if="currentStep === 2" class="step-panel">
-              <h2 class="step-panel__title">Revisar pedido</h2>
-
-              <!-- Order review content -->
-              <div class="order-review">
-                <div class="review-section">
-                  <h4>Detalles de entrega</h4>
-                  <div class="review-item">
-                    <strong>Tipo:</strong> {{ deliveryType === 'now' ? 'Entregar ahora' : 'Programado' }}
-                  </div>
-                  <div v-if="deliveryType === 'scheduled'" class="review-item">
-                    <strong>Fecha y hora:</strong> {{ formatScheduledDelivery() }}
-                  </div>
-                  <div class="review-item">
-                    <strong>Dirección:</strong> {{ getSelectedAddress()?.name }} - {{ formatAddress(getSelectedAddress()) }}
-                  </div>
-                  <div v-if="deliveryInstructions" class="review-item">
-                    <strong>Instrucciones:</strong> {{ deliveryInstructions }}
-                  </div>
-                </div>
-
-                <div class="review-section">
-                  <h4>Método de pago</h4>
-                  <div class="review-item">
-                    <strong>{{ getSelectedPaymentMethod()?.nickname }}</strong>
-                    <span>{{ getPaymentMethodDescription(getSelectedPaymentMethod()) }}</span>
-                  </div>
-                </div>
-
-                <div class="review-section">
-                  <h4>Productos</h4>
-                  <div class="review-items">
-                    <div v-for="item in processedCartItems" :key="item.id" class="review-product">
-                      <div class="review-product__quantity">{{ item.quantity }}×</div>
-                      <div class="review-product__details">
-                        <div class="review-product__name">{{ item.name }}</div>
-                        <!-- Mostrar precio original y con descuento si aplica -->
-                        <div v-if="item.appliedOffer" class="review-product__price-with-offer">
-                          <div class="review-product__offer-info">
-                            <span class="review-product__offer-badge">{{ formatOfferBadge(item.appliedOffer) }}</span>
-                          </div>
-                          <div class="review-product__pricing">
-                            <span class="review-product__original-price">${{ item.originalPrice.toFixed(2) }}</span>
-                            <span class="review-product__discounted-price">${{ item.finalPrice.toFixed(2) }}</span>
-                          </div>
-                        </div>
-                        <div v-else class="review-product__price">
-                          ${{ item.finalPrice.toFixed(2) }}
-                        </div>
-                      </div>
-                      <div class="review-product__total">
-                        ${{ (item.finalPrice * item.quantity).toFixed(2) }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="step-panel__actions">
-                <button @click="goToStep(1)" class="btn-back">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                  </svg>
-                  Volver
-                </button>
-                <button @click="placeOrder" class="btn-place-order" :disabled="placingOrder">
-                  <span v-if="!placingOrder">Realizar pedido</span>
-                  <span v-else class="loading-spinner"></span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Order confirmation step (step 4) -->
-            <div v-else-if="currentStep === 3" class="step-panel step-panel--success">
-              <div class="order-success">
-                <!-- Video aleatorio de delivery -->
-                <div class="delivery-animation-container">
-                  <video
-                    v-if="randomDeliveryGifUrl"
-                    :src="randomDeliveryGifUrl"
-                    autoplay
-                    loop
-                    muted
-                    playsinline
-                    class="delivery-video">
-                  </video>
-
-                  <!-- Textos animados -->
-                  <div class="delivery-text">
-                    <h3 class="delivery-title">¡Tu pedido está en camino!</h3>
-                    <p class="delivery-subtitle">El repartidor ya salió del restaurante</p>
-                    <div class="loading-dots">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="order-success__icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                </div>
-                <h2 class="order-success__title">¡Pedido realizado con éxito!</h2>
-                <p class="order-success__text">Tu pedido #{{ createdOrderId }} ha sido recibido y está siendo procesado.</p>
-                <div class="order-success__details">
-                  <div class="order-success__detail">
-                    <span class="order-success__label">Número de pedido:</span>
-                    <span class="order-success__value">{{ createdOrderId }}</span>
-                  </div>
-                  <div class="order-success__detail">
-                    <span class="order-success__label">{{ deliveryType === 'now' ? 'Tiempo estimado de entrega:' : 'Entrega programada:' }}</span>
-                    <span class="order-success__value">{{ getDeliveryTimeText() }}</span>
-                  </div>
-                  <div class="order-success__detail">
-                    <span class="order-success__label">Total:</span>
-                    <span class="order-success__value">${{ finalOrderTotals.total.toFixed(2) }}</span>
-                  </div>
-                  <!-- NUEVO: Mostrar ahorros totales si existen -->
-                  <div v-if="finalOrderTotals.totalSavings > 0" class="order-success__detail">
-                    <span class="order-success__label">Total ahorrado:</span>
-                    <span class="order-success__value order-success__savings">-${{ finalOrderTotals.totalSavings.toFixed(2) }}</span>
-                  </div>
-                </div>
-                <div class="order-success__actions">
-                  <router-link :to="`/orders/${createdOrderId}`" class="order-success__button">Ver detalles del pedido</router-link>
-                  <router-link to="/orders" class="order-success__button order-success__button--secondary">Ver todos mis pedidos</router-link>
-                </div>
-              </div>
-            </div>
+            <span class="progress-step__label">{{ stepInfo.label }}</span>
           </div>
         </div>
+      </div>
 
-        <!-- Order summary sidebar - DESCUENTOS CORREGIDOS -->
-        <div class="order-sidebar" v-if="currentStep < 3">
+      <!-- Main checkout content -->
+      <div class="checkout-content">
+        <div class="checkout-main">
+          <!-- ===== PASO 1: ENTREGA ===== -->
+          <section v-if="step === 1" class="checkout-step">
+            <div class="step-header">
+              <div class="step-header__icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M9 17H7A5 5 0 0 1 7 7h2"></path>
+                  <path d="M15 7h2a5 5 0 1 1 0 10h-2"></path>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              </div>
+              <div class="step-header__content">
+                <h2 class="step-header__title">Opciones de entrega</h2>
+                <p class="step-header__subtitle">Selecciona dónde y cuándo quieres recibir tu pedido</p>
+              </div>
+            </div>
+
+            <!-- Delivery Address -->
+            <div class="form-section">
+              <h3 class="form-section__title">Dirección de entrega</h3>
+              <div class="address-selector" v-if="userAddresses.length > 0">
+                <div
+                  v-for="addr in userAddresses"
+                  :key="addr.id"
+                  class="address-option"
+                  :class="{ 'address-option--selected': selectedAddress === addr.id }"
+                  @click="selectedAddress = addr.id"
+                >
+                  <div class="address-option__radio">
+                    <div class="radio-circle" :class="{ 'radio-circle--checked': selectedAddress === addr.id }"></div>
+                  </div>
+                  <div class="address-option__content">
+                    <div class="address-option__name">{{ addr.name || 'Mi dirección' }}</div>
+                    <div class="address-option__details">{{ addr.street }}, {{ addr.city }}</div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-state">
+                <div class="empty-state__icon">
+                  <svg
+                    width="48"
+                    height="48"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                </div>
+                <p class="empty-state__text">No tienes direcciones guardadas</p>
+              </div>
+            </div>
+
+            <!-- Delivery Type -->
+            <div class="form-section">
+              <h3 class="form-section__title">Tipo de entrega</h3>
+              <div class="delivery-options">
+                <div
+                  class="delivery-option"
+                  :class="{ 'delivery-option--selected': deliveryType === 'now' }"
+                  @click="deliveryType = 'now'"
+                >
+                  <div class="delivery-option__radio">
+                    <div class="radio-circle" :class="{ 'radio-circle--checked': deliveryType === 'now' }"></div>
+                  </div>
+                  <div class="delivery-option__content">
+                    <div class="delivery-option__title">Entregar ahora</div>
+                    <div class="delivery-option__subtitle">Lo antes posible</div>
+                  </div>
+                  <div class="delivery-option__icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                  </div>
+                </div>
+
+                <div
+                  class="delivery-option"
+                  :class="{ 'delivery-option--selected': deliveryType === 'scheduled' }"
+                  @click="deliveryType = 'scheduled'"
+                >
+                  <div class="delivery-option__radio">
+                    <div class="radio-circle" :class="{ 'radio-circle--checked': deliveryType === 'scheduled' }"></div>
+                  </div>
+                  <div class="delivery-option__content">
+                    <div class="delivery-option__title">Programar para más tarde</div>
+                    <div class="delivery-option__subtitle">Elige día y hora</div>
+                  </div>
+                  <div class="delivery-option__icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scheduled Delivery -->
+            <div v-if="deliveryType === 'scheduled'" class="form-section scheduled-section">
+              <h3 class="form-section__title">Programar entrega</h3>
+              <div class="scheduled-inputs">
+                <div class="input-group">
+                  <label for="scheduledDate" class="input-label">Fecha</label>
+                  <input
+                    id="scheduledDate"
+                    type="date"
+                    v-model="scheduledDate"
+                    :min="minDate"
+                    :max="maxDate"
+                    class="form-input"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="scheduledTime" class="input-label">Hora</label>
+                  <select id="scheduledTime" v-model="scheduledTime" class="form-select">
+                    <option value="">Seleccionar hora</option>
+                    <option v-for="t in availableTimeSlots" :key="t" :value="t">{{ t }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delivery Instructions -->
+            <div class="form-section">
+              <h3 class="form-section__title">Instrucciones de entrega (opcional)</h3>
+              <textarea
+                v-model="deliveryInstructions"
+                class="form-textarea"
+                placeholder="Ej. Timbre no funciona, llamar por teléfono..."
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="step-actions">
+              <button
+                class="btn-primary btn-primary--large"
+                :disabled="!canProceedToPayment"
+                @click="step = 2"
+              >
+                <span>Continuar al pago</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ===== PASO 2: PAGO ===== -->
+          <section v-if="step === 2" class="checkout-step">
+            <div class="step-header">
+              <div class="step-header__icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+              </div>
+              <div class="step-header__content">
+                <h2 class="step-header__title">Método de pago</h2>
+                <p class="step-header__subtitle">Selecciona cómo quieres pagar tu pedido</p>
+              </div>
+            </div>
+
+            <!-- Existing Payment Methods -->
+            <div v-if="paymentMethods.length" class="form-section">
+              <h3 class="form-section__title">Métodos de pago guardados</h3>
+              <div class="payment-methods">
+                <div
+                  v-for="pm in paymentMethods"
+                  :key="pm.id"
+                  class="payment-method"
+                  :class="{ 'payment-method--selected': selectedPaymentMethod === pm.id }"
+                  @click="selectedPaymentMethod = pm.id"
+                >
+                  <div class="payment-method__radio">
+                    <div
+                      class="radio-circle"
+                      :class="{ 'radio-circle--checked': selectedPaymentMethod === pm.id }"
+                    ></div>
+                  </div>
+                  <div class="payment-method__icon">
+                    <svg width="32" height="20" viewBox="0 0 32 20" fill="none">
+                      <rect width="32" height="20" rx="4" fill="#E2E8F0" />
+                      <text
+                        x="16"
+                        y="14"
+                        text-anchor="middle"
+                        fill="#64748B"
+                        font-size="6"
+                        font-weight="bold"
+                      >
+                        CARD
+                      </text>
+                    </svg>
+                  </div>
+                  <div class="payment-method__details">
+                    <div class="payment-method__name">{{ displayPaymentMethod(pm) }}</div>
+                    <div v-if="pm.isDefault" class="payment-method__badge">Predeterminado</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- New Payment Method Form -->
+            <div v-else class="form-section">
+              <h3 class="form-section__title">Agregar método de pago</h3>
+              <div class="new-payment-form">
+                <div class="input-group">
+                  <label for="nickname" class="input-label">Nombre del método *</label>
+                  <input
+                    id="nickname"
+                    v-model="newPayment.nickname"
+                    type="text"
+                    class="form-input"
+                    placeholder="Ej: Mi Tarjeta Visa"
+                  />
+                </div>
+
+                <div class="input-group">
+                  <label for="type" class="input-label">Tipo de pago *</label>
+                  <select id="type" v-model="newPayment.type" class="form-select">
+                    <option value="">Seleccionar tipo</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="visa">Visa</option>
+                    <option value="mastercard">Mastercard</option>
+                    <option value="other">Otra tarjeta</option>
+                  </select>
+                </div>
+
+                <!-- PayPal Fields -->
+                <div v-if="newPayment.type.toLowerCase() === 'paypal'" class="input-group">
+                  <label for="payPalEmail" class="input-label">Correo PayPal *</label>
+                  <input
+                    id="payPalEmail"
+                    v-model="newPayment.payPalEmail"
+                    type="email"
+                    class="form-input"
+                    placeholder="usuario@ejemplo.com"
+                  />
+                </div>
+
+                <!-- Card Fields -->
+                <div v-if="['visa', 'mastercard', 'other'].includes(newPayment.type.toLowerCase())">
+                  <div class="input-group">
+                    <label for="cardNumber" class="input-label">Número de tarjeta *</label>
+                    <input
+                      id="cardNumber"
+                      v-model="newPayment.cardNumber"
+                      type="text"
+                      class="form-input"
+                      placeholder="1234 5678 9012 3456"
+                    />
+                  </div>
+                  <div class="input-row">
+                    <div class="input-group">
+                      <label for="expiryDate" class="input-label">Vencimiento *</label>
+                      <input
+                        id="expiryDate"
+                        v-model="newPayment.expiryDate"
+                        type="text"
+                        class="form-input"
+                        placeholder="MM/AA"
+                      />
+                    </div>
+                    <div class="input-group">
+                      <label for="cvv" class="input-label">CVV *</label>
+                      <input
+                        id="cvv"
+                        v-model="newPayment.cvv"
+                        type="text"
+                        class="form-input"
+                        placeholder="123"
+                      />
+                    </div>
+                  </div>
+                  <div class="input-group">
+                    <label for="cardholderName" class="input-label">Nombre del titular *</label>
+                    <input
+                      id="cardholderName"
+                      v-model="newPayment.cardholderName"
+                      type="text"
+                      class="form-input"
+                      placeholder="Juan Pérez"
+                    />
+                  </div>
+                </div>
+
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" v-model="newPayment.isDefault" />
+                    <span class="checkbox-custom"></span>
+                    Establecer como método predeterminado
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button class="btn-secondary" @click="step = 1">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Volver</span>
+              </button>
+
+              <button
+                v-if="paymentMethods.length"
+                class="btn-primary btn-primary--large"
+                :disabled="!selectedPaymentMethod"
+                @click="step = 3"
+              >
+                <span>Revisar pedido</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+
+              <button
+                v-else
+                class="btn-primary btn-primary--large"
+                :disabled="!canSavePayment"
+                @click="saveNewPaymentMethod"
+              >
+                <span>Guardar y continuar</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ===== PASO 3: REVISIÓN ===== -->
+          <section v-if="step === 3" class="checkout-step">
+            <div class="step-header">
+              <div class="step-header__icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="step-header__content">
+                <h2 class="step-header__title">Revisar pedido</h2>
+                <p class="step-header__subtitle">
+                  Verifica que todo esté correcto antes de confirmar
+                </p>
+              </div>
+            </div>
+
+            <!-- Order Review -->
+            <div class="review-section">
+              <h3 class="review-section__title">Productos del pedido</h3>
+              <div class="review-products">
+                <div
+                  v-for="item in processedCartItems"
+                  :key="item.id"
+                  class="review-product"
+                >
+                  <div class="review-product__quantity">{{ item.quantity }}×</div>
+                  <div class="review-product__details">
+                    <div class="review-product__name">{{ item.name }}</div>
+                    <div
+                      v-if="item.appliedOffer"
+                      class="review-product__price-with-offer"
+                    >
+                      <span class="review-product__original-price">
+                        ${{ item.originalPrice.toFixed(2) }}
+                      </span>
+                      <span class="review-product__discounted-price">
+                        ${{ item.finalPrice.toFixed(2) }}
+                      </span>
+                    </div>
+                    <div v-else class="review-product__price">
+                      ${{ item.finalPrice.toFixed(2) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delivery Details -->
+            <div class="review-section">
+              <h3 class="review-section__title">Detalles de entrega</h3>
+              <div class="review-details">
+                <div class="review-detail">
+                  <span class="review-detail__label">Tipo:</span>
+                  <span class="review-detail__value">
+                    {{ deliveryType === 'now' ? 'Entregar ahora' : 'Programado' }}
+                  </span>
+                </div>
+                <div v-if="deliveryType === 'scheduled'" class="review-detail">
+                  <span class="review-detail__label">Fecha y hora:</span>
+                  <span class="review-detail__value">
+                    {{ scheduledDate }} a las {{ scheduledTime }}
+                  </span>
+                </div>
+                <div v-if="deliveryInstructions" class="review-detail">
+                  <span class="review-detail__label">Instrucciones:</span>
+                  <span class="review-detail__value">{{ deliveryInstructions }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Promo Code -->
+            <div class="promo-section">
+              <h3 class="promo-section__title">Código promocional</h3>
+              <div class="promo-input">
+                <input
+                  type="text"
+                  v-model="promoCode"
+                  class="promo-input__field"
+                  placeholder="Ingresa tu código"
+                />
+                <button
+                  class="promo-input__button"
+                  :disabled="validatingPromo || !promoCode.trim()"
+                  @click="validatePromoCode"
+                >
+                  <span v-if="!validatingPromo">Aplicar</span>
+                  <span v-else class="loading-spinner loading-spinner--small"></span>
+                </button>
+              </div>
+              <div v-if="promoDiscount > 0" class="promo-success">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Código aplicado: -${{ promoDiscount.toFixed(2) }}</span>
+                <button @click="removePromoCode" class="promo-remove">×</button>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button class="btn-secondary" @click="step = 2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Volver</span>
+              </button>
+              <button
+                class="btn-primary btn-primary--large btn-primary--confirm"
+                :disabled="placingOrder"
+                @click="placeOrder"
+              >
+                <span v-if="!placingOrder">Confirmar y pagar</span>
+                <span v-else class="loading-spinner loading-spinner--small"></span>
+              </button>
+            </div>
+          </section>
+
+          <!-- ===== PASO 4: CONFIRMACIÓN ===== -->
+          <section v-if="step === 4" class="checkout-step checkout-step--success">
+            <div class="success-content">
+              <div class="success-icon">
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <h2 class="success-title">¡Pedido confirmado!</h2>
+              <p class="success-subtitle">Tu pedido ha sido procesado exitosamente</p>
+
+              <div class="order-summary-final">
+                <div class="order-summary-final__row">
+                  <span>Subtotal original:</span>
+                  <span>${{ finalOrderTotals.original.toFixed(2) }}</span>
+                </div>
+                <div v-if="finalOrderTotals.totalSavings > 0" class="order-summary-final__row order-summary-final__row--savings">
+                  <span>Ahorros totales:</span>
+                  <span>-${{ finalOrderTotals.totalSavings.toFixed(2) }}</span>
+                </div>
+                <div class="order-summary-final__row order-summary-final__row--total">
+                  <span>Total pagado:</span>
+                  <span>${{ finalOrderTotals.total.toFixed(2) }}</span>
+                </div>
+                <div class="order-summary-final__row">
+                  <span>Tiempo de entrega:</span>
+                  <span>{{ getDeliveryTimeText() }}</span>
+                </div>
+              </div>
+
+              <div class="success-actions">
+                <button class="btn-secondary" @click="router.push('/')">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                  <span>Volver al inicio</span>
+                </button>
+                <button class="btn-primary" @click="router.push('/orders')">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 1 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"></path>
+                    <polyline points="14 2 14 8 11 6 8 8 8 2"></polyline>
+                  </svg>
+                  <span>Ver mis pedidos</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Order Summary Sidebar -->
+        <div v-if="step < 4" class="order-sidebar">
           <div class="order-summary">
             <div class="order-summary__header">
               <h3 class="order-summary__title">Resumen del pedido</h3>
             </div>
             <div class="order-summary__content">
-              <!-- Restaurant info -->
-              <div class="order-summary__restaurant">
-                <div class="restaurant-placeholder">{{ restaurantName[0] || 'R' }}</div>
-                <div>
-                  <h4 class="order-summary__restaurant-name">{{ restaurantName }}</h4>
-                  <p class="order-summary__delivery-time">{{ estimatedDeliveryTime }} min</p>
-                </div>
+              <div class="order-summary__row">
+                <span>Subtotal (sin descuentos)</span>
+                <span>${{ cartTotals.originalSubtotal.toFixed(2) }}</span>
               </div>
-
-              <!-- Cart item list CON DESCUENTOS -->
-              <div class="order-summary__items">
-                <div v-for="item in processedCartItems" :key="item.id" class="order-summary__item">
-                  <div class="item-quantity">{{ item.quantity }}×</div>
-                  <div class="item-details">
-                    <div class="item-name">{{ item.name }}</div>
-                    <!-- Mostrar ofertas aplicadas -->
-                    <div v-if="item.appliedOffer" class="item-offer">
-                      <span class="offer-badge">{{ formatOfferBadge(item.appliedOffer) }}</span>
-                    </div>
-                  </div>
-                  <div class="item-pricing">
-                    <!-- Precio con descuento si aplica -->
-                    <div v-if="item.appliedOffer" class="item-price-with-discount">
-                      <span class="item-original-price">${{ item.originalPrice.toFixed(2) }}</span>
-                      <span class="item-discounted-price">${{ item.finalPrice.toFixed(2) }}</span>
-                    </div>
-                    <div v-else class="item-price">${{ item.finalPrice.toFixed(2) }}</div>
-                    <div class="item-total">${{ (item.finalPrice * item.quantity).toFixed(2) }}</div>
-                  </div>
-                </div>
+              <div v-if="cartTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">
+                <span>Ahorros por ofertas</span>
+                <span>-${{ cartTotals.totalOfferSavings.toFixed(2) }}</span>
               </div>
-
-              <!-- Promo discount display -->
-              <div v-if="promoDiscount > 0" class="promo-success">
-                <div class="promo-success__message">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                  Código aplicado: -${{ promoDiscount.toFixed(2) }}
-                </div>
-                <button @click="removePromoCode" class="remove-promo">×</button>
+              <div v-if="promoDiscount > 0" class="order-summary__row order-summary__row--promo">
+                <span>Descuento promocional</span>
+                <span>-${{ promoDiscount.toFixed(2) }}</span>
               </div>
-
-              <!-- Order totals CORREGIDOS - SIN DOBLE DESCUENTO -->
-              <div class="order-summary__totals">
-                <div class="order-summary__row">
-                  <span>Subtotal original</span>
-                  <span>${{ cartTotals.originalSubtotal.toFixed(2) }}</span>
-                </div>
-                <!-- Mostrar ahorros por ofertas -->
-                <div v-if="cartTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">
-                  <span>Ahorros por ofertas</span>
-                  <span>-${{ cartTotals.totalOfferSavings.toFixed(2) }}</span>
-                </div>
-                <div v-if="promoDiscount > 0" class="order-summary__row order-summary__row--discount">
-                  <span>Descuento promocional</span>
-                  <span>-${{ promoDiscount.toFixed(2) }}</span>
-                </div>
-                <div class="order-summary__row">
-                  <span>Subtotal con descuentos</span>
-                  <span>${{ calculatedTotals.subtotalAfterDiscounts.toFixed(2) }}</span>
-                </div>
-                <div class="order-summary__row">
-                  <span>Costo de envío</span>
-                  <span v-if="deliveryFee > 0">${{ deliveryFee.toFixed(2) }}</span>
-                  <span v-else class="free-delivery">Gratis</span>
-                </div>
-                <div class="order-summary__row order-summary__total">
-                  <span>Total</span>
-                  <span>${{ calculatedTotals.total.toFixed(2) }}</span>
-                </div>
+              <div class="order-summary__row">
+                <span>Costo de envío</span>
+                <span v-if="deliveryFee > 0">${{ deliveryFee.toFixed(2) }}</span>
+                <span v-else class="free-delivery">Gratis</span>
+              </div>
+              <div class="order-summary__row order-summary__row--total">
+                <span>Total</span>
+                <span>${{ calculatedTotals.total.toFixed(2) }}</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para agregar dirección -->
-      <div v-if="showAddAddressModal" class="modal-overlay">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Agregar Nueva Dirección</h3>
-            <button @click="showAddAddressModal = false" class="modal-close">×</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Nombre de la dirección</label>
-              <input v-model="newAddress.name" type="text" placeholder="Casa, Trabajo, etc.">
-            </div>
-            <div class="form-group">
-              <label>Calle</label>
-              <input v-model="newAddress.street" type="text" placeholder="Calle Principal">
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Número</label>
-                <input v-model="newAddress.number" type="text" placeholder="123">
-              </div>
-              <div class="form-group">
-                <label>Interior</label>
-                <input v-model="newAddress.interior" type="text" placeholder="Apt 4B">
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Colonia</label>
-              <input v-model="newAddress.neighborhood" type="text" placeholder="Centro">
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Ciudad</label>
-                <input v-model="newAddress.city" type="text" placeholder="Zaragoza">
-              </div>
-              <div class="form-group">
-                <label>Estado</label>
-                <input v-model="newAddress.state" type="text" placeholder="Aragón">
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Código Postal</label>
-              <input v-model="newAddress.zipCode" type="text" placeholder="50001">
-            </div>
-            <div class="form-group">
-              <label>Teléfono</label>
-              <input v-model="newAddress.phone" type="tel" placeholder="612 345 678">
-            </div>
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input v-model="newAddress.isDefault" type="checkbox">
-                Establecer como dirección predeterminada
-              </label>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="showAddAddressModal = false" class="btn-secondary">Cancelar</button>
-            <button @click="saveNewAddress" class="btn-primary" :disabled="savingAddress">
-              <span v-if="!savingAddress">Guardar</span>
-              <span v-else class="loading-spinner loading-spinner--small"></span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para agregar método de pago -->
-      <div v-if="showAddPaymentModal" class="modal-overlay">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Agregar Método de Pago</h3>
-            <button @click="cancelAddPayment" class="modal-close">×</button>
-          </div>
-          <div class="modal-body">
-            <!-- Selector de tipo de pago -->
-            <div class="form-group">
-              <label>Tipo de método</label>
-              <select v-model="newPayment.type" @change="resetPaymentForm">
-                <option value="">Seleccionar tipo</option>
-                <option value="visa">Visa</option>
-                <option value="mastercard">Mastercard</option>
-                <option value="paypal">PayPal</option>
-                <option value="other">Otra tarjeta</option>
-              </select>
-            </div>
-
-            <!-- Nombre del método -->
-            <div class="form-group">
-              <label>Nombre del método *</label>
-              <input v-model="newPayment.nickname"
-                     type="text"
-                     placeholder="Mi tarjeta personal, PayPal trabajo, etc.">
-            </div>
-
-            <!-- Campos para PayPal -->
-            <template v-if="newPayment.type === 'paypal'">
-              <div class="form-group">
-                <label>Email de PayPal *</label>
-                <input v-model="newPayment.payPalEmail"
-                       type="email"
-                       placeholder="correo@ejemplo.com">
-              </div>
-            </template>
-
-            <!-- Campos para tarjetas -->
-            <template v-else-if="newPayment.type && newPayment.type !== 'paypal'">
-              <div class="form-group">
-                <label>Número de tarjeta *</label>
-                <input v-model="newPayment.cardNumber"
-                       type="text"
-                       placeholder="1234 5678 9012 3456"
-                       maxlength="19"
-                       @input="formatCardNumber">
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Fecha de vencimiento *</label>
-                  <input v-model="newPayment.expiryDate"
-                         type="text"
-                         placeholder="MM/AA"
-                         maxlength="5"
-                         @input="formatExpiryDate">
-                </div>
-                <div class="form-group">
-                  <label>CVV *</label>
-                  <input v-model="newPayment.cvv"
-                         type="text"
-                         placeholder="123"
-                         maxlength="4">
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Nombre en la tarjeta *</label>
-                <input v-model="newPayment.cardholderName"
-                       type="text"
-                       placeholder="Juan Pérez">
-              </div>
-            </template>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input v-model="newPayment.isDefault" type="checkbox">
-                Establecer como método predeterminado
-              </label>
-            </div>
-
-            <!-- Mensaje de error -->
-            <div v-if="paymentError" class="error-message">
-              {{ paymentError }}
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="cancelAddPayment" class="btn-secondary">Cancelar</button>
-            <button @click="saveNewPayment"
-                    class="btn-primary"
-                    :disabled="savingPayment || !canSavePayment">
-              <span v-if="!savingPayment">Guardar</span>
-              <span v-else class="loading-spinner loading-spinner--small"></span>
-            </button>
           </div>
         </div>
       </div>
@@ -664,275 +708,134 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
 import { useOrderStore } from '@/stores/orderStore';
 import { useAuthStore } from '@/stores/auth';
+
+import { restaurantService } from '@/services/restaurantService';
+import paymentService, { PaymentMethodInfo, CreatePaymentMethodRequest } from '@/services/paymentService';
 import userService from '@/services/userService';
-import orderService from '@/services/orderService';
-import { paymentService, type PaymentMethodInfo, type CreatePaymentMethodRequest } from '@/services/paymentService';
+
 import type { Address } from '@/types';
 
-// ============= INTERFACES PARA OFERTAS =============
-interface ProductOffer {
-  id: number
-  name: string
-  description: string
-  discountType: string
-  discountValue: number
-  minimumOrderAmount: number
-  minimumQuantity: number
-  startDate: string
-  endDate: string
-  usageLimit: number
-  usageCount: number
-  status: string
-  restaurantId: number
-  restaurantName: string
-  productId: number
-  productName: string
-  productImageUrl: string
-}
-
-interface ProcessedCartItem {
-  id: number
-  productId: number
-  name: string
-  originalPrice: number
-  finalPrice: number
-  quantity: number
-  appliedOffer?: ProductOffer
-}
-
+// ——— Instanciar stores y router ———
 const router = useRouter();
 const cartStore = useCartStore();
 const orderStore = useOrderStore();
 const authStore = useAuthStore();
 
-// Checkout steps
-const steps = [
-  { id: 'delivery', name: 'Entrega' },
-  { id: 'payment', name: 'Pago' },
-  { id: 'review', name: 'Revisión' },
-  { id: 'confirmation', name: 'Confirmación' }
-];
+// ——— Paso actual del checkout (1..4) ———
+const step = ref<1 | 2 | 3 | 4>(1);
 
-// State
-const currentStep = ref(0);
-const placingOrder = ref(false);
-const createdOrderId = ref('');
+// ——— Progress steps data ———
+const progressSteps = ref([
+  { label: 'Entrega' },
+  { label: 'Pago' },
+  { label: 'Revisión' },
+  { label: 'Confirmación' }
+]);
 
-// Videos de delivery aleatorios
-const deliveryGifFiles = ['Bici.mp4', 'Moto.mp4', 'Scooter.mp4'];
-const randomDeliveryGifUrl = ref<string | null>(null);
+// ——— 1) Estados para direcciones y usuario ———
+const userAddresses = ref<Address[]>([]);
+const loadingAddresses = ref(false);
+const selectedAddress = ref<number | null>(null);
 
-// ============= ESTADO PARA OFERTAS =============
-const activeOffers = ref<ProductOffer[]>([]);
-const loadingOffers = ref(false);
+// ——— 2) Estados para métodos de pago ———
+const paymentMethods = ref<PaymentMethodInfo[]>([]);
+const loadingPayments = ref(false);
+const selectedPaymentMethod = ref<number | null>(null);
 
-// Función para obtener la URL del video desde assets
-const getVideoUrl = (filename: string) => {
-  return new URL(`../assets/videos/${filename}`, import.meta.url).href;
-};
-
-// Modales
-const showAddAddressModal = ref(false);
-const showAddPaymentModal = ref(false);
-const savingAddress = ref(false);
-const savingPayment = ref(false);
-
-const newAddress = ref({
-  name: '',
-  street: '',
-  number: '',
-  interior: '',
-  neighborhood: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  phone: '',
-  isDefault: false
-});
-
-// Estado para métodos de pago con tipado del backend
+// Datos para "Agregar nuevo método de pago"
 const newPayment = ref<CreatePaymentMethodRequest>({
   nickname: '',
   type: '',
-  cardNumber: '',
-  expiryDate: '',
-  cvv: '',
-  cardholderName: '',
-  payPalEmail: '',
+  cardNumber: undefined,
+  expiryDate: undefined,
+  cvv: undefined,
+  cardholderName: undefined,
+  payPalEmail: undefined,
   isDefault: false
 });
 
-const deliveryType = ref('now');
-const scheduledDate = ref('');
-const scheduledTime = ref('');
-const deliveryInstructions = ref('');
+// ——— 3) Datos del restaurante (para deliveryFee) ———
+const restaurantData = ref<{ id: number; name: string; deliveryFee: number } | null>(null);
+const loadingRestaurantData = ref(false);
+
+// ——— 4) Fechas/hora para programar entrega ———
+const deliveryType = ref<'now' | 'scheduled'>('now');
+const scheduledDate = ref<string>('');
+const scheduledTime = ref<string>('');
 const availableTimeSlots = ref<string[]>([]);
+const deliveryInstructions = ref<string>('');
 
-const addresses = ref<Address[]>([]);
-const selectedAddress = ref<number | null>(null);
-const loadingAddresses = ref(true);
-
-// Estado para métodos de pago reales del backend
-const paymentMethods = ref<PaymentMethodInfo[]>([]);
-const selectedPaymentMethod = ref<number | null>(null);
-const loadingPaymentMethods = ref(true);
-const paymentMethodsError = ref<string>('');
-const paymentError = ref<string>('');
-
-const promoCode = ref('');
-const promoDiscount = ref(0);
+// ——— 5) Código promocional ———
+const promoCode = ref<string>('');
+const promoDiscount = ref<number>(0);
 const validatingPromo = ref(false);
 
+// ——— 6) Costo de envío que viene del restaurante ———
+const deliveryFee = ref<number>(0);
+
+// ——— 7) Estado al "colocar pedido" ———
+const placingOrder = ref<boolean>(false);
+
+// ——— 8) Getters dependientes del carrito ———
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
-const cartItems = computed(() => cartStore.items);
-const estimatedDeliveryTime = ref(30);
+const cartItems = computed(() =>
+  cartStore.items as Array<{
+    id: number;
+    name: string;
+    originalPrice?: number;
+    price?: number;
+    quantity: number;
+    appliedOffer?: unknown;
+    restaurantId: number;
+  }>
+);
 
-const deliveryFee = ref(0);
-const restaurantData = ref<any>(null);
+// ——— 9) Procesar cada ítem del carrito (SIN volver a aplicar oferta) ———
+interface ProcessedCartItem {
+  id: number;
+  productId: number;
+  name: string;
+  originalPrice: number;
+  finalPrice: number;
+  quantity: number;
+  appliedOffer?: unknown;
+}
 
-// Función para cargar datos del restaurante y su delivery fee
-const fetchRestaurantData = async (): Promise<void> => {
-  if (!restaurantId.value) return;
-  
-  try {
-    const response = await fetch(`http://localhost:5290/api/restaurants/${restaurantId.value}`, {
-      headers: {
-        'Authorization': authStore.token ? `Bearer ${authStore.token}` : ''
-      }
-    });
-    
-    if (response.ok) {
-      restaurantData.value = await response.json();
-      deliveryFee.value = safeNumber(restaurantData.value.deliveryFee, 0);
-      estimatedDeliveryTime.value = safeNumber(restaurantData.value.estimatedDeliveryTime, 30);
-      console.log('✅ Delivery fee obtenido del restaurante:', deliveryFee.value);
-    } else {
-      deliveryFee.value = 3.99; // Fallback
-    }
-  } catch (error) {
-    console.error('❌ Error obteniendo datos del restaurante:', error);
-    deliveryFee.value = 3.99; // Fallback
-  }
-};
-
-// Helper function para números seguros
-const safeNumber = (value: any, defaultValue: number = 0): number => {
-  if (value === null || value === undefined || value === '') {
-    return defaultValue;
-  }
-  const num = typeof value === 'number' ? value : parseFloat(value);
-  return isNaN(num) ? defaultValue : num;
-};
-
-// Función para obtener el precio real del producto
-const getProductPrice = (product: any): number => {
-  const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost'];
-
-  for (let field of priceFields) {
-    if (product[field] !== null && product[field] !== undefined && product[field] !== '') {
-      const testPrice = typeof product[field] === 'number' ? product[field] : parseFloat(product[field]);
-      if (!isNaN(testPrice) && testPrice > 0) {
-        return testPrice;
-      }
-    }
-  }
-  return 0;
-};
-
-const getApplicableOffer = (product: any): ProductOffer | null => {
-  if (!activeOffers.value.length) {
-    return null;
-  }
-  
-  // CORREGIDO: Usar subtotal original (sin descuentos) para evaluar mínimo de pedido
-  const currentSubtotal = cartTotals.value.originalSubtotal;
-  
-  // Buscar ofertas para este producto específico
-  const productOffers = activeOffers.value.filter(offer => {
-    const matchesProduct = offer.productId === product.id || offer.productId === product.productId;
-    const meetsMinimumAmount = currentSubtotal >= offer.minimumOrderAmount;
-    const isActive = offer.status === 'active';
-    
-    return matchesProduct && meetsMinimumAmount && isActive;
-  });
-  
-  if (!productOffers.length) return null;
-  
-  // Devolver la mejor oferta (mayor descuento)
-  const bestOffer = productOffers.reduce((best, current) => {
-    const originalPrice = getProductPrice(product);
-    const bestDiscount = best.discountType === '%' ? 
-      (originalPrice * best.discountValue / 100) : 
-      best.discountValue;
-      
-    const currentDiscount = current.discountType === '%' ? 
-      (originalPrice * current.discountValue / 100) : 
-      current.discountValue;
-      
-    return currentDiscount > bestDiscount ? current : best;
-  });
-  
-  return bestOffer;
-};
-
-const calculateDiscountedPrice = (product: any): number => {
-  const offer = getApplicableOffer(product);
-  const originalPrice = getProductPrice(product);
-  
-  if (!offer) {
-    return originalPrice;
-  }
-  
-  let discountedPrice: number;
-  
-  if (offer.discountType === '%') {
-    discountedPrice = originalPrice * (1 - offer.discountValue / 100);
-  } else {
-    discountedPrice = Math.max(0, originalPrice - offer.discountValue);
-  }
-  
-  return discountedPrice;
-};
-
-const processedCartItems = computed((): ProcessedCartItem[] => {
+const processedCartItems = computed<ProcessedCartItem[]>(() => {
   if (!cartItems.value.length) return [];
-  
-  return cartItems.value.map(item => {
-    const originalPrice = getProductPrice(item);
-    const finalPrice = calculateDiscountedPrice(item);
-    const offer = getApplicableOffer(item);
-    
-    return {
-      id: item.id,
-      productId: item.productId || item.id,
-      name: item.name || 'Producto',
-      originalPrice,
-      finalPrice,
-      quantity: item.quantity,
-      appliedOffer: offer || undefined
-    };
-  });
+  return cartItems.value.map(item => ({
+    id:            item.id,
+    productId:     item.id,
+    name:          item.name,
+    // Asegurarnos de que originalPrice existe; si no, tomar 0
+    originalPrice: typeof item.originalPrice === 'number' ? item.originalPrice : 0,
+    // Igual con price
+    finalPrice:    typeof item.price === 'number' ? item.price : 0,
+    quantity:      item.quantity,
+    appliedOffer:  item.appliedOffer
+  }));
 });
 
-// CORREGIDO: Cálculo base de totales del carrito
+// ——— 10) Cálculo de totales antes de promo =====
 const cartTotals = computed(() => {
   const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
-    return sum + (item.originalPrice * item.quantity);
+    return sum + item.originalPrice * item.quantity;
   }, 0);
 
   const subtotalWithOffers = processedCartItems.value.reduce((sum, item) => {
-    return sum + (item.finalPrice * item.quantity);
+    return sum + item.finalPrice * item.quantity;
   }, 0);
-  
+
   const totalOfferSavings = originalSubtotal - subtotalWithOffers;
-  
+
   return {
     originalSubtotal,
     subtotalWithOffers,
@@ -940,44 +843,40 @@ const cartTotals = computed(() => {
   };
 });
 
-// CORREGIDO: Cálculo final sin doble descuento
+// ——— 11) Totales tras aplicar promo y envío =====
 const calculatedTotals = computed(() => {
-  // Subtotal después de ofertas pero antes de código promo
   const subtotalAfterOffers = cartTotals.value.subtotalWithOffers;
-  
-  // Aplicar código promocional al subtotal con ofertas
   const subtotalAfterDiscounts = Math.max(0, subtotalAfterOffers - promoDiscount.value);
-  
   const total = subtotalAfterDiscounts + deliveryFee.value;
-  
   return {
     subtotalAfterDiscounts,
     total
   };
 });
 
-// NUEVO: Totales finales para mostrar en el paso 4
+// ——— 12) Totales finales para mostrar en paso 4 =====
 const finalOrderTotals = computed(() => {
+  const original = cartTotals.value.originalSubtotal + deliveryFee.value;
   const totalSavings = cartTotals.value.totalOfferSavings + promoDiscount.value;
-  
   return {
-    original: cartTotals.value.originalSubtotal + deliveryFee.value,
+    original,
     total: calculatedTotals.value.total,
     totalSavings
   };
 });
 
+// ——— 13) Fechas mínimas/máximas para programar entrega =====
 const minDate = computed(() => {
   const today = new Date();
   return today.toISOString().split('T')[0];
 });
-
 const maxDate = computed(() => {
   const future = new Date();
   future.setDate(future.getDate() + 7);
   return future.toISOString().split('T')[0];
 });
 
+// ——— 14) Validaciones reactivas para habilitar botones =====
 const canProceedToPayment = computed(() => {
   if (!selectedAddress.value) return false;
   if (deliveryType.value === 'scheduled') {
@@ -985,145 +884,133 @@ const canProceedToPayment = computed(() => {
   }
   return true;
 });
-
-// Validación para poder guardar método de pago
 const canSavePayment = computed(() => {
   if (!newPayment.value.nickname?.trim()) return false;
   if (!newPayment.value.type) return false;
-
-  if (newPayment.value.type === 'paypal') {
-    return !!(newPayment.value.payPalEmail?.trim());
-  } else {
-    return !!(
-      newPayment.value.cardNumber?.trim() &&
-      newPayment.value.expiryDate?.trim() &&
-      newPayment.value.cvv?.trim() &&
-      newPayment.value.cardholderName?.trim()
+  const tipo = newPayment.value.type.toLowerCase();
+  if (tipo === 'paypal') {
+    return !!newPayment.value.payPalEmail?.includes('@');
+  }
+  if (['visa', 'mastercard', 'other'].includes(tipo)) {
+    return (
+      !!newPayment.value.cardNumber &&
+      !!newPayment.value.expiryDate &&
+      !!newPayment.value.cvv &&
+      !!newPayment.value.cardholderName
     );
+  }
+  return true;
+});
+
+// ——— 15) onMounted: cargar carrito, direcciones, métodos de pago y restaurante =====
+onMounted(async () => {
+  // 15.a) Asegurarnos de que el carrito esté cargado ANTES de calcular totales
+  if (typeof cartStore.loadFromLocalStorage === 'function') {
+    await cartStore.loadFromLocalStorage();
+  }
+
+  // 15.b) Chequear autenticación
+  if (!authStore.isAuthenticated) {
+    alert('Por favor, inicia sesión para continuar.');
+    router.push('/login?redirect=/checkout');
+    return;
+  }
+
+  // 15.c) Cargar direcciones, métodos de pago y datos del restaurante en paralelo
+  await Promise.all([
+    loadAddresses(),
+    loadPaymentMethods(),
+    fetchRestaurantData()
+  ]);
+});
+
+// ——— 16) Cargar direcciones del usuario =====
+async function loadAddresses() {
+  try {
+    loadingAddresses.value = true;
+    const res = await userService.getUserAddresses();
+    userAddresses.value = res || [];
+    if (userAddresses.value.length > 0) {
+      selectedAddress.value = userAddresses.value[0].id;
+    }
+  } catch (err: any) {
+    console.error('Error cargando direcciones:', err);
+    userAddresses.value = [];
+  } finally {
+    loadingAddresses.value = false;
+  }
+}
+
+// ——— 17) Cargar métodos de pago =====
+async function loadPaymentMethods() {
+  try {
+    loadingPayments.value = true;
+    const res = await paymentService.getUserPaymentMethods();
+    paymentMethods.value = res || [];
+    if (paymentMethods.value.length > 0) {
+      selectedPaymentMethod.value = paymentMethods.value[0].id;
+    }
+  } catch (err: any) {
+    console.error('Error cargando métodos de pago:', err);
+    paymentMethods.value = [];
+  } finally {
+    loadingPayments.value = false;
+  }
+}
+
+// ——— 18) Cargar datos del restaurante (para deliveryFee) =====
+async function fetchRestaurantData() {
+  // Si restaurantId es null o 0, no llamamos a la API
+  if (!restaurantId.value) {
+    deliveryFee.value = 0;
+    restaurantData.value = null;
+    return;
+  }
+
+  try {
+    loadingRestaurantData.value = true;
+    const res = await restaurantService.getRestaurantById(restaurantId.value);
+    restaurantData.value = {
+      id:          res.id,
+      name:        res.name,
+      deliveryFee: res.deliveryFee
+    };
+    deliveryFee.value = res.deliveryFee;
+  } catch (err: any) {
+    console.error('Error cargando datos de restaurante:', err);
+    deliveryFee.value = 0;
+    restaurantData.value = null;
+  } finally {
+    loadingRestaurantData.value = false;
+  }
+}
+
+// ——— 19) Si el usuario programó entrega y cambia la fecha, traer slots =====
+watch(scheduledDate, async newDate => {
+  if (newDate && restaurantId.value && selectedAddress.value) {
+    try {
+      const times = await orderStore.getAvailableDeliveryTimes(
+        restaurantId.value,
+        selectedAddress.value,
+        newDate
+      );
+      availableTimeSlots.value = times;
+    } catch (err: any) {
+      console.error('Error obteniendo slots de tiempo:', err);
+      availableTimeSlots.value = [];
+    }
   }
 });
 
-// ============= FUNCIONES AUXILIARES PARA OFERTAS CORREGIDAS =============
-const formatOfferBadge = (offer: ProductOffer): string => {
-  if (offer.discountType === '%' || offer.discountType === 'percentage') {
-    return `${offer.discountValue}% OFF`;
-  } else {
-    return `$${offer.discountValue} OFF`;
-  }
-};
-
-// Función para cargar ofertas activas del restaurante
-const fetchActiveOffers = async (): Promise<void> => {
-  if (!restaurantId.value) return;
-  
-  try {
-    loadingOffers.value = true;
-    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
-    
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    };
-    
-    // Agregar token si está disponible
-    if (authStore.token) {
-      headers['Authorization'] = `Bearer ${authStore.token}`;
-    }
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers
-    });
-    
-    if (response.ok) {
-      const offers = await response.json();
-      activeOffers.value = offers || [];
-      console.log('✅ Ofertas cargadas en checkout:', offers.length);
-    } else {
-      activeOffers.value = [];
-    }
-  } catch (error) {
-    console.error('❌ Error cargando ofertas:', error);
-    activeOffers.value = [];
-  } finally {
-    loadingOffers.value = false;
-  }
-};
-
-const goToStep = (step: number) => {
-  currentStep.value = step;
-  window.scrollTo(0, 0);
-};
-
-const selectAddress = async (addressId: number) => {
-  selectedAddress.value = addressId;
-  // El delivery fee ya viene del restaurante, no necesitamos recalcularlo por dirección
-};
-
-const selectPaymentMethod = (paymentId: number) => {
-  selectedPaymentMethod.value = paymentId;
-};
-
-const getSelectedAddress = () => {
-  return addresses.value.find(address => address.id === selectedAddress.value) || null;
-};
-
-const getSelectedPaymentMethod = () => {
-  return paymentMethods.value.find(method => method.id === selectedPaymentMethod.value) || null;
-};
-
-const formatAddress = (address: Address | null) => {
-  if (!address) return '';
-  return `${address.street} ${address.number || ''}, ${address.city}, ${address.state}`;
-};
-
-// Función para obtener descripción del método de pago usando el servicio
-const getPaymentMethodDescription = (method: PaymentMethodInfo | null | undefined) => {
-  if (!method) return '';
-  return paymentService.getPaymentMethodDescription(method);
-};
-
-const formatScheduledDelivery = () => {
-  if (!scheduledDate.value || !scheduledTime.value) return '';
-  const date = new Date(scheduledDate.value + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  let dateStr = '';
-  if (date.toDateString() === today.toDateString()) {
-    dateStr = 'Hoy';
-  } else {
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    if (date.toDateString() === tomorrow.toDateString()) {
-      dateStr = 'Mañana';
-    } else {
-      dateStr = date.toLocaleDateString('es-ES', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-      });
-    }
-  }
-  return `${dateStr} a las ${scheduledTime.value}`;
-};
-
-const getDeliveryTimeText = () => {
-  if (deliveryType.value === 'scheduled') {
-    return formatScheduledDelivery();
-  }
-  return `${estimatedDeliveryTime.value}-${estimatedDeliveryTime.value + 15} minutos`;
-};
-
-// CORREGIDO: Aplicar código promocional al subtotal ya con ofertas
-const applyPromoCode = async () => {
+// ——— 20) Validar código promocional =====
+const validatePromoCode = async () => {
   if (!promoCode.value.trim() || !restaurantId.value) return;
   validatingPromo.value = true;
   try {
-    const result = await orderService.validatePromoCode(
+    const result = await orderStore.validatePromoCode(
       promoCode.value.trim(),
       restaurantId.value,
-      cartTotals.value.subtotalWithOffers // Usar subtotal con ofertas aplicadas
+      cartTotals.value.subtotalWithOffers
     );
     if (result.valid) {
       promoDiscount.value = result.discount;
@@ -1145,308 +1032,146 @@ const removePromoCode = () => {
   promoDiscount.value = 0;
 };
 
+// ——— 21) Guardar un nuevo método de pago =====
+const saveNewPaymentMethod = async () => {
+  try {
+    const created = await paymentService.addPaymentMethod(newPayment.value);
+    // Recargar lista y seleccionar el método recién creado
+    await loadPaymentMethods();
+    if (paymentMethods.value.length > 0) {
+      selectedPaymentMethod.value = created.id;
+    }
+    step.value = 3;
+  } catch (err: any) {
+    alert(err.message || 'No se pudo guardar el método de pago');
+  }
+};
+
+// ——— 22) Construir y enviar el pedido al backend =====
 const placeOrder = async () => {
   if (!selectedAddress.value || !selectedPaymentMethod.value) {
     alert('Por favor selecciona una dirección de entrega y un método de pago.');
     return;
   }
   if (!restaurantId.value) {
-    alert('Error: No se ha identificado el restaurante. Por favor, vuelve a intentarlo.');
+    alert('Error interno: no se identificó el restaurante.');
     return;
   }
 
   placingOrder.value = true;
-
   try {
-    // Usar los productos procesados con precios finales (con descuentos)
+    // Armar payload usando "item.finalPrice" (sin doble descuento)
     const orderRequest = {
-      restaurantId: restaurantId.value,
-      deliveryAddressId: selectedAddress.value,
+      restaurantId:         restaurantId.value,
+      deliveryAddressId:    selectedAddress.value,
+      paymentMethodId:      selectedPaymentMethod.value,
+      deliveryType:         deliveryType.value,
+      scheduledDate:
+        deliveryType.value === 'scheduled'
+          ? `${scheduledDate.value} ${scheduledTime.value}`
+          : null,
+      deliveryInstructions: deliveryInstructions.value,
+      promoCode:            promoCode.value.trim() || null,
       items: processedCartItems.value.map(item => ({
         productId: item.productId,
-        quantity: item.quantity,
-        name: item.name,
-        price: item.finalPrice // Usar precio con descuento aplicado
-      })),
-      paymentMethod: getSelectedPaymentMethod()?.type || 'card',
-      deliveryInstructions: deliveryInstructions.value || undefined,
-      promoCode: promoCode.value.trim() || undefined,
-      scheduledDeliveryTime: deliveryType.value === 'scheduled' && scheduledDate.value && scheduledTime.value
-        ? `${scheduledDate.value}T${scheduledTime.value}:00`
-        : undefined
+        quantity:  item.quantity,
+        unitPrice: item.finalPrice
+      }))
     };
 
-    console.log('🚀 Enviando pedido con precios con descuento:', orderRequest);
-
-    const order = await orderStore.createOrder(orderRequest);
-    createdOrderId.value = order.id.toString();
-
-    cartStore.clearCart();
-
-    // Seleccionar video aleatorio
-    const randomIndex = Math.floor(Math.random() * deliveryGifFiles.length);
-    const selectedVideo = deliveryGifFiles[randomIndex];
-    randomDeliveryGifUrl.value = getVideoUrl(selectedVideo);
-
-    goToStep(3);
-
-  } catch (error: any) {
-    console.error('Error placing order:', error);
-    alert(error.response?.data?.message || error.message || 'Error al procesar el pedido');
+    await orderStore.createOrder(orderRequest);
+    step.value = 4;
+  } catch (err: any) {
+    console.error('Error al crear pedido:', err);
+    alert(err.message || 'No se pudo procesar tu pedido. Intenta de nuevo.');
   } finally {
     placingOrder.value = false;
   }
 };
 
-const loadAddresses = async () => {
-  try {
-    loadingAddresses.value = true;
-    addresses.value = await userService.getUserAddresses();
-    const defaultAddress = addresses.value.find(addr => addr.isDefault);
-    if (defaultAddress) {
-      await selectAddress(defaultAddress.id);
-    } else if (addresses.value.length > 0) {
-      await selectAddress(addresses.value[0].id);
-    }
-    if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
-      await loadAvailableTimeSlots();
-    }
-  } catch (error) {
-    console.error('Error loading addresses:', error);
-  } finally {
-    loadingAddresses.value = false;
+// ——— 23) Mostrar texto de tiempo de entrega =====
+const getDeliveryTimeText = (): string => {
+  if (deliveryType.value === 'now') {
+    // Si restaurantData es null, simplemente mostramos "Envío inmediato"
+    return restaurantData.value
+      ? `Envío inmediato (aprox. ${restaurantData.value.estimatedDeliveryTime ?? 30} min)`
+      : `Envío inmediato`;
+  } else {
+    return `Programado: ${scheduledDate.value} a las ${scheduledTime.value}`;
   }
 };
 
-// Función real para cargar métodos de pago desde el backend
-const loadPaymentMethods = async () => {
-  try {
-    loadingPaymentMethods.value = true;
-    paymentMethodsError.value = '';
-
-    console.log('🔄 Cargando métodos de pago desde backend...');
-
-    const methods = await paymentService.getUserPaymentMethods();
-    paymentMethods.value = methods;
-
-    console.log('✅ Métodos de pago cargados:', methods);
-
-    // Seleccionar método predeterminado
-    const defaultMethod = methods.find(method => method.isDefault);
-    if (defaultMethod) {
-      selectedPaymentMethod.value = defaultMethod.id;
-      console.log('🎯 Método predeterminado seleccionado:', defaultMethod.id);
-    } else if (methods.length > 0) {
-      selectedPaymentMethod.value = methods[0].id;
-      console.log('🎯 Primer método seleccionado:', methods[0].id);
-    }
-
-  } catch (error: any) {
-    console.error('❌ Error cargando métodos de pago:', error);
-    paymentMethodsError.value = error.message || 'Error al cargar métodos de pago';
-  } finally {
-    loadingPaymentMethods.value = false;
+// ——— 24) Helper para presentar un método de pago en la lista =====
+const displayPaymentMethod = (pm: PaymentMethodInfo) => {
+  const tipo = pm.type.toLowerCase();
+  if (tipo === 'paypal') {
+    return `PayPal • ${pm.payPalEmail}`;
   }
-};
-
-const loadAvailableTimeSlots = async () => {
-  if (!restaurantId.value || !selectedAddress.value || !scheduledDate.value) return;
-  try {
-    const times = await orderService.getAvailableDeliveryTimes(restaurantId.value, selectedAddress.value, scheduledDate.value);
-    availableTimeSlots.value = times;
-    if (scheduledTime.value && !times.includes(scheduledTime.value)) {
-        scheduledTime.value = '';
-    }
-  } catch (error) {
-    console.warn('Error loading available time slots, using fallback:', error);
-    const slots = [];
-    const now = new Date();
-    const selectedDay = new Date(scheduledDate.value + 'T00:00:00');
-    const isToday = selectedDay.toDateString() === now.toDateString();
-    let startHour = 11;
-    if (isToday) {
-        startHour = Math.max(startHour, now.getHours() + 1);
-    }
-
-    for (let hour = startHour; hour <= 22; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    availableTimeSlots.value = slots;
-    if (scheduledTime.value && !slots.includes(scheduledTime.value)) {
-        scheduledTime.value = '';
-    }
+  if (pm.lastFourDigits) {
+    return `${pm.nickname} •••• ${pm.lastFourDigits}`;
   }
+  return pm.nickname;
 };
-
-const saveNewAddress = async () => {
-  if (!newAddress.value.name || !newAddress.value.street || !newAddress.value.city || !newAddress.value.zipCode) {
-    alert('Por favor completa los campos obligatorios (Nombre, Calle, Ciudad, Código Postal).');
-    return;
-  }
-  savingAddress.value = true;
-  try {
-    const addressData = { ...newAddress.value };
-    const savedAddress = await userService.addAddress(addressData);
-    addresses.value.push(savedAddress);
-    if (newAddress.value.isDefault || addresses.value.length === 1) {
-      await selectAddress(savedAddress.id);
-    }
-    newAddress.value = { name: '', street: '', number: '', interior: '', neighborhood: '', city: '', state: '', zipCode: '', phone: '', isDefault: false };
-    showAddAddressModal.value = false;
-    alert('Dirección agregada exitosamente');
-  } catch (error) {
-    console.error('Error saving address:', error);
-    alert('Error al guardar la dirección');
-  } finally {
-    savingAddress.value = false;
-  }
-};
-
-// Función real para guardar método de pago usando el backend
-const saveNewPayment = async () => {
-  try {
-    savingPayment.value = true;
-    paymentError.value = '';
-
-    console.log('💳 Guardando método de pago:', newPayment.value);
-
-    const savedMethod = await paymentService.addPaymentMethod(newPayment.value);
-
-    console.log('✅ Método guardado exitosamente:', savedMethod);
-
-    // Agregar a la lista local
-    paymentMethods.value.push(savedMethod);
-
-    // Seleccionar como método actual si es predeterminado o es el primero
-    if (savedMethod.isDefault || paymentMethods.value.length === 1) {
-      selectedPaymentMethod.value = savedMethod.id;
-    }
-
-    // Limpiar formulario y cerrar modal
-    resetPaymentForm();
-    showAddPaymentModal.value = false;
-
-    alert('Método de pago agregado exitosamente');
-
-  } catch (error: any) {
-    console.error('❌ Error guardando método de pago:', error);
-    paymentError.value = error.message || 'Error al guardar el método de pago';
-  } finally {
-    savingPayment.value = false;
-  }
-};
-
-// Función para resetear el formulario de pago
-const resetPaymentForm = () => {
-  newPayment.value = {
-    nickname: '',
-    type: newPayment.value.type, // Mantener el tipo seleccionado
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardholderName: '',
-    payPalEmail: '',
-    isDefault: false
-  };
-  paymentError.value = '';
-};
-
-// Función para cancelar agregar pago
-const cancelAddPayment = () => {
-  resetPaymentForm();
-  showAddPaymentModal.value = false;
-};
-
-// Funciones de formateo usando el servicio
-const formatCardNumber = (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const formatted = paymentService.formatCardNumber(input.value);
-  newPayment.value.cardNumber = formatted;
-};
-
-const formatExpiryDate = (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const formatted = paymentService.formatExpiryDate(input.value);
-  newPayment.value.expiryDate = formatted;
-};
-
-// Watchers
-watch([deliveryType, scheduledDate, selectedAddress], async () => {
-  if (deliveryType.value === 'scheduled' && scheduledDate.value && selectedAddress.value) {
-    await loadAvailableTimeSlots();
-  }
-});
-
-// Lifecycle hooks
-onMounted(async () => {
-  if (cartStore.isEmpty) {
-    alert('Tu carrito está vacío. Serás redirigido.');
-    router.push('/cart');
-    return;
-  }
-  if (!authStore.isAuthenticated) {
-    alert('Por favor, inicia sesión para continuar.');
-    router.push('/login?redirect=/checkout');
-    return;
-  }
-
-  await Promise.all([
-    loadAddresses(),
-    loadPaymentMethods(),
-    fetchRestaurantData(),
-    fetchActiveOffers()
-  ]);
-});
 </script>
+
 
 <style lang="scss" scoped>
 // Variables
 $primary-color: #06C167;
-$black: #000000;
+$primary-gradient: linear-gradient(135deg, #06C167, #04A653);
+$secondary-gradient: linear-gradient(135deg, #667eea, #764ba2);
+$success-gradient: linear-gradient(135deg, #10b981, #059669);
 $white: #FFFFFF;
-$light-gray: #F6F6F6;
-$medium-gray: #EEEEEE;
-$dark-gray: #545454;
-$text-primary: #000000;
-$text-secondary: #757575;
-$success-color: #06C167;
-$warning-color: #FF8000;
-$error-color: #ff4444;
-$border-radius-sm: 8px;
+$light-gray: #F8FAFC;
+$medium-gray: #E2E8F0;
+$dark-gray: #64748B;
+$text-primary: #1E293B;
+$text-secondary: #64748B;
 $border-radius: 16px;
-$box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-$transition: all 0.2s ease;
+$border-radius-sm: 8px;
+$transition: all 0.3s ease;
+$shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
+$shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.08);
+$shadow-elevated: 0 20px 40px rgba(0, 0, 0, 0.1);
 
 // Container
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 2rem;
 
   @media (max-width: 768px) {
-    padding: 0 16px;
+    padding: 0 1rem;
   }
 }
 
 .checkout-page {
-  background-color: $light-gray;
+  background: linear-gradient(to bottom, $white, $light-gray);
   min-height: 100vh;
-  padding: 40px 0 60px;
+  padding: 2rem 0 4rem;
 
   &__title {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 32px;
-    color: $text-primary;
+    font-size: 2rem;
+    font-weight: 800;
+    background: $primary-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0 0 2rem;
+    text-align: center;
+
+    @media (max-width: 768px) {
+      font-size: 1.75rem;
+    }
   }
 }
 
+// Breadcrumb
 .breadcrumb {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
-  font-size: 14px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
 
   &__link {
     color: $text-secondary;
@@ -1459,7 +1184,7 @@ $transition: all 0.2s ease;
   }
 
   &__separator {
-    margin: 0 8px;
+    margin: 0 0.5rem;
     color: $text-secondary;
     display: flex;
     align-items: center;
@@ -1467,483 +1192,314 @@ $transition: all 0.2s ease;
 
   &__current {
     color: $text-primary;
-    font-weight: 500;
-  }
-}
-
-.checkout-content {
-  display: grid;
-  grid-template-columns: 1fr 350px;
-  gap: 24px;
-
-  @media (max-width: 992px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-// ============= ESTILOS PARA OFERTAS EN REVIEW =============
-
-.review-product {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e2e8f0;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &__quantity {
     font-weight: 600;
-    color: #1e293b;
-    min-width: 30px;
-  }
-
-  &__details {
-    flex: 1;
-  }
-
-  &__name {
-    font-weight: 500;
-    color: #1e293b;
-    margin-bottom: 0.25rem;
-  }
-
-  &__price-with-offer {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__offer-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  &__offer-badge {
-    background: linear-gradient(135deg, #059669, #10b981);
-    color: white;
-    padding: 0.125rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
-  }
-
-  &__pricing {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  &__original-price {
-    font-size: 0.85rem;
-    color: $text-secondary;
-    text-decoration: line-through;
-  }
-
-  &__discounted-price {
-    font-weight: 600;
-    color: #059669;
-    font-size: 0.9rem;
-  }
-
-  &__price {
-    font-weight: 500;
-    color: #1e293b;
-    font-size: 0.9rem;
-  }
-
-  &__total {
-    font-weight: 600;
-    color: #1e293b;
-    text-align: right;
-    min-width: 70px;
   }
 }
 
-// ============= ESTILOS PARA OFERTAS EN SIDEBAR =============
+// Progress Indicator
+.progress-indicator {
+  margin-bottom: 3rem;
 
-.order-summary__item {
-  display: flex;
-  align-items: flex-start;
-  padding: 12px 0;
-  border-bottom: 1px solid $light-gray;
-  gap: 8px;
-
-  &:last-child {
-    border-bottom: none;
+  &__track {
+    width: 100%;
+    height: 4px;
+    background: $medium-gray;
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
   }
 
-  .item-quantity {
-    font-weight: 600;
-    margin-right: 8px;
-    min-width: 30px;
-    padding-top: 2px;
-  }
-
-  .item-details {
-    flex: 1;
-  }
-
-  .item-name {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 2px;
-  }
-
-  .item-offer {
-    margin-top: 4px;
-  }
-
-  .offer-badge {
-    background: linear-gradient(135deg, #059669, #10b981);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.65rem;
-    font-weight: 700;
-    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
-  }
-
-  .item-pricing {
-    text-align: right;
-    min-width: 80px;
-  }
-
-  .item-price-with-discount {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-bottom: 4px;
-  }
-
-  .item-original-price {
-    font-size: 0.75rem;
-    color: $text-secondary;
-    text-decoration: line-through;
-  }
-
-  .item-discounted-price {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #059669;
-  }
-
-  .item-price {
-    font-size: 0.85rem;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-
-  .item-total {
-    font-size: 14px;
-    font-weight: 600;
-    color: $text-primary;
+  &__fill {
+    height: 100%;
+    background: $primary-gradient;
+    border-radius: 2px;
+    transition: width 0.6s ease;
   }
 }
 
-.order-summary__row--savings {
-  color: #059669;
-  font-weight: 600;
-
-  span:last-child {
-    color: #059669;
-  }
-}
-
-// Contenedor de animación de delivery con videos
-.delivery-animation-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem;
-  background: linear-gradient(65deg, #e8fafd, #d7f8d1);
-  border-radius: 20px;
-  margin: 2rem 0;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.delivery-video {
-  width: 300px;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  margin-bottom: 1.5rem;
-  background: #f0f0f0;
-
-  @media (max-width: 768px) {
-    width: 250px;
-    height: 167px;
-  }
-
-  @media (max-width: 480px) {
-    width: 200px;
-    height: 133px;
-  }
-}
-
-.delivery-text {
-  text-align: center;
-
-  .delivery-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #1a365d;
-    margin: 0 0 8px;
-    animation: titleGlow 3s ease-in-out infinite;
-  }
-
-  .delivery-subtitle {
-    font-size: 15px;
-    color: #4a5568;
-    margin: 0 0 20px;
-    font-weight: 500;
-  }
-}
-
-@keyframes titleGlow {
-  0%, 100% { color: #1a365d; transform: scale(1); }
-  50% { color: #2c5aa0; transform: scale(1.02); }
-}
-
-.loading-dots {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-
-  span {
-    width: 8px;
-    height: 8px;
-    background: linear-gradient(135deg, #3182ce, #2c5aa0);
-    border-radius: 50%;
-    animation: dotBounce 1.6s ease-in-out infinite;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-
-    &:nth-child(1) { animation-delay: 0s; }
-    &:nth-child(2) { animation-delay: 0.3s; }
-    &:nth-child(3) { animation-delay: 0.6s; }
-  }
-}
-
-@keyframes dotBounce {
-  0%, 80%, 100% {
-    transform: scale(0.8) translateY(0px);
-    opacity: 0.7;
-  }
-  40% {
-    transform: scale(1.2) translateY(-10px);
-    opacity: 1;
-  }
-}
-
-// Estados vacíos mejorados
-.empty-state {
-  text-align: center;
-  padding: 2rem;
-  color: $text-secondary;
-
-  svg {
-    margin-bottom: 1rem;
-  }
-
-  p {
-    margin: 0.5rem 0;
-
-    &.empty-state__subtitle {
-      font-size: 0.9rem;
-      color: $text-secondary;
-    }
-  }
-}
-
-// Botones para agregar elementos
-.add-item-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: rgba($primary-color, 0.1);
-  border: 2px dashed $primary-color;
-  color: $primary-color;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 1rem;
-  text-align: center;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  font-size: 14px;
-  margin-top: 12px;
-
-  &:hover {
-    background: rgba($primary-color, 0.15);
-    border-color: $primary-color;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
-  }
-}
-
-// Estados de error
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba($error-color, 0.1);
-  border: 1px solid rgba($error-color, 0.3);
-  color: $error-color;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 14px;
-
-  .retry-btn {
-    margin-left: auto;
-    background: $error-color;
-    color: white;
-    border: none;
-    padding: 4px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-
-    &:hover {
-      background: #d32f2f;
-    }
-  }
-}
-
-// Modales
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.modal-content {
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal-header {
+.progress-steps {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
+}
 
-  h3 {
-    margin: 0;
-    font-size: 1.25rem;
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+
+  &__circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: $medium-gray;
+    color: $text-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 700;
-    color: $text-primary;
+    margin-bottom: 0.5rem;
+    transition: $transition;
+  }
+
+  &__label {
+    font-size: 0.85rem;
+    color: $text-secondary;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  &--active {
+    .progress-step__circle {
+      background: $primary-gradient;
+      color: white;
+      transform: scale(1.1);
+      box-shadow: $shadow-medium;
+    }
+
+    .progress-step__label {
+      color: $primary-color;
+      font-weight: 700;
+    }
+  }
+
+  &--completed {
+    .progress-step__circle {
+      background: $success-gradient;
+      color: white;
+    }
+
+    .progress-step__label {
+      color: $text-primary;
+      font-weight: 600;
+    }
   }
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: $text-secondary;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
+// Checkout Content
+.checkout-content {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 3rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr 350px;
+    gap: 2rem;
+  }
+
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+// Checkout Step
+.checkout-step {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: $shadow-soft;
+  padding: 2rem;
+  margin-bottom: 2rem;
+
+  &--success {
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+// Step Header
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid;
+  border-image: $primary-gradient 1;
+
+  &__icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: $primary-gradient;
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 0.25rem;
+  }
+
+  &__subtitle {
+    color: $text-secondary;
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+// Form Section
+.form-section {
+  margin-bottom: 2rem;
+
+  &__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 1rem;
+  }
+}
+
+// Address Selector
+.address-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.address-option {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid $medium-gray;
+  border-radius: $border-radius-sm;
+  cursor: pointer;
   transition: $transition;
 
   &:hover {
-    background: rgba($text-secondary, 0.1);
+    border-color: $primary-color;
+    transform: translateY(-2px);
+    box-shadow: $shadow-medium;
+  }
+
+  &--selected {
+    border-color: $primary-color;
+    background: rgba($primary-color, 0.05);
+    box-shadow: 0 0 0 1px $primary-color;
+  }
+
+  &__radio {
+    flex-shrink: 0;
+  }
+
+  &__name {
+    font-weight: 600;
     color: $text-primary;
+    margin-bottom: 0.25rem;
+  }
+
+  &__details {
+    color: $text-secondary;
+    font-size: 0.9rem;
   }
 }
 
-.modal-body {
-  padding: 1.5rem;
+// Radio Circle
+.radio-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid $medium-gray;
+  position: relative;
+  transition: $transition;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 10px;
+    height: 10px;
+    background: $primary-color;
+    border-radius: 50%;
+    transition: $transition;
+  }
+
+  &--checked {
+    border-color: $primary-color;
+
+    &::after {
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
 }
 
-.modal-footer {
+// Delivery Options
+.delivery-options {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
-  border-radius: 0 0 16px 16px;
 }
 
-// Formularios en modales
-.form-group {
-  margin-bottom: 1.25rem;
+.delivery-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid $medium-gray;
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition;
 
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
+  &:hover {
+    border-color: $primary-color;
+    transform: translateY(-2px);
+    box-shadow: $shadow-medium;
+  }
+
+  &--selected {
+    border-color: $primary-color;
+    background: rgba($primary-color, 0.05);
+    box-shadow: 0 0 0 1px $primary-color;
+  }
+
+  &__radio {
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+  }
+
+  &__title {
     font-weight: 600;
     color: $text-primary;
+    margin-bottom: 0.25rem;
+  }
+
+  &__subtitle {
+    color: $text-secondary;
     font-size: 0.9rem;
   }
 
-  input, select, textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: $transition;
-
-    &:focus {
-      outline: none;
-      border-color: $primary-color;
-      box-shadow: 0 0 0 3px rgba(6, 193, 103, 0.1);
-    }
-
-    &::placeholder {
-      color: #9ca3af;
-    }
+  &__icon {
+    flex-shrink: 0;
+    color: $primary-color;
   }
 }
 
-.form-row {
+// Scheduled Section
+.scheduled-section {
+  background: rgba($primary-color, 0.02);
+  border: 1px solid rgba($primary-color, 0.1);
+  border-radius: $border-radius-sm;
+  padding: 1.5rem;
+}
+
+.scheduled-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
@@ -1953,678 +1509,325 @@ $transition: all 0.2s ease;
   }
 }
 
-.checkbox-label {
-  display: flex !important;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 500 !important;
-  cursor: pointer;
-
-  input[type="checkbox"] {
-    width: auto !important;
-    margin: 0;
-    transform: scale(1.2);
-    accent-color: $primary-color;
-  }
+// Input Groups
+.input-group {
+  margin-bottom: 1rem;
 }
 
-// Botones de modales
-.btn-primary {
-  background: $primary-color;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: $transition;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 100px;
-
-  &:hover:not(:disabled) {
-    background: #059142;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(6, 193, 103, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-  }
-}
-
-.btn-secondary {
-  background: #f1f5f9;
-  color: $text-primary;
-  border: 1px solid #e2e8f0;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: $transition;
-
-  &:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
-  }
-}
-
-.step-progress {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 32px;
-  position: relative;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 24px;
-    left: 24px;
-    right: 24px;
-    height: 2px;
-    background-color: $medium-gray;
-    z-index: 1;
-  }
-}
-
-.step-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  z-index: 2;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 24px;
-    left: -50%;
-    width: 100%;
-    height: 2px;
-    background-color: $primary-color;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  &--active {
-    .step-item__indicator {
-      background-color: $primary-color;
-      color: $white;
-      border-color: $primary-color;
-    }
-
-    .step-item__name {
-      color: $text-primary;
-      font-weight: 600;
-    }
-  }
-
-  &--completed {
-    &::before {
-      opacity: 1;
-    }
-
-    .step-item__indicator {
-      background-color: $primary-color;
-      color: $white;
-      border-color: $primary-color;
-    }
-  }
-
-  &:first-child::before {
-    display: none;
-  }
-
-  &__indicator {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: $white;
-    border: 2px solid $medium-gray;
-    margin-bottom: 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-  }
-
-  &__name {
-    font-size: 14px;
-    color: $text-secondary;
-    transition: all 0.3s ease;
-  }
-}
-
-.step-panel {
-  background-color: $white;
-  border-radius: $border-radius;
-  box-shadow: $box-shadow;
-  padding: 24px;
-  margin-bottom: 16px;
-
-  &__title {
-    font-size: 20px;
-    font-weight: 600;
-    margin: 0 0 24px;
-    color: $text-primary;
-  }
-
-  &__actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 32px;
-  }
-
-  &--success {
-    text-align: center;
-  }
-}
-
-.delivery-options {
-  display: flex;
-  flex-direction: column;
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  margin-bottom: 2rem;
-}
 
-.delivery-option {
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    border-color: $primary-color;
-  }
-
-  &--active {
-    border-color: $primary-color;
-    background-color: rgba(6, 193, 103, 0.05);
-  }
-
-  input[type="radio"] {
-    display: none;
-  }
-
-  label {
-    cursor: pointer;
-    margin: 0;
-  }
-
-  &__main {
-    h4 {
-      margin: 0 0 0.25rem;
-      font-weight: 600;
-      color: #1e293b;
-    }
-
-    p {
-      margin: 0;
-      color: #64748b;
-      font-size: 0.9rem;
-    }
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
   }
 }
 
-.scheduled-delivery {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-
-  h4 {
-    margin: 0 0 1rem;
-    color: #1e293b;
-    font-weight: 600;
-  }
-
-  &__inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-
-    @media (max-width: 576px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .input-group {
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #1e293b;
-      font-size: 0.9rem;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 1rem;
-
-      &:focus {
-        outline: none;
-        border-color: $primary-color;
-        box-shadow: 0 0 0 3px rgba(6, 193, 103, 0.1);
-      }
-    }
-
-    .time-selector {
-      background-color: white;
-      cursor: pointer;
-
-      option {
-        padding: 8px;
-      }
-    }
-  }
-}
-
-.address-section,
-.payment-methods {
-  margin-bottom: 2rem;
-
-  h4 {
-    margin: 0 0 1rem;
-    color: #1e293b;
-    font-weight: 600;
-    font-size: 1.1rem;
-  }
-}
-
-.loading-addresses,
-.loading-payment {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 2rem;
-  justify-content: center;
-  color: #64748b;
-
-  .loading-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid #e2e8f0;
-    border-top-color: $primary-color;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-}
-
-.address-list,
-.payment-method-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.address-item,
-.payment-method {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    border-color: $primary-color;
-  }
-
-  &--selected {
-    border-color: $primary-color;
-    background-color: rgba(6, 193, 103, 0.05);
-  }
-
-  .address-content,
-  .payment-method__details {
-    flex: 1;
-
-    h5 {
-      margin: 0 0 0.25rem;
-      font-weight: 600;
-      color: #1e293b;
-    }
-
-    p {
-      margin: 0;
-      color: #64748b;
-      font-size: 0.9rem;
-    }
-  }
-
-  .default-badge {
-    display: inline-block;
-    background: rgba(6, 193, 103, 0.1);
-    color: $primary-color;
-    padding: 0.125rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-top: 0.25rem;
-  }
-
-  .radio-indicator input {
-    margin: 0;
-  }
-}
-
-.payment-method__icon {
-  margin-right: 1rem;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 32px;
-}
-
-.delivery-instructions {
-  margin-bottom: 2rem;
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #1e293b;
-  }
-
-  textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: inherit;
-    resize: vertical;
-
-    &:focus {
-      outline: none;
-      border-color: $primary-color;
-      box-shadow: 0 0 0 3px rgba(6, 193, 103, 0.1);
-    }
-  }
-}
-
-// Buttons
-.btn-next {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: $primary-color;
-  color: $white;
-  border: none;
-  border-radius: $border-radius-sm;
-  padding: 12px 24px;
+.input-label {
+  display: block;
   font-weight: 600;
-  cursor: pointer;
-  transition: $transition;
-  box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
-
-  &:hover:not(:disabled) {
-    background-color: #059142;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.btn-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: $white;
   color: $text-primary;
-  border: 1px solid $medium-gray;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid $medium-gray;
   border-radius: $border-radius-sm;
-  padding: 12px 24px;
-  font-weight: 500;
-  cursor: pointer;
+  font-size: 1rem;
   transition: $transition;
-
-  &:hover {
-    background-color: $light-gray;
-  }
-}
-
-.btn-place-order {
-  background-color: $primary-color;
-  color: $white;
-  border: none;
-  border-radius: $border-radius-sm;
-  padding: 12px 32px;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-  transition: $transition;
-  box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
-  min-width: 200px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover:not(:disabled) {
-    background-color: #059142;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(6, 193, 103, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: $white;
-  animation: spin 1s linear infinite;
-}
-
-.loading-spinner--small {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// Order sidebar
-.order-sidebar {
-  position: sticky;
-  top: 24px;
-
-  @media (max-width: 992px) {
-    position: static;
-  }
-}
-
-.order-summary {
-  background-color: $white;
-  border-radius: $border-radius;
-  box-shadow: $box-shadow;
-  overflow: hidden;
-
-  &__header {
-    padding: 20px;
-    border-bottom: 1px solid $light-gray;
-  }
-
-  &__title {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: $text-primary;
-  }
-
-  &__content {
-    padding: 20px;
-  }
-
-  &__restaurant {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid $light-gray;
-
-    .restaurant-placeholder {
-      width: 40px;
-      height: 40px;
-      background: $primary-color;
-      color: white;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-    }
-  }
-
-  &__restaurant-name {
-    font-weight: 600;
-    margin: 0 0 4px;
-    font-size: 16px;
-  }
-
-  &__delivery-time {
-    margin: 0;
-    font-size: 14px;
-    color: $text-secondary;
-  }
-
-  &__items {
-    margin-bottom: 20px;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-
-  &__promocode {
-    display: flex;
-    margin-bottom: 16px;
-  }
-
-  &__totals {
-    padding: 16px 0;
-    border-top: 1px solid $light-gray;
-    margin-bottom: 16px;
-  }
-
-  &__row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: $text-secondary;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    &--discount {
-      color: #10b981;
-    }
-  }
-
-  &__total {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid $light-gray;
-    font-size: 16px;
-    font-weight: 600;
-    color: $text-primary;
-  }
-}
-
-.free-delivery {
-  color: $success-color;
-  font-weight: 600;
-}
-
-.promocode-input {
-  flex: 1;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid $medium-gray;
-  border-radius: 8px 0 0 8px;
-  font-size: 14px;
 
   &:focus {
     outline: none;
     border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+  }
+
+  &::placeholder {
+    color: $text-secondary;
   }
 }
 
-.promocode-button {
-  height: 40px;
-  padding: 0 12px;
-  background-color: $primary-color;
-  border: none;
-  border-radius: 0 8px 8px 0;
-  color: $white;
-  font-weight: 600;
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+// Checkbox
+.checkbox-group {
+  margin-top: 1rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+
+  input[type="checkbox"] {
+    display: none;
+  }
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid $medium-gray;
+  border-radius: 4px;
+  position: relative;
+  transition: $transition;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 12px;
+    height: 12px;
+    background: $primary-color;
+    border-radius: 2px;
+    transition: $transition;
+  }
+
+  input:checked + & {
+    border-color: $primary-color;
+
+    &::after {
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+}
+
+// Payment Methods
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid $medium-gray;
+  border-radius: $border-radius-sm;
   cursor: pointer;
   transition: $transition;
 
-  &:hover:not(:disabled) {
-    background-color: #059142;
+  &:hover {
+    border-color: $primary-color;
+    transform: translateY(-2px);
+    box-shadow: $shadow-medium;
   }
 
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+  &--selected {
+    border-color: $primary-color;
+    background: rgba($primary-color, 0.05);
+    box-shadow: 0 0 0 1px $primary-color;
+  }
+
+  &__radio {
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__details {
+    flex: 1;
+  }
+
+  &__name {
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 0.25rem;
+  }
+
+  &__badge {
+    font-size: 0.75rem;
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+}
+
+.new-payment-form {
+  background: rgba($primary-color, 0.02);
+  border: 1px solid rgba($primary-color, 0.1);
+  border-radius: $border-radius-sm;
+  padding: 1.5rem;
+}
+
+// Review Section
+.review-section {
+  margin-bottom: 2rem;
+
+  &__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 1rem;
+  }
+}
+
+.review-products {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.review-product {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: $light-gray;
+  border-radius: $border-radius-sm;
+
+  &__quantity {
+    font-weight: 700;
+    color: $primary-color;
+    min-width: 30px;
+  }
+
+  &__details {
+    flex: 1;
+  }
+
+  &__name {
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 0.25rem;
+  }
+
+  &__price-with-offer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__original-price {
+    color: $text-secondary;
+    text-decoration: line-through;
+    font-size: 0.9rem;
+  }
+
+  &__discounted-price {
+    color: $primary-color;
+    font-weight: 700;
+  }
+
+  &__price {
+    color: $text-primary;
+    font-weight: 600;
+  }
+}
+
+.review-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.review-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+
+  &__label {
+    color: $text-secondary;
+    font-weight: 500;
+  }
+
+  &__value {
+    color: $text-primary;
+    font-weight: 600;
+    text-align: right;
+  }
+}
+
+// Promo Section
+.promo-section {
+  margin-bottom: 2rem;
+
+  &__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 1rem;
+  }
+}
+
+.promo-input {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  &__field {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid $medium-gray;
+    border-radius: $border-radius-sm;
+    font-size: 1rem;
+    transition: $transition;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+    }
+  }
+
+  &__button {
+    padding: 0.75rem 1.5rem;
+    background: $primary-gradient;
+    color: white;
+    border: none;
+    border-radius: $border-radius-sm;
+    font-weight: 600;
+    cursor: pointer;
+    transition: $transition;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: $shadow-medium;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
   }
 }
 
 .promo-success {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 8px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  background: rgba($primary-color, 0.1);
+  color: $primary-color;
+  padding: 0.75rem 1rem;
+  border-radius: $border-radius-sm;
+  font-weight: 600;
 
-  &__message {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #10b981;
-    font-weight: 500;
-    font-size: 0.9rem;
-  }
-
-  .remove-promo {
+  .promo-remove {
+    margin-left: auto;
     background: none;
     border: none;
-    color: #10b981;
+    color: $primary-color;
     font-size: 1.25rem;
     cursor: pointer;
     padding: 0;
@@ -2636,249 +1839,311 @@ $transition: all 0.2s ease;
     border-radius: 50%;
 
     &:hover {
-      background-color: rgba(16, 185, 129, 0.1);
+      background: rgba($primary-color, 0.1);
     }
   }
 }
 
-.order-success {
-  padding: 24px 0;
+// Step Actions
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
 
-  &__icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 24px;
-    background-color: rgba($success-color, 0.1);
-    border-radius: 50%;
+  @media (max-width: 576px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+// Buttons
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: $border-radius-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+  text-decoration: none;
+  border: none;
+  font-size: 0.95rem;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  @media (max-width: 576px) {
+    width: 100%;
+  }
+}
+
+.btn-primary {
+  background: $primary-gradient;
+  color: white;
+  box-shadow: $shadow-soft;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: $shadow-medium;
+  }
+
+  &--large {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+  }
+
+  &--confirm {
+    background: $success-gradient;
+  }
+}
+
+.btn-secondary {
+  background: white;
+  color: $text-primary;
+  border: 2px solid $medium-gray;
+
+  &:hover:not(:disabled) {
+    border-color: $primary-color;
+    color: $primary-color;
+    transform: translateY(-2px);
+    box-shadow: $shadow-soft;
+  }
+}
+
+// Success Content
+.success-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.success-icon {
+  width: 100px;
+  height: 100px;
+  background: $success-gradient;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+  box-shadow: $shadow-elevated;
+}
+
+.success-title {
+  font-size: 2rem;
+  font-weight: 800;
+  background: $success-gradient;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0 0 0.5rem;
+}
+
+.success-subtitle {
+  color: $text-secondary;
+  font-size: 1.1rem;
+  margin: 0 0 2rem;
+}
+
+.order-summary-final {
+  background: $light-gray;
+  border-radius: $border-radius-sm;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+
+  &__row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    color: $success-color;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &--savings {
+      color: $primary-color;
+      font-weight: 700;
+    }
+
+    &--total {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: $text-primary;
+      border-top: 1px solid $medium-gray;
+      padding-top: 0.75rem;
+      margin-top: 0.75rem;
+    }
+  }
+}
+
+.success-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+  }
+}
+
+// Order Sidebar
+.order-sidebar {
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+
+  @media (max-width: 992px) {
+    position: static;
+  }
+}
+
+.order-summary {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: $shadow-soft;
+  overflow: hidden;
+
+  &__header {
+    background: $primary-gradient;
+    color: white;
+    padding: 1.5rem;
   }
 
   &__title {
-    font-size: 24px;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin: 0 0 16px;
-    color: $text-primary;
+    margin: 0;
+  }
+
+  &__content {
+    padding: 1.5rem;
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: $text-secondary;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &--savings,
+    &--promo {
+      color: $primary-color;
+      font-weight: 700;
+    }
+
+    &--total {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: $text-primary;
+      border-top: 1px solid $medium-gray;
+      padding-top: 0.75rem;
+      margin-top: 0.75rem;
+    }
+  }
+}
+
+.free-delivery {
+  color: $primary-color;
+  font-weight: 700;
+}
+
+// Empty State
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  color: $text-secondary;
+
+  &__icon {
+    margin-bottom: 1rem;
   }
 
   &__text {
-    font-size: 16px;
-    color: $text-secondary;
-    margin: 0 0 32px;
-  }
-
-  &__details {
-    max-width: 400px;
-    margin: 0 auto 32px;
-    text-align: left;
-    background-color: $light-gray;
-    border-radius: $border-radius;
-    padding: 16px;
-  }
-
-  &__detail {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    font-size: 14px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  &__label {
-    font-weight: 500;
-    color: $text-secondary;
-  }
-
-  &__value {
-    font-weight: 600;
-    color: $text-primary;
-  }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 16px;
-  }
-
-  &__button {
-    padding: 12px 24px;
-    border-radius: $border-radius-sm;
-    font-weight: 600;
-    text-decoration: none;
-    transition: $transition;
-
-    &:hover {
-      transform: translateY(-2px);
-    }
-
-    background-color: $primary-color;
-    color: $white;
-    box-shadow: 0 4px 8px rgba(6, 193, 103, 0.2);
-
-    &--secondary {
-      background-color: transparent;
-      border: 1px solid $primary-color;
-      color: $primary-color;
-      box-shadow: none;
-
-      &:hover {
-        background-color: rgba($primary-color, 0.05);
-      }
-    }
+    margin: 0;
   }
 }
 
-.order-review {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
+// Loading Spinner
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
 
-.review-section {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 1.5rem;
-
-  h4 {
-    margin: 0 0 1rem;
-    color: #1e293b;
-    font-weight: 600;
-  }
-
-  .review-item {
-    margin-bottom: 0.5rem;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    strong {
-      color: #1e293b;
-      margin-right: 0.5rem;
-    }
+  &--small {
+    width: 16px;
+    height: 16px;
   }
 }
 
-.review-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 // Responsive
 @media (max-width: 768px) {
-  .checkout-content {
-    gap: 16px;
-  }
-  
-  .step-progress {
-    margin-bottom: 24px;
-    
-    &::before {
-      left: 16px;
-      right: 16px;
-      top: 20px;
-    }
-  }
-  
-  .step-item {
-    &__indicator {
-      width: 40px;
-      height: 40px;
-    }
-    
-    &__name {
-      font-size: 12px;
-    }
-    
-    &::before {
-      top: 20px;
-    }
-  }
-  
-  .step-panel {
-    padding: 16px;
-    
-    &__title {
-      font-size: 18px;
-      margin-bottom: 16px;
-    }
-    
-    &__actions {
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 24px;
-    }
-  }
-  
-  .order-summary {
-    &__restaurant {
-      gap: 8px;
-      
-      .restaurant-placeholder {
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
-      }
-    }
-    
-    &__restaurant-name {
-      font-size: 14px;
-    }
-    
-    &__delivery-time {
-      font-size: 12px;
-    }
-  }
-  
-  .delivery-options {
-    gap: 0.75rem;
-  }
-  
-  .delivery-option {
-    padding: 0.75rem;
-  }
-  
-  .btn-next,
-  .btn-back,
-  .btn-place-order {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .container {
-    padding: 0 12px;
-  }
-  
   .checkout-page {
-    padding: 20px 0 40px;
-    
+    padding: 1rem 0 3rem;
+
     &__title {
-      font-size: 24px;
-      margin-bottom: 20px;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
     }
   }
-  
-  .breadcrumb {
-    font-size: 12px;
-    margin-bottom: 12px;
+
+  .progress-indicator {
+    margin-bottom: 2rem;
   }
-  
-  .modal-content {
-    margin: 1rem 0.5rem;
-    max-width: none;
+
+  .progress-step {
+    &__circle {
+      width: 32px;
+      height: 32px;
+    }
+
+    &__label {
+      font-size: 0.75rem;
+    }
   }
-  
-  .form-row {
-    grid-template-columns: 1fr;
+
+  .step-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+
+    &__icon {
+      align-self: center;
+    }
+  }
+
+  .checkout-content {
+    gap: 1.5rem;
+  }
+
+  .step-actions {
+    flex-direction: column;
   }
 }
 </style>

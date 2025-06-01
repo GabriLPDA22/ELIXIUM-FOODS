@@ -1,19 +1,33 @@
-<!-- src/views/Cart.vue -->
 <template>
   <div class="cart-page">
     <div class="container">
       <!-- Empty cart state -->
       <div v-if="isEmpty" class="empty-cart">
         <div class="empty-cart__icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="9" cy="21" r="1"></circle>
             <circle cx="20" cy="21" r="1"></circle>
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            <path
+              d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
+            ></path>
           </svg>
         </div>
         <h2 class="empty-cart__title">Tu carrito está vacío</h2>
-        <p class="empty-cart__text">Añade elementos de tus restaurantes favoritos para empezar tu pedido</p>
-        <router-link to="/" class="empty-cart__button">Explorar restaurantes</router-link>
+        <p class="empty-cart__text">
+          Añade elementos de tus restaurantes favoritos para empezar tu pedido
+        </p>
+        <router-link to="/" class="empty-cart__button">
+          Explorar restaurantes
+        </router-link>
       </div>
 
       <!-- Cart with items -->
@@ -31,12 +45,27 @@
                   </div>
                   <div>
                     <h3 class="cart-restaurant__name">{{ restaurantName }}</h3>
-                    <p class="cart-restaurant__delivery">Tiempo estimado de entrega: {{ deliveryTime }} min</p>
+                    <p class="cart-restaurant__delivery">
+                      Tiempo estimado de entrega: {{ deliveryTime }} min
+                    </p>
                   </div>
                 </div>
-                <router-link v-if="restaurantId" :to="`/restaurant/${restaurantId}`" class="cart-restaurant__link">
+                <router-link
+                  v-if="restaurantId"
+                  :to="`/restaurant/${restaurantId}`"
+                  class="cart-restaurant__link"
+                >
                   <span>Añadir más productos</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <polyline points="9 18 15 12 9 6"></polyline>
                   </svg>
                 </router-link>
@@ -44,11 +73,28 @@
 
               <!-- Cart item list CON OFERTAS -->
               <div class="cart-item-list">
-                <div v-for="item in processedCartItems" :key="item.id" class="cart-item">
+                <div
+                  v-for="item in processedCartItems"
+                  :key="item.id"
+                  class="cart-item"
+                >
                   <div class="cart-item__image">
-                    <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" />
+                    <img
+                      v-if="item.imageUrl"
+                      :src="item.imageUrl"
+                      :alt="item.name"
+                    />
                     <div v-else class="cart-item__placeholder">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                         <polyline points="21 15 16 10 5 21"></polyline>
@@ -58,15 +104,19 @@
 
                   <div class="cart-item__details">
                     <div class="cart-item__name">{{ item.name || 'Producto' }}</div>
-                    
+
                     <!-- Mostrar precio con descuento si aplica -->
                     <div v-if="item.appliedOffer" class="cart-item__price-with-offer">
                       <div class="cart-item__offer-badge">
                         {{ formatOfferBadge(item.appliedOffer) }}
                       </div>
                       <div class="cart-item__pricing">
-                        <span class="cart-item__original-price">${{ item.originalPrice.toFixed(2) }}</span>
-                        <span class="cart-item__discounted-price">${{ item.finalPrice.toFixed(2) }}</span>
+                        <span class="cart-item__original-price">
+                          ${{ item.originalPrice.toFixed(2) }}
+                        </span>
+                        <span class="cart-item__discounted-price">
+                          ${{ item.finalPrice.toFixed(2) }}
+                        </span>
                       </div>
                     </div>
                     <div v-else class="cart-item__price">
@@ -75,24 +125,63 @@
 
                     <div class="cart-item__actions">
                       <div class="cart-item__quantity">
-                        <button class="cart-item__quantity-btn" @click="decrementItem(item.id)">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <button
+                          class="cart-item__quantity-btn"
+                          @click="decrementItem(item.id)"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
                         </button>
                         <span>{{ item.quantity || 0 }}</span>
-                        <button class="cart-item__quantity-btn" @click="incrementItem(item.id)">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <button
+                          class="cart-item__quantity-btn"
+                          @click="incrementItem(item.id)"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
                         </button>
                       </div>
 
-                      <button class="cart-item__remove" @click="removeItem(item.id)">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <button
+                        class="cart-item__remove"
+                        @click="removeItem(item.id)"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
                           <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4
+                               a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          ></path>
                         </svg>
                         <span>Eliminar</span>
                       </button>
@@ -107,9 +196,21 @@
 
               <div class="cart-actions">
                 <button class="cart-actions__clear" @click="clearCart">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4
+                         a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    ></path>
                   </svg>
                   Vaciar carrito
                 </button>
@@ -117,51 +218,79 @@
             </div>
           </div>
 
-          <!-- Order summary section CON DESCUENTOS -->
+          <!-- Order summary section SIN IMPUESTOS y SIN DOBLE DESCUENTO -->
           <div class="order-summary">
             <div class="order-summary__header">
               <h3 class="order-summary__title">Resumen del pedido</h3>
             </div>
 
             <div class="order-summary__content">
+              <!-- Mostramos el subtotal original (antes de ofertas) -->
               <div class="order-summary__row">
-                <span>Subtotal</span>
-                <span>${{ calculatedTotals.subtotal.toFixed(2) }}</span>
+                <span>Subtotal (sin descuentos)</span>
+                <span>${{ cartTotals.originalSubtotal.toFixed(2) }}</span>
               </div>
-              <!-- Mostrar ahorros por ofertas -->
-              <div v-if="calculatedTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">
+              <!-- Ahorros por ofertas -->
+              <div
+                v-if="cartTotals.totalOfferSavings > 0"
+                class="order-summary__row order-summary__row--savings"
+              >
                 <span>Ahorros por ofertas</span>
-                <span>-${{ calculatedTotals.totalOfferSavings.toFixed(2) }}</span>
+                <span>− ${{ cartTotals.totalOfferSavings.toFixed(2) }}</span>
               </div>
+              <!-- Costo de envío -->
               <div class="order-summary__row">
                 <span>Costo de envío</span>
                 <span v-if="deliveryFee > 0">${{ deliveryFee.toFixed(2) }}</span>
                 <span v-else class="free-delivery">Gratis</span>
               </div>
-              <div class="order-summary__row">
-                <span>Impuestos</span>
-                <span>${{ calculatedTotals.tax.toFixed(2) }}</span>
-              </div>
+              <!-- Total final (subtotal con ofertas + envío) -->
               <div class="order-summary__row order-summary__total">
                 <span>Total</span>
-                <span>${{ calculatedTotals.total.toFixed(2) }}</span>
+                <span>${{ cartTotalsWithDelivery.toFixed(2) }}</span>
               </div>
 
               <div class="promocode">
-                <input type="text" class="promocode__input" placeholder="Código promocional" v-model="promoCode" />
-                <button class="promocode__button" @click="applyPromoCode" :disabled="applyingPromo">
+                <input
+                  type="text"
+                  class="promocode__input"
+                  placeholder="Código promocional"
+                  v-model="promoCode"
+                />
+                <button
+                  class="promocode__button"
+                  @click="applyPromoCode"
+                  :disabled="applyingPromo"
+                >
                   <span v-if="!applyingPromo">Aplicar</span>
-                  <span v-else>...</span>
+                  <span v-else>…</span>
                 </button>
               </div>
 
-              <div v-if="promoMessage" class="promo-message" :class="{ 'promo-message--error': !promoSuccess }">
+              <div
+                v-if="promoMessage"
+                class="promo-message"
+                :class="{ 'promo-message--error': !promoSuccess }"
+              >
                 {{ promoMessage }}
               </div>
 
-              <button @click="proceedToCheckout" class="checkout-button" :disabled="!canCheckout">
+              <button
+                @click="proceedToCheckout"
+                class="checkout-button"
+                :disabled="!canCheckout"
+              >
                 <span>Proceder al pago</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                   <polyline points="12 5 19 12 12 19"></polyline>
                 </svg>
@@ -179,65 +308,65 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
 import { useAuthStore } from '@/stores/auth';
-import type { CartItem } from '@/stores/cart';
 
 // ============= INTERFACES PARA OFERTAS =============
 interface ProductOffer {
-  id: number
-  name: string
-  description: string
-  discountType: string
-  discountValue: number
-  minimumOrderAmount: number
-  minimumQuantity: number
-  startDate: string
-  endDate: string
-  usageLimit: number
-  usageCount: number
-  status: string
-  restaurantId: number
-  restaurantName: string
-  productId: number
-  productName: string
-  productImageUrl: string
+  id: number;
+  name: string;
+  description: string;
+  discountType: string;
+  discountValue: number;
+  minimumOrderAmount: number;
+  minimumQuantity: number;
+  startDate: string;
+  endDate: string;
+  usageLimit: number;
+  usageCount: number;
+  status: string;
+  restaurantId: number;
+  restaurantName: string;
+  productId: number;
+  productName: string;
+  productImageUrl: string;
 }
 
 interface ProcessedCartItem {
-  id: number
-  productId: number
-  name: string
-  imageUrl: string
-  originalPrice: number
-  finalPrice: number
-  quantity: number
-  appliedOffer?: ProductOffer
+  id: number;
+  productId: number;
+  name: string;
+  imageUrl: string;
+  originalPrice: number;
+  finalPrice: number;
+  quantity: number;
+  appliedOffer?: ProductOffer;
 }
 
 const router = useRouter();
 const cartStore = useCartStore();
 const authStore = useAuthStore();
 
-// Estado
+// Estado promocional
 const promoCode = ref('');
 const applyingPromo = ref(false);
 const promoMessage = ref('');
 const promoSuccess = ref(false);
 
-// ============= ESTADO PARA OFERTAS =============
+// Ofertas activas
 const activeOffers = ref<ProductOffer[]>([]);
 const loadingOffers = ref(false);
 
+// Datos de envío
 const deliveryFee = ref(0);
 const restaurantData = ref<any>(null);
 
-// Computed properties
+// Obtener items y restaurante del store
 const isEmpty = computed(() => cartStore.isEmpty);
 const cartItems = computed(() => cartStore.items);
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const deliveryTime = ref(cartStore.estimatedDeliveryTime || 25);
 
-// Helper function para números seguros
+// Helper: convertir cualquier valor a número seguro
 const safeNumber = (value: any, defaultValue: number = 0): number => {
   if (value === null || value === undefined || value === '') {
     return defaultValue;
@@ -246,13 +375,19 @@ const safeNumber = (value: any, defaultValue: number = 0): number => {
   return isNaN(num) ? defaultValue : num;
 };
 
-// Función para obtener el precio real del producto
+// Obtener precio “base” del producto (para originalPrice)
 const getProductPrice = (product: any): number => {
   const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost'];
-
   for (let field of priceFields) {
-    if (product[field] !== null && product[field] !== undefined && product[field] !== '') {
-      const testPrice = typeof product[field] === 'number' ? product[field] : parseFloat(product[field]);
+    if (
+      product[field] !== null &&
+      product[field] !== undefined &&
+      product[field] !== ''
+    ) {
+      const testPrice =
+        typeof product[field] === 'number'
+          ? product[field]
+          : parseFloat(product[field]);
       if (!isNaN(testPrice) && testPrice > 0) {
         return testPrice;
       }
@@ -261,68 +396,63 @@ const getProductPrice = (product: any): number => {
   return 0;
 };
 
+// Buscar la mejor oferta aplicable para un producto
 const getApplicableOffer = (product: any): ProductOffer | null => {
   if (!activeOffers.value.length) {
     return null;
   }
-  
+
   const currentSubtotal = cartTotals.value.subtotal;
-  
-  // Buscar ofertas para este producto específico
-  const productOffers = activeOffers.value.filter(offer => {
-    const matchesProduct = offer.productId === product.id || offer.productId === product.productId;
+
+  const productOffers = activeOffers.value.filter((offer) => {
+    const matchesProduct =
+      offer.productId === product.id || offer.productId === product.productId;
     const meetsMinimumAmount = currentSubtotal >= offer.minimumOrderAmount;
     const isActive = offer.status === 'active';
-    
     return matchesProduct && meetsMinimumAmount && isActive;
   });
-  
+
   if (!productOffers.length) return null;
-  
-  // Devolver la mejor oferta (mayor descuento)
+
   const bestOffer = productOffers.reduce((best, current) => {
     const originalPrice = getProductPrice(product);
-    const bestDiscount = best.discountType === '%' ? 
-      (originalPrice * best.discountValue / 100) : 
-      best.discountValue;
-      
-    const currentDiscount = current.discountType === '%' ? 
-      (originalPrice * current.discountValue / 100) : 
-      current.discountValue;
-      
+    const bestDiscount =
+      best.discountType === '%'
+        ? originalPrice * (best.discountValue / 100)
+        : best.discountValue;
+    const currentDiscount =
+      current.discountType === '%'
+        ? originalPrice * (current.discountValue / 100)
+        : current.discountValue;
     return currentDiscount > bestDiscount ? current : best;
   });
-  
+
   return bestOffer;
 };
 
+// Calcular precio con descuento si aplica oferta
 const calculateDiscountedPrice = (product: any): number => {
   const offer = getApplicableOffer(product);
   const originalPrice = getProductPrice(product);
-  
   if (!offer) {
     return originalPrice;
   }
-  
   let discountedPrice: number;
-  
   if (offer.discountType === '%') {
     discountedPrice = originalPrice * (1 - offer.discountValue / 100);
   } else {
     discountedPrice = Math.max(0, originalPrice - offer.discountValue);
   }
-  
   return discountedPrice;
 };
 
-const processedCartItems = computed((): ProcessedCartItem[] => {
+// Items procesados (con originalPrice, finalPrice y appliedOffer)
+const processedCartItems = computed<ProcessedCartItem[]>(() => {
   if (!cartItems.value.length) return [];
-  
-  return cartItems.value.map(item => {
+  return cartItems.value.map((item) => {
     const originalPrice = getProductPrice(item);
     const finalPrice = calculateDiscountedPrice(item);
     const offer = getApplicableOffer(item);
-    
     return {
       id: item.id,
       productId: item.productId || item.id,
@@ -331,87 +461,113 @@ const processedCartItems = computed((): ProcessedCartItem[] => {
       originalPrice,
       finalPrice,
       quantity: item.quantity,
-      appliedOffer: offer || undefined
+      appliedOffer: offer || undefined,
     };
   });
 });
 
-// Función para cargar datos del restaurante y su delivery fee
+// Cargar datos del restaurante y deliveryFee
 const fetchRestaurantData = async (): Promise<void> => {
   if (!restaurantId.value) return;
-  
   try {
-    const response = await fetch(`http://localhost:5290/api/restaurants/${restaurantId.value}`, {
-      headers: {
-        'Authorization': authStore.token ? `Bearer ${authStore.token}` : ''
+    const response = await fetch(
+      `http://localhost:5290/api/restaurants/${restaurantId.value}`,
+      {
+        headers: {
+          Authorization: authStore.token ? `Bearer ${authStore.token}` : '',
+        },
       }
-    });
-    
+    );
     if (response.ok) {
       restaurantData.value = await response.json();
       deliveryFee.value = safeNumber(restaurantData.value.deliveryFee, 0);
-      console.log('✅ Delivery fee obtenido del restaurante:', deliveryFee.value);
+      console.log('✅ Delivery fee obtenido:', deliveryFee.value);
     } else {
-      deliveryFee.value = 3.99; // Fallback
+      deliveryFee.value = 0;
     }
   } catch (error) {
-    console.error('❌ Error obteniendo datos del restaurante:', error);
-    deliveryFee.value = 3.99; // Fallback
+    console.error('❌ Error obteniendo datos de restaurante:', error);
+    deliveryFee.value = 0;
   }
 };
 
+// Cargar ofertas activas del restaurante
+const fetchActiveOffers = async (): Promise<void> => {
+  if (!restaurantId.value) return;
+  try {
+    loadingOffers.value = true;
+    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (authStore.token) {
+      headers.Authorization = `Bearer ${authStore.token}`;
+    }
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+    });
+    if (response.ok) {
+      const offers = await response.json();
+      activeOffers.value = offers || [];
+      console.log('✅ Ofertas cargadas:', offers.length);
+    } else {
+      activeOffers.value = [];
+    }
+  } catch (error) {
+    console.error('❌ Error cargando ofertas:', error);
+    activeOffers.value = [];
+  } finally {
+    loadingOffers.value = false;
+  }
+};
+
+// Cálculo de subtotales y ahorros
 const cartTotals = computed(() => {
+  // subtotal = suma de (finalPrice × cantidad)
   const subtotal = processedCartItems.value.reduce((sum, item) => {
-    return sum + (item.finalPrice * item.quantity);
+    return sum + item.finalPrice * item.quantity;
   }, 0);
-  
+
+  // originalSubtotal = suma de (originalPrice × cantidad)
   const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
-    return sum + (item.originalPrice * item.quantity);
+    return sum + item.originalPrice * item.quantity;
   }, 0);
-  
+
+  // totalOfferSavings = diferencia
   const totalOfferSavings = originalSubtotal - subtotal;
-  
+
   return {
     subtotal,
     originalSubtotal,
-    totalOfferSavings
+    totalOfferSavings,
   };
 });
 
-const taxRate = 0.16;
-
-const calculatedTotals = computed(() => {
-  const tax = cartTotals.value.subtotal * taxRate;
-  const total = cartTotals.value.subtotal + deliveryFee.value + tax;
-  
-  return {
-    subtotal: cartTotals.value.subtotal,
-    originalSubtotal: cartTotals.value.originalSubtotal,
-    totalOfferSavings: cartTotals.value.totalOfferSavings,
-    tax,
-    total
-  };
+// Total final incluyendo envío (sin impuestos)
+const cartTotalsWithDelivery = computed(() => {
+  return cartTotals.value.subtotal + deliveryFee.value;
 });
 
-// Restaurant initials for logo placeholder
+// Iniciales del restaurante para el placeholder de logo
 const restaurantInitials = computed(() => {
   const name = restaurantName.value;
   if (!name || name === 'Restaurante') return 'R';
-
   return name
     .split(' ')
-    .map(word => word[0])
+    .map((w) => w[0])
     .join('')
     .substring(0, 2)
     .toUpperCase();
 });
 
-// Validation
+// Validación para proceder a checkout
 const canCheckout = computed(() => {
-  return !isEmpty.value && authStore.isAuthenticated && calculatedTotals.value.subtotal > 0;
+  return !isEmpty.value && authStore.isAuthenticated && cartTotals.value.subtotal > 0;
 });
 
-// ============= FUNCIONES AUXILIARES PARA OFERTAS =============
+// Formato de badge de oferta
 const formatOfferBadge = (offer: ProductOffer): string => {
   if (offer.discountType === '%') {
     return `${offer.discountValue}% OFF`;
@@ -420,60 +576,22 @@ const formatOfferBadge = (offer: ProductOffer): string => {
   }
 };
 
-// Función para cargar ofertas activas del restaurante
-const fetchActiveOffers = async (): Promise<void> => {
-  if (!restaurantId.value) return;
-  
-  try {
-    loadingOffers.value = true;
-    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
-    
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    };
-    
-    // Agregar token si está disponible
-    if (authStore.token) {
-      headers['Authorization'] = `Bearer ${authStore.token}`;
-    }
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers
-    });
-    
-    if (response.ok) {
-      const offers = await response.json();
-      activeOffers.value = offers || [];
-      console.log('✅ Ofertas cargadas en cart:', offers.length);
-    } else {
-      activeOffers.value = [];
-    }
-  } catch (error) {
-    console.error('❌ Error cargando ofertas en cart:', error);
-    activeOffers.value = [];
-  } finally {
-    loadingOffers.value = false;
-  }
-};
-
-// Methods
+// Métodos de carrito
 const incrementItem = async (itemId: number) => {
-  const item = cartItems.value.find(item => item.id === itemId);
+  const item = cartItems.value.find((i) => i.id === itemId);
   if (item) {
     await cartStore.updateQuantity(itemId, safeNumber(item.quantity, 0) + 1);
   }
 };
 
 const decrementItem = async (itemId: number) => {
-  const item = cartItems.value.find(item => item.id === itemId);
+  const item = cartItems.value.find((i) => i.id === itemId);
   if (item) {
-    const currentQuantity = safeNumber(item.quantity, 0);
-    if (currentQuantity > 1) {
-      await cartStore.updateQuantity(itemId, currentQuantity - 1);
+    const currentQty = safeNumber(item.quantity, 0);
+    if (currentQty > 1) {
+      await cartStore.updateQuantity(itemId, currentQty - 1);
     } else {
-      removeItem(itemId); // Si es 1 y decrementa, se elimina
+      removeItem(itemId);
     }
   }
 };
@@ -488,6 +606,7 @@ const clearCart = () => {
   }
 };
 
+// Aplicar código promocional (simulación)
 const applyPromoCode = async () => {
   const code = promoCode.value.trim();
   if (!code) {
@@ -495,26 +614,21 @@ const applyPromoCode = async () => {
     promoSuccess.value = false;
     return;
   }
-
   applyingPromo.value = true;
   promoMessage.value = '';
-
   try {
-    // Simular validación de código promocional
-    // Reemplazar con llamada real al servicio si es necesario
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulación
-
-    // Ejemplo de simulación:
+    // Simular llamada a API
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     if (code.toUpperCase() === 'DESCUENTO10') {
       promoMessage.value = '¡Descuento del 10% aplicado!';
       promoSuccess.value = true;
-      // Aquí deberías actualizar el subtotal/total o aplicar el descuento en cartStore
+      // Aquí se podría ajustar cartTotals.subtotal si se deseara
     } else {
       promoMessage.value = 'El código promocional ingresado no es válido.';
       promoSuccess.value = false;
     }
   } catch (error) {
-    console.error('Error applying promo code:', error);
+    console.error('Error al aplicar promo code:', error);
     promoMessage.value = 'Ocurrió un error al validar el código.';
     promoSuccess.value = false;
   } finally {
@@ -522,57 +636,48 @@ const applyPromoCode = async () => {
   }
 };
 
+// Ir a checkout
 const proceedToCheckout = () => {
   if (!authStore.isAuthenticated) {
     alert('Por favor, inicia sesión para continuar con tu pedido.');
     router.push({ name: 'Login', query: { redirect: '/cart' } });
     return;
   }
-
   if (!canCheckout.value) {
-     if (isEmpty.value) {
-        alert('Tu carrito está vacío.');
-     } else if (calculatedTotals.value.subtotal <= 0) {
-        alert('El total de tu pedido debe ser mayor a cero.');
-     }
+    if (isEmpty.value) {
+      alert('Tu carrito está vacío.');
+    } else if (cartTotals.value.subtotal <= 0) {
+      alert('El total de tu pedido debe ser mayor a cero.');
+    }
     return;
   }
   router.push('/checkout');
 };
 
-// Watcher para recalcular cuando cambien las ofertas
+// Watchers y onMounted
 watch(activeOffers, () => {
-  console.log('🔄 Ofertas actualizadas, recalculando precios del cart');
+  console.log('🔄 Ofertas actualizadas, recalculando precios');
 }, { deep: true });
 
-// Watcher para cargar ofertas cuando cambie el restaurante
-watch(restaurantId, async (newRestaurantId) => {
-  if (newRestaurantId) {
-    await Promise.all([
-      fetchRestaurantData(),
-      fetchActiveOffers()
-    ]);
-  }
-}, { immediate: true });
+watch(
+  restaurantId,
+  async (newId) => {
+    if (newId) {
+      await Promise.all([fetchRestaurantData(), fetchActiveOffers()]);
+    }
+  },
+  { immediate: true }
+);
 
-// Inicialización
 onMounted(async () => {
-  console.log("Cart.vue mounted. Auth state:", authStore.isAuthenticated);
-  
-  // Cargar datos del restaurante y ofertas si hay un restaurante seleccionado
   if (restaurantId.value) {
-    await Promise.all([
-      fetchRestaurantData(),
-      fetchActiveOffers()
-    ]);
+    await Promise.all([fetchRestaurantData(), fetchActiveOffers()]);
   }
-  
-  // Validar carrito si no está vacío
   if (!isEmpty.value) {
     try {
       await cartStore.validateCart();
     } catch (error) {
-      console.error('Error validating cart on mount:', error);
+      console.error('Error validando carrito al montar:', error);
     }
   }
 });
@@ -580,16 +685,15 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 // Variables
-$primary-color: #06C167;
+$primary-color: #06c167;
 $black: #000000;
-$white: #FFFFFF;
-$light-gray: #F6F6F6;
-$medium-gray: #EEEEEE;
+$white: #ffffff;
+$light-gray: #f6f6f6;
+$medium-gray: #eeeeee;
 $dark-gray: #545454;
 $text-primary: #000000;
 $text-secondary: #757575;
-$success-color: #06C167;
-$warning-color: #FF8000;
+$success-color: #06c167;
 $error-color: #ff4444;
 $border-radius-sm: 8px;
 $border-radius: 16px;
@@ -811,14 +915,14 @@ $transition: all 0.2s ease;
     color: $text-primary;
   }
 
-  // ============= ESTILOS PARA OFERTAS =============
+  // ESTILOS PARA OFERTAS
   &__price-with-offer {
     margin-bottom: 16px;
   }
 
   &__offer-badge {
     background: linear-gradient(135deg, #059669, #10b981);
-    color: white;
+    color: $white;
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.7rem;
@@ -926,8 +1030,13 @@ $transition: all 0.2s ease;
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 // Cart actions
@@ -996,7 +1105,6 @@ $transition: all 0.2s ease;
       margin-bottom: 24px;
     }
 
-    // ============= ESTILO PARA AHORROS =============
     &--savings {
       color: #059669;
       font-weight: 600;

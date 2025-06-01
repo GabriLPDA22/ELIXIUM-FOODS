@@ -109,8 +109,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
 import { useOrderStore } from '@/stores/orderStore';
-import orderService, { OrderStatus } from '@/services/orderService';
-import type { OrderResponse } from '@/services/orderService';
+import orderService, { OrderStatus, type OrderResponse } from '@/services/orderService';
 
 const router = useRouter();
 const cartStore = useCartStore();
