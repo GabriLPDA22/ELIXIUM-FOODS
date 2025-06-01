@@ -1,4 +1,3 @@
-<!-- components/layout/UFooter.vue -->
 <template>
   <footer class="u-footer">
     <div class="u-footer__main">
@@ -6,7 +5,7 @@
         <div class="u-footer__content">
           <div class="u-footer__brand">
             <div class="u-footer__logo">
-              <span class="u-footer__logo-icon">🍽️</span>
+             <img src="/docs/images/LOGO CHIQUITO.png" alt="Elixium Foods Logo" style="height: 30px; width: fit-content; vertical-align: middle;">
               <h2 class="u-footer__logo-text">Elixium Foods</h2>
             </div>
             <p class="u-footer__tagline">Deliciosa comida entregada a tu puerta. Los mejores restaurantes locales a tu
@@ -60,33 +59,32 @@
             <div class="u-footer__column">
               <h3 class="u-footer__heading">Compañía</h3>
               <ul class="u-footer__list">
-                <li><a href="#" class="u-footer__link">Sobre Nosotros</a></li>
-                <li><a href="#" class="u-footer__link">Empleos</a></li>
-                <li><a href="#" class="u-footer__link">Blog</a></li>
-                <li><a href="#" class="u-footer__link">Elixium Business</a></li>
-                <li><a href="#" class="u-footer__link">Inversores</a></li>
+                <li><router-link :to="{ name: 'about' }" class="u-footer__link">Sobre Nosotros</router-link></li>
+                <li><router-link :to="{ name: 'blog' }" class="u-footer__link">Blog</router-link></li>
+                <li><router-link :to="{ name: 'for-business' }" class="u-footer__link">Elixium Busines</router-link>
+                <li><router-link :to="{ name: 'careers' }" class="u-footer__link">Empleos</router-link>
+                </li>
+                </li>
               </ul>
             </div>
 
             <div class="u-footer__column">
               <h3 class="u-footer__heading">Soporte</h3>
               <ul class="u-footer__list">
-                <li><a href="#" class="u-footer__link">Centro de Ayuda</a></li>
-                <li><a href="#" class="u-footer__link">Contacto</a></li>
-                <li><a href="#" class="u-footer__link">Seguridad</a></li>
-                <li><a href="#" class="u-footer__link">COVID-19</a></li>
-                <li><a href="#" class="u-footer__link">Preguntas Frecuentes</a></li>
+                <li><router-link :to="{ name: 'help-center' }" class="u-footer__link">Centro de Ayuda</router-link></li>
+                <li><router-link :to="{ name: 'contact' }" class="u-footer__link">Contacto</router-link></li>
+               <li><router-link :to="{ name: 'faq' }" class="u-footer__link">Preguntas Frecuentes</router-link></li>
               </ul>
             </div>
 
             <div class="u-footer__column">
               <h3 class="u-footer__heading">Legal</h3>
               <ul class="u-footer__list">
-                <li><a href="#" class="u-footer__link">Términos y Condiciones</a></li>
-                <li><a href="#" class="u-footer__link">Política de Privacidad</a></li>
-                <li><a href="#" class="u-footer__link">Política de Cookies</a></li>
-                <li><a href="#" class="u-footer__link">Accesibilidad</a></li>
-                <li><a href="#" class="u-footer__link">Licencias</a></li>
+                <li><router-link :to="{ name: 'terms-and-conditions' }" class="u-footer__link">Términos y
+                    Condiciones</router-link></li>
+                <li><router-link :to="{ name: 'privacy-policy' }" class="u-footer__link">Política de
+                    Privacidad</router-link></li>
+               <li><router-link :to="{ name: 'cookie-policy' }" class="u-footer__link">Política de Cookies</router-link></li>
               </ul>
             </div>
           </div>
@@ -100,22 +98,24 @@
           <p class="u-footer__copyright">© {{ new Date().getFullYear() }} Elixium Foods. Todos los derechos reservados.
           </p>
           <div class="u-footer__payment">
-            <!-- Tarjetas de crédito con las imágenes específicas proporcionadas -->
             <a href="#" class="u-footer__payment-link" title="American Express">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/1200px-American_Express_logo_%282018%29.svg.png"
-                  alt="American Express" class="u-footer__payment-img">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/1200px-American_Express_logo_%282018%29.svg.png"
+                alt="American Express" class="u-footer__payment-img">
             </a>
             <a href="#" class="u-footer__payment-link" title="Mastercard">
               <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/MasterCard_early_1990s_logo.png"
-                  alt="Mastercard" class="u-footer__payment-img">
+                alt="Mastercard" class="u-footer__payment-img">
             </a>
             <a href="#" class="u-footer__payment-link" title="Visa">
-              <img src="https://www.visa.es/dam/VCOM/regional/ve/unitedkingdom/in-page-images/click-to-pay/consumer/uk-visa-clicktopay-logo-800x450.jpg"
-                  alt="Visa" class="u-footer__payment-img">
+              <img
+                src="https://www.visa.es/dam/VCOM/regional/ve/unitedkingdom/in-page-images/click-to-pay/consumer/uk-visa-clicktopay-logo-800x450.jpg"
+                alt="Visa" class="u-footer__payment-img">
             </a>
-            <a href="https://www.top-bank.ch/es/banca-online-movil/paypal" class="u-footer__payment-link" title="PayPal">
-              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
-                  alt="PayPal" class="u-footer__payment-img">
+            <a href="https://www.top-bank.ch/es/banca-online-movil/paypal" class="u-footer__payment-link"
+              title="PayPal">
+              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="PayPal"
+                class="u-footer__payment-img">
             </a>
           </div>
         </div>

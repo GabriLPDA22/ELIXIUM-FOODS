@@ -24,6 +24,7 @@
           @click="clearSearch"
           class="search-box__clear"
           type="button"
+          aria-label="Limpiar búsqueda"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -41,13 +42,13 @@
         <span v-if="!isSearching">{{ buttonText }}</span>
         <div v-else class="search-box__spinner"></div>
         <svg v-if="!isSearching" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-box__button-arrow">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
       </button>
     </div>
     <transition name="dropdown">
-      <div v-if="showSuggestions && (suggestions.length > 0 || popularSearches.length > 0)"
+      <div v-if="showSuggestions && (suggestions.length > 0 || popularSearches.length > 0 || quickCategories.length > 0)"
            class="search-box__dropdown">
         <div v-if="suggestions.length > 0" class="suggestion-group">
           <div class="suggestion-group__header">
@@ -88,7 +89,7 @@
             <span class="suggestion-item__text">{{ popular }}</span>
           </button>
         </div>
-        <div v-if="!searchQuery" class="suggestion-group">
+        <div v-if="!searchQuery && quickCategories.length > 0" class="suggestion-group">
           <div class="suggestion-group__header">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
@@ -317,52 +318,46 @@ watch(() => props.autoFocus, (newValue) => {
 .search-box {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  z-index: 100; /* Aumentado para estar sobre otras secciones */
+  max-width: 700px; // Aumentado ligeramente para mejor aspecto en desktop
+  margin: 2rem auto; // Añadido margen vertical para separación
+  z-index: 100;
 }
 
 .search-box__container {
   display: flex;
-  flex-direction: column;
-  border-radius: 20px;
-  overflow: visible;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-radius: 28px; // Ligeramente menos redondeado para un look más moderno
+  overflow: hidden; // Para asegurar que los hijos no rompan el border-radius
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); // Sombra más suave
   background: white;
-  transition: all 0.3s ease;
+  transition: box-shadow 0.3s ease;
   position: relative;
 
   &:hover,
   &:focus-within {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   }
 
-  @media (min-width: 768px) {
-    flex-direction: row;
-    border-radius: 50px;
+  @media (max-width: 767px) {
+    flex-direction: column;
+    border-radius: 20px; // Bordes para móvil
   }
 }
 
 .search-box__input-wrapper {
   flex: 1;
   position: relative;
-  background: white;
-   @media (min-width: 768px) {
-    border-radius: 50px 0 0 50px;
-  }
-   @media (max-width: 767px) {
-    border-radius: 20px 20px 0 0;
-  }
+  display: flex; // Para alinear el icono y el input
+  align-items: center; // Alinear verticalmente
+  // No necesita su propio background si el container ya lo tiene
 }
 
 .search-box__icon {
-  position: absolute;
+  position: absolute; // Mantenemos absoluto para superponer si es necesario
   left: 1.2rem;
   top: 50%;
   transform: translateY(-50%);
   color: #FF416C;
-  z-index: 2;
+  pointer-events: none; // Para que no interfiera con el click del input
 
   @media (max-width: 767px) {
     left: 1rem;
@@ -373,17 +368,16 @@ watch(() => props.autoFocus, (newValue) => {
   width: 100%;
   border: none;
   outline: none;
-  padding: 1.4rem 3rem 1.4rem 3.5rem;
+  padding: 1.2rem 3rem 1.2rem 3.5rem; // Ajustado padding
   font-size: 1rem;
   font-weight: 500;
   color: #1e293b;
   background: transparent;
-   @media (min-width: 768px) {
-    border-radius: 50px 0 0 50px;
-  }
-   @media (max-width: 767px) {
-    border-radius: 20px 20px 0 0;
-    padding: 1.2rem 2.5rem 1.2rem 3rem;
+  line-height: 1.5; // Mejorar alineación vertical del texto
+
+  @media (max-width: 767px) {
+    padding: 1.1rem 2.8rem 1.1rem 3.2rem; // Padding ajustado para móvil
+    font-size: 0.95rem;
   }
   &::placeholder {
     color: #94a3b8;
@@ -400,7 +394,7 @@ watch(() => props.autoFocus, (newValue) => {
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 0.4rem; // Área de toque ligeramente mayor
   border-radius: 50%;
   transition: all 0.2s ease;
   z-index: 2;
@@ -409,34 +403,35 @@ watch(() => props.autoFocus, (newValue) => {
     background-color: rgba(255, 65, 108, 0.1);
     color: #FF416C;
   }
+  svg { // Asegurar tamaño del icono
+    display: block;
+  }
 }
 
 .search-box__button {
   background: linear-gradient(to right, #FF416C, #FF4B2B);
   color: white;
   border: none;
-  padding: 1.4rem 1.5rem;
+  padding: 1.2rem 1.8rem; // Padding ajustado
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, opacity 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  min-height: 60px;
-  @media (min-width: 768px) {
-    padding: 0 2rem;
-    min-height: auto;
-    border-radius: 0 50px 50px 0;
-    font-size: 1.1rem;
-  }
-   @media (max-width: 767px) {
-    border-radius: 0 0 20px 20px;
+  gap: 0.6rem; // Espacio entre texto e icono
+  line-height: 1.5; // Coincidir con input
+
+  @media (max-width: 767px) {
+    width: 100%; // Ocupar todo el ancho en móvil
+    padding: 1.1rem 1.5rem;
+    font-size: 0.95rem;
+    // border-radius ya se maneja por el contenedor padre en modo columna
   }
 
   &:hover:not(:disabled) {
-    background: linear-gradient(to right, #e63946, #FF4B2B);
+    background: linear-gradient(to right, darken(#FF416C, 5%), darken(#FF4B2B, 5%));
   }
 
   &:disabled {
@@ -444,36 +439,36 @@ watch(() => props.autoFocus, (newValue) => {
     cursor: not-allowed;
   }
 
-  svg {
+  .search-box__button-arrow { // Clase específica para la flecha
     transition: transform 0.3s ease;
   }
 
-  &:hover:not(:disabled) svg {
+  &:hover:not(:disabled) .search-box__button-arrow {
     transform: translateX(3px);
   }
 }
 
 .search-box__spinner {
-  width: 16px;
-  height: 16px;
+  width: 18px; // Ligeramente más grande
+  height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite; // Un poco más rápido
 }
 
 .search-box__dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px); // Un poco más de espacio
   left: 0;
   right: 0;
   background: white;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  z-index: 110; /* Más alto que .search-box para asegurar que el dropdown esté encima */
-  max-height: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12); // Sombra consistente
+  z-index: 105; // Asegurar que esté encima de .search-box pero debajo de otros modales si los hubiera
+  max-height: 220px; // Ligeramente menor
   overflow-y: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e9ecef; // Borde más suave
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -486,26 +481,30 @@ watch(() => props.autoFocus, (newValue) => {
     background: #cbd5e1;
     border-radius: 3px;
   }
-   &::-webkit-scrollbar-thumb:hover {
+  &::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
 }
 
 .suggestion-group {
-  padding: 0.75rem 0;
+  padding: 0.5rem 0; // Reducido padding vertical
   &:not(:last-child) {
     border-bottom: 1px solid #f1f5f9;
   }
   &__header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1.25rem 0.75rem;
-    font-size: 0.75rem;
+    gap: 0.6rem; // Ajustado gap
+    padding: 0.6rem 1rem; // Ajustado padding
+    font-size: 0.7rem; // Ligeramente más pequeño
     font-weight: 600;
-    color: #64748b;
+    color: #475569; // Color más oscuro para mejor contraste
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em; // Ajustado espaciado
+    svg { // Iconos en header un poco más pequeños
+        width: 13px;
+        height: 13px;
+    }
   }
 }
 
@@ -514,22 +513,23 @@ watch(() => props.autoFocus, (newValue) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
+  padding: 0.65rem 1rem; // Ajustado padding
   background: none;
   border: none;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
-  font-size: 0.9rem;
+  font-size: 0.875rem; // Tamaño de fuente base
   color: #334155;
 
   &:hover,
   &--active {
-    background-color: #fef2f2;
-    color: #ef4444;
+    background-color: #fff слой; // Usar un color más sutil, ej: #f8f9fa o el color primario muy diluido
+    color: #e63946; // Color de hover/active más fuerte
   }
   &__icon {
-    font-size: 0.9rem;
+    font-size: 0.875rem; // Coincidir con texto
+    margin-right: 0.25rem; // Pequeño ajuste
   }
   &__text {
     flex: 1;
@@ -537,20 +537,20 @@ watch(() => props.autoFocus, (newValue) => {
   }
   &--popular {
     .suggestion-item__text {
-      color: #1e293b;
+      color: #1e293b; // Texto popular un poco más oscuro
     }
     &:hover .suggestion-item__text,
     &--active .suggestion-item__text {
-      color: #ef4444;
+      color: #e63946;
     }
   }
 }
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.75rem;
-  padding: 0.5rem 1.25rem 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); // Ajustado minmax
+  gap: 0.6rem; // Ajustado gap
+  padding: 0.5rem 1rem 0.75rem; // Ajustado padding
 }
 
 .category-quick {
@@ -559,30 +559,30 @@ watch(() => props.autoFocus, (newValue) => {
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  padding: 0.75rem 0.5rem;
+  padding: 0.6rem 0.4rem; // Ajustado padding
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid #e9ecef; // Borde más suave
+  border-radius: 12px; // Ligeramente más redondeado
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
-  min-height: 80px;
+  min-height: 75px; // Ajustada altura
 
   &:hover {
     border-color: #FF6B2B;
     background-color: #fff7ed;
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(255, 107, 43, 0.1);
+    box-shadow: 0 4px 12px rgba(255, 107, 43, 0.15); // Sombra más pronunciada en hover
   }
   &__icon {
-    font-size: 1.4rem;
+    font-size: 1.3rem; // Ajustado tamaño
   }
   &__name {
-    font-size: 0.75rem;
+    font-size: 0.7rem; // Ligeramente más pequeño para más espacio
     font-weight: 500;
     color: #475569;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.3; // Mejorado line-height
   }
   &:hover &__name {
     color: #FF6B2B;
@@ -591,12 +591,12 @@ watch(() => props.autoFocus, (newValue) => {
 
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: opacity 0.2s ease, transform 0.2s ease; // Transición más simple
 }
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-10px) scaleY(0.95);
+  transform: translateY(-8px); // Movimiento sutil
 }
 
 @keyframes spin {

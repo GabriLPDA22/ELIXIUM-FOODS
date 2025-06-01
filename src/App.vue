@@ -1,21 +1,32 @@
-<!-- src/App.vue -->
 <template>
     <div class="app">
-        <UHeader />
-        <main class="app__content">
-            <router-view v-slot="{ Component }">
+        <UHeader v-if="showGlobalLayout" />
+        <main class="app__content" :class="{ 'app__content--no-header': !showGlobalLayout }">
+            <router-view v-slot="{ Component, route }">
                 <transition name="fade" mode="out-in">
-                    <component :is="Component" />
+                    <component :is="Component" :key="route.path" />
                 </transition>
             </router-view>
         </main>
-        <UFooter />
+        <UFooter v-if="showGlobalLayout" />
     </div>
 </template>
 
 <script setup lang="ts">
-import UHeader from '@/components/layout/UHeader.vue'
-import UFooter from '@/components/layout/UFooter.vue'
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import UHeader from '@/components/layout/UHeader.vue';
+import UFooter from '@/components/layout/UFooter.vue';
+
+const route = useRoute();
+
+// Propiedad computada para determinar si se muestra el UHeader y UFooter
+const showGlobalLayout = computed(() => {
+  // Revisa si alguna de las rutas coincidentes (actual o sus padres)
+  // tiene la meta propiedad hideHeaderFooter establecida a true.
+  // Si es true, entonces showGlobalLayout será false (y se ocultarán).
+  return !route.matched.some(record => record.meta.hideHeaderFooter);
+});
 </script>
 
 <style lang="scss">
@@ -96,7 +107,12 @@ body {
 
     &__content {
         flex: 1;
-        margin-top: 70px; // Altura del header
+        margin-top: 70px; // Altura del header (ajusta este valor si la altura de tu UHeader es diferente)
+
+        // Clase para cuando el header NO se muestra
+        &--no-header {
+            margin-top: 0;
+        }
     }
 }
 

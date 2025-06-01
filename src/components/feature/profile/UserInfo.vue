@@ -33,6 +33,62 @@
         <span>Los cambios se han guardado correctamente</span>
       </div>
 
+      <div class="form-section">
+        <h3 class="section-title">Foto de Perfil</h3>
+        <p class="section-description">
+          {{ isGoogleUser ? 'Tu foto de perfil de Google se sincroniza automáticamente' : 'Esta foto aparecerá en tu perfil y pedidos' }}
+        </p>
+
+        <div v-if="uploading" class="upload-loading">
+          <div class="upload-spinner"></div>
+          <p>Subiendo foto...</p>
+        </div>
+
+        <div class="photo-uploader">
+          <div class="photo-preview" :class="{ 'photo-preview--google': isGoogleUser }">
+            <img v-if="localUserInfo.photoURL" :src="localUserInfo.photoURL" alt="Foto de perfil" />
+            <div v-else class="photo-placeholder">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div v-if="isGoogleUser" class="google-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" class="google-icon">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+            </div>
+          </div>
+
+          <div v-if="!isGoogleUser" class="photo-actions">
+            <label class="upload-btn" :class="{ 'upload-btn--disabled': uploading }">
+              {{ uploading ? 'Subiendo...' : 'Cambiar Foto' }}
+              <input type="file" accept="image/*" @change="handlePhotoUpload" class="file-input"
+                :disabled="uploading" />
+            </label>
+            <button v-if="localUserInfo.photoURL && !uploading" @click="removePhoto" type="button"
+              class="remove-btn">
+              Eliminar
+            </button>
+          </div>
+
+          <div v-else class="google-photo-notice">
+            <div class="google-notice-content">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+              <span>Tu foto se sincroniza automáticamente desde tu cuenta de Google</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
       <div class="form-row">
         <div class="form-group">
           <label for="firstName">Nombre</label>
@@ -100,15 +156,18 @@
     </form>
   </div>
 </template>
+
 <script lang="ts" setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue'; // Import computed
 import userService, { type UserProfile } from '@/services/userService';
+import { ImageService } from '@/services/imageService';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 
 const loading = ref(false);
 const saving = ref(false);
+const uploading = ref(false);
 const error = ref('');
 const updateSuccess = ref(false);
 const originalUserInfo = ref<UserProfile | null>(null);
@@ -124,6 +183,9 @@ const localUserInfo = reactive<UserProfile>({
   bio: '',
   dietaryPreferences: [],
 });
+
+// Computed property to check if the user is a Google user
+const isGoogleUser = computed(() => authStore.isGoogleUser);
 
 const dietaryPreferencesOptions = [
   { id: 'vegetarian', label: 'Vegetariano', icon: '🥗' },
@@ -146,28 +208,152 @@ const toggleDietaryPreference = (prefId: string) => {
   } else {
     localUserInfo.dietaryPreferences.splice(index, 1);
   }
+}
+
+// Métodos para manejo de foto de perfil
+const handlePhotoUpload = async (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file || uploading.value) return;
+
+  // Prevenir cambio de foto para usuarios de Google
+  if (isGoogleUser.value) {
+    showError('No puedes cambiar la foto de perfil de una cuenta de Google');
+    // Clear the file input immediately
+    (event.target as HTMLInputElement).value = '';
+    return;
+  }
+
+  try {
+    uploading.value = true;
+
+    // Validar imagen
+    const validation = ImageService.validateImage(file);
+    if (!validation.valid) {
+      showError(validation.errors.join('\n'));
+      return;
+    }
+
+    // Subir imagen usando el servicio
+    const result = await ImageService.uploadFile(file, 'users');
+
+    if (result.imageUrl) {
+      // Actualizar la URL de la foto localmente
+      localUserInfo.photoURL = result.imageUrl;
+
+      // Guardar inmediatamente en el servidor
+      await updatePhotoURL(result.imageUrl);
+
+      showSuccess('Foto de perfil actualizada correctamente');
+    }
+  } catch (err: any) {
+    console.error('Error subiendo foto:', err);
+    showError('Error al subir la imagen: ' + (err.response?.data?.message || err.message || 'Error desconocido'));
+  } finally {
+    uploading.value = false;
+    // Limpiar el input
+    (event.target as HTMLInputElement).value = '';
+  }
+};
+
+const removePhoto = async () => {
+  // Prevenir eliminación de foto para usuarios de Google
+  if (isGoogleUser.value) {
+    showError('No puedes eliminar la foto de perfil de una cuenta de Google');
+    return;
+  }
+
+  if (!confirm('¿Estás seguro de que quieres eliminar tu foto de perfil?')) return;
+
+  try {
+    uploading.value = true;
+
+    // Eliminar la imagen del servidor si existe una URL
+    if (localUserInfo.photoURL) {
+      try {
+        await ImageService.delete(localUserInfo.photoURL);
+      } catch (deleteError) {
+        console.warn('Error eliminando imagen del storage:', deleteError);
+        // Continuar aunque falle la eliminación del storage
+      }
+    }
+
+    // Actualizar el perfil sin foto
+    localUserInfo.photoURL = '';
+    await updatePhotoURL('');
+
+    showSuccess('Foto de perfil eliminada correctamente');
+  } catch (err: any) {
+    console.error('Error eliminando foto:', err);
+    showError('Error al eliminar la foto de perfil');
+  } finally {
+    uploading.value = false;
+  }
+};
+
+const updatePhotoURL = async (photoURL: string) => {
+  // No permitir actualización de foto para usuarios de Google
+  if (isGoogleUser.value && photoURL !== localUserInfo.photoURL) {
+    // If the photoURL passed is different from the current one, it means an attempt to change
+    throw new Error('No se puede modificar la foto de perfil de una cuenta de Google');
+  }
+
+  try {
+    const dataToUpdate: Partial<UserProfile> = {
+      firstName: localUserInfo.firstName,
+      lastName: localUserInfo.lastName,
+      phoneNumber: localUserInfo.phoneNumber,
+      birthdate: localUserInfo.birthdate || null,
+      bio: localUserInfo.bio || null,
+      dietaryPreferences: localUserInfo.dietaryPreferences || [],
+      // Only update photoURL if NOT a Google user, otherwise keep the existing photoURL from the store
+      photoURL: isGoogleUser.value ? authStore.user?.photoURL || null : (photoURL || null),
+    };
+
+    const updatedUserData = await userService.updateUserProfile(dataToUpdate);
+
+    // Update the auth store (without overwriting Google's photo if it's a Google user)
+    if (authStore.user) {
+      authStore.user.firstName = updatedUserData.firstName;
+      authStore.user.lastName = updatedUserData.lastName;
+      (authStore.user as any).phoneNumber = updatedUserData.phoneNumber;
+
+      // Only update photoURL if NOT a Google user
+      if (!isGoogleUser.value) {
+        authStore.user.photoURL = updatedUserData.photoURL;
+      }
+
+      localStorage.setItem('user', JSON.stringify(authStore.user));
+    }
+
+    // Update local data
+    Object.assign(localUserInfo, updatedUserData);
+    originalUserInfo.value = JSON.parse(JSON.stringify(localUserInfo));
+  } catch (error) {
+    console.error('Error actualizando foto en el perfil:', error);
+    throw error;
+  }
 };
 
 const loadUserInfo = async () => {
   if (!authStore.isAuthenticated) {
-      error.value = "Usuario no autenticado.";
-      return;
+    error.value = "Usuario no autenticado.";
+    return;
   }
   loading.value = true;
   error.value = '';
   try {
     const userDataFromApi = await userService.getCurrentUser();
     const mergedData: UserProfile = {
-        id: userDataFromApi.id || localUserInfo.id,
-        firstName: userDataFromApi.firstName || localUserInfo.firstName,
-        lastName: userDataFromApi.lastName || localUserInfo.lastName,
-        email: userDataFromApi.email || localUserInfo.email,
-        phoneNumber: userDataFromApi.phoneNumber || localUserInfo.phoneNumber,
-        photoURL: userDataFromApi.photoURL || localUserInfo.photoURL,
-        birthdate: userDataFromApi.birthdate ? new Date(userDataFromApi.birthdate).toISOString().split('T')[0] : '',
-        bio: userDataFromApi.bio || '',
-        dietaryPreferences: userDataFromApi.dietaryPreferences || [],
-        createdAt: userDataFromApi.createdAt
+      id: userDataFromApi.id || localUserInfo.id,
+      firstName: userDataFromApi.firstName || localUserInfo.firstName,
+      lastName: userDataFromApi.lastName || localUserInfo.lastName,
+      email: userDataFromApi.email || localUserInfo.email,
+      phoneNumber: userDataFromApi.phoneNumber || localUserInfo.phoneNumber,
+      photoURL: userDataFromApi.photoURL || localUserInfo.photoURL,
+      birthdate: userDataFromApi.birthdate ? new Date(userDataFromApi.birthdate).toISOString().split('T')[0] : '',
+      bio: userDataFromApi.bio || '',
+      dietaryPreferences: userDataFromApi.dietaryPreferences || [],
+      createdAt: userDataFromApi.createdAt
     };
     Object.assign(localUserInfo, mergedData);
     originalUserInfo.value = JSON.parse(JSON.stringify(localUserInfo));
@@ -181,8 +367,8 @@ const loadUserInfo = async () => {
 
 const saveInfo = async () => {
   if (!authStore.isAuthenticated) {
-      error.value = "No estás autenticado para guardar cambios.";
-      return;
+    error.value = "No estás autenticado para guardar cambios.";
+    return;
   }
   saving.value = true;
   updateSuccess.value = false;
@@ -196,7 +382,8 @@ const saveInfo = async () => {
       birthdate: localUserInfo.birthdate || null,
       bio: localUserInfo.bio || null,
       dietaryPreferences: localUserInfo.dietaryPreferences || [],
-      photoURL: localUserInfo.photoURL || null,
+      // photoURL is handled by updatePhotoURL specifically, or kept as is if Google user
+      photoURL: isGoogleUser.value ? authStore.user?.photoURL || null : localUserInfo.photoURL || null,
     };
 
     console.log('Enviando estos datos para actualizar perfil:', dataToUpdate);
@@ -206,7 +393,10 @@ const saveInfo = async () => {
       authStore.user.firstName = updatedUserData.firstName;
       authStore.user.lastName = updatedUserData.lastName;
       (authStore.user as any).phoneNumber = updatedUserData.phoneNumber;
-      authStore.user.photoURL = updatedUserData.photoURL;
+      // Only update photoURL in store if NOT a Google user or if it was explicitly changed (and not a Google user)
+      if (!isGoogleUser.value) {
+          authStore.user.photoURL = updatedUserData.photoURL;
+      }
       localStorage.setItem('user', JSON.stringify(authStore.user));
     }
     Object.assign(localUserInfo, updatedUserData);
@@ -233,6 +423,25 @@ const resetForm = () => {
   error.value = '';
 };
 
+// Métodos de utilidad
+const showSuccess = (message: string) => {
+  // Puedes reemplazar con tu sistema de notificaciones
+  console.log('✅', message);
+  updateSuccess.value = true;
+  setTimeout(() => {
+    updateSuccess.value = false;
+  }, 3000);
+};
+
+const showError = (message: string) => {
+  // Puedes reemplazar con tu sistema de notificaciones
+  console.error('❌', message);
+  error.value = message;
+  setTimeout(() => {
+    error.value = '';
+  }, 5000);
+};
+
 onMounted(() => {
   if (authStore.isAuthenticated) {
     loadUserInfo();
@@ -242,23 +451,23 @@ onMounted(() => {
 });
 
 watch(() => authStore.user, (newUser, oldUser) => {
-    if (newUser && (!oldUser || newUser.id !== oldUser.id)) {
-        loadUserInfo();
-    } else if (!newUser && oldUser) {
-        Object.assign(localUserInfo, {
-          id: 0,
-          firstName: '',
-          lastName: '',
-          email: '',
-          phoneNumber: '',
-          photoURL: '',
-          birthdate: '',
-          bio: '',
-          dietaryPreferences: [],
-        });
-        originalUserInfo.value = null;
-        error.value = "Has cerrado sesión.";
-    }
+  if (newUser && (!oldUser || newUser.id !== oldUser.id)) {
+    loadUserInfo();
+  } else if (!newUser && oldUser) {
+    Object.assign(localUserInfo, {
+      id: 0,
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNumber: '',
+      photoURL: '',
+      birthdate: '',
+      bio: '',
+      dietaryPreferences: [],
+    });
+    originalUserInfo.value = null;
+    error.value = "Has cerrado sesión.";
+  }
 }, { deep: true });
 </script>
 
@@ -291,41 +500,41 @@ watch(() => authStore.user, (newUser, oldUser) => {
   justify-content: center;
   padding: 3rem;
   text-align: center;
-  min-height: 200px; /* Para que no salte tanto el layout */
+  min-height: 200px;
 }
 
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e2e8f0; /* $border */
-  border-top-color: #FF416C; /* $primary */
+  border: 3px solid #e2e8f0;
+  border-top-color: #FF416C;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
 }
 
 .error-icon {
-  color: #ef4444; /* Color de error */
+  color: #ef4444;
   margin-bottom: 1rem;
 }
 
 .error-container p {
-  color: #64748b; /* $text-light */
+  color: #64748b;
   margin-bottom: 1.5rem;
 }
 
 .retry-button {
   padding: 0.75rem 1.5rem;
-  background: #f1f5f9; /* Un gris claro */
-  border: 1px solid #e2e8f0; /* $border */
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 50px;
-  color: #1e293b; /* $text */
+  color: #1e293b;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: #e2e8f0; /* $border */
+    background: #e2e8f0;
   }
 }
 
@@ -334,8 +543,8 @@ watch(() => authStore.user, (newUser, oldUser) => {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background-color: rgba(#10b981, 0.1); /* Verde éxito con transparencia */
-  color: #10b981; /* Verde éxito */
+  background-color: rgba(#10b981, 0.1);
+  color: #10b981;
   border-radius: 8px;
   margin-bottom: 1.5rem;
 }
@@ -343,6 +552,193 @@ watch(() => authStore.user, (newUser, oldUser) => {
 .user-info-form {
   width: 100%;
 }
+
+// Estilos para la sección de foto de perfil
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: #1e293b;
+}
+
+.section-description {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.upload-loading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(#FF416C, 0.1), rgba(#FF4B2B, 0.05));
+  border: 2px solid rgba(#FF416C, 0.2);
+  border-radius: 12px;
+  color: #FF416C;
+  font-weight: 500;
+}
+
+.upload-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(#FF416C, 0.2);
+  border-radius: 50%;
+  border-top-color: #FF416C;
+  animation: spin 1s linear infinite;
+}
+
+.photo-uploader {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.photo-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e2e8f0;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover {
+    border-color: #cbd5e1;
+  }
+
+  &--google {
+    border-color: #4285F4;
+
+    &:hover {
+      border-color: #1a73e8;
+    }
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+
+  svg {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+.photo-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(to right, #FF416C, #FF4B2B);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-block;
+  text-decoration: none;
+
+  &:hover:not(&--disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(#FF416C, 0.3);
+  }
+
+  &--disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.file-input {
+  display: none;
+}
+
+.remove-btn {
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #dc2626;
+  border: 2px solid #fecaca;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-color: #f87171;
+    transform: translateY(-1px);
+  }
+}
+
+.google-badge {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: white;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid white;
+
+  .google-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.google-photo-notice {
+  background: rgba(66, 133, 244, 0.1);
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.google-notice-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #1a73e8;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  svg {
+    flex-shrink: 0;
+    stroke: #1a73e8;
+  }
+}
+
 
 .form-row {
   display: flex;
@@ -363,34 +759,34 @@ watch(() => authStore.user, (newUser, oldUser) => {
   gap: 0.5rem;
 
   &--full {
-    width: 100%; /* Ocupa todo el ancho si es el único en la fila */
+    width: 100%;
   }
 
   label {
     font-weight: 600;
-    color: #1e293b; /* $dark */
+    color: #1e293b;
   }
 
   input,
   textarea {
     padding: 0.75rem 1rem;
-    border: 1px solid #e2e8f0; /* $border */
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 1rem;
     transition: all 0.3s ease;
     background-color: white;
-    color: #1e293b; /* $text */
+    color: #1e293b;
 
     &:focus {
       outline: none;
-      border-color: #FF416C; /* $primary */
+      border-color: #FF416C;
       box-shadow: 0 0 0 3px rgba(#FF416C, 0.1);
     }
 
     &:read-only {
-      background-color: #f8fafc; /* $light */
+      background-color: #f8fafc;
       cursor: not-allowed;
-      color: #64748b; /* $text-light */
+      color: #64748b;
     }
   }
 
@@ -401,14 +797,14 @@ watch(() => authStore.user, (newUser, oldUser) => {
 
   .email-note {
     font-size: 0.8rem;
-    color: #64748b; /* $text-light */
+    color: #64748b;
     margin-top: 0.25rem;
   }
 }
 
 .form-divider {
   height: 1px;
-  background-color: #e2e8f0; /* $border */
+  background-color: #e2e8f0;
   margin: 2rem 0;
 }
 
@@ -423,32 +819,32 @@ watch(() => authStore.user, (newUser, oldUser) => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1.25rem;
-  border: 1px solid #e2e8f0; /* $border */
+  border: 1px solid #e2e8f0;
   border-radius: 50px;
   background-color: white;
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #1e293b; /* $text */
+  color: #1e293b;
 
   &:hover {
-    border-color: #FF4B2B; /* $primary-hover or similar */
+    border-color: #FF4B2B;
     color: #FF4B2B;
   }
 
   &--active {
-    background: linear-gradient(to right, #FF416C, #FF4B2B); /* $primary-gradient */
+    background: linear-gradient(to right, #FF416C, #FF4B2B);
     color: white;
     border-color: transparent;
 
     &:hover {
-      color: white; // Mantener color en hover si está activo
+      color: white;
       box-shadow: 0 5px 15px rgba(#FF416C, 0.2);
     }
   }
 
   &-icon {
-    font-size: 1.2rem; // Ajustar si es necesario
+    font-size: 1.2rem;
   }
 }
 
@@ -461,19 +857,20 @@ watch(() => authStore.user, (newUser, oldUser) => {
 
 .cancel-button {
   padding: 0.75rem 1.5rem;
-  background-color: #f1f5f9; /* Gris claro */
-  border: 1px solid #e2e8f0; /* $border */
-  color: #64748b; /* $text-light */
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
   border-radius: 50px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover:not(:disabled) {
-    background-color: #e2e8f0; /* $border */
-    color: #1e293b; /* $dark */
+    background-color: #e2e8f0;
+    color: #1e293b;
   }
-   &:disabled {
+
+  &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
   }
@@ -481,7 +878,7 @@ watch(() => authStore.user, (newUser, oldUser) => {
 
 .save-button {
   padding: 0.75rem 2rem;
-  background: linear-gradient(to right, #FF416C, #FF4B2B); /* $primary-gradient */
+  background: linear-gradient(to right, #FF416C, #FF4B2B);
   color: white;
   border: none;
   border-radius: 50px;
@@ -492,7 +889,7 @@ watch(() => authStore.user, (newUser, oldUser) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 150px; /* Para que no cambie mucho de tamaño con el spinner */
+  min-width: 150px;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
@@ -506,7 +903,7 @@ watch(() => authStore.user, (newUser, oldUser) => {
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-    background: #ccc; /* O un gris de deshabilitado */
+    background: #ccc;
   }
 }
 

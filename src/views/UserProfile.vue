@@ -12,7 +12,7 @@
     <div class="profile-content">
       <div class="container">
         <div class="profile-tabs">
-          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id; handleTabChange(tab.id)"
+          <button v-for="tab in tabs" :key="tab.id" @click="changeTab(tab.id)"
             :class="['profile-tab', { 'profile-tab--active': activeTab === tab.id }]">
             <span class="profile-tab__icon" v-html="tab.icon"></span>
             <span class="profile-tab__text">{{ tab.label }}</span>
@@ -179,7 +179,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useOrderStore } from '@/stores/orderStore';
 import ProfileHeader from '@/components/feature/profile/ProfileHeader.vue';
@@ -190,6 +191,8 @@ import userService, { type UserProfile } from '@/services/userService';
 import { OrderStatus } from '@/services/orderService';
 import type { OrderResponse } from '@/services/orderService';
 
+const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const orderStore = useOrderStore();
 
@@ -254,13 +257,34 @@ const userInfo = reactive<UserProfile>({
   photoURL: authStore.user?.photoURL || '',
 });
 
-// Métodos de gestión de pestañas
-const handleTabChange = async (tabId: string) => {
+// Métodos de cambio de pestaña con actualización de URL
+const changeTab = async (tabId: string) => {
   activeTab.value = tabId;
+
+  // Actualizar la URL sin recargar la página
+  await router.replace({
+    path: '/profile',
+    query: tabId !== 'info' ? { tab: tabId } : {}
+  });
 
   if (tabId === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
     await loadUserOrders();
   }
+};
+
+// Inicializar pestaña desde query parameter
+const initializeTabFromQuery = () => {
+  const tabFromQuery = route.query.tab as string;
+  if (tabFromQuery && tabs.some(tab => tab.id === tabFromQuery)) {
+    activeTab.value = tabFromQuery;
+  } else {
+    activeTab.value = 'info';
+  }
+};
+
+// Métodos de gestión de pestañas
+const handleTabChange = async (tabId: string) => {
+  await changeTab(tabId);
 };
 
 // Métodos de carga de datos
@@ -367,7 +391,7 @@ const formatOrderDate = (dateString?: string): string => {
 
 // Métodos de gestión de perfil
 const openEditProfileModal = () => {
-  activeTab.value = 'info';
+  changeTab('info');
   console.log("Intentando abrir modal de edición de perfil (lógica en UserInfo.vue)");
 };
 
@@ -432,9 +456,23 @@ const changePassword = async () => {
   }
 };
 
+// Watch para cambios en la query
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && typeof newTab === 'string' && tabs.some(tab => tab.id === newTab)) {
+    activeTab.value = newTab;
+
+    // Cargar datos específicos si es necesario
+    if (newTab === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
+      loadUserOrders();
+    }
+  }
+}, { immediate: false });
+
 // Inicialización
 onMounted(() => {
+  initializeTabFromQuery();
   loadUserData();
+
   if (activeTab.value === 'orders') {
     loadUserOrders();
   }
@@ -442,7 +480,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// Variables (las mismas que antes)
+// Variables
 $primary: #FF416C;
 $primary-gradient: linear-gradient(to right, #FF416C, #FF4B2B);
 $secondary: #0652DD;
@@ -456,7 +494,7 @@ $border: #e2e8f0;
 $border-radius: 12px;
 $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 
-// Contenedor y layout principal (igual que antes)
+// Contenedor y layout principal
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -584,7 +622,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-// ===== RESTO DE ESTILOS (Orders, Settings, etc.) =====
+// Resto de estilos (como antes)...
 .modal {
   position: fixed;
   top: 0;
@@ -654,205 +692,6 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-.payment-form {
-  &__error {
-    background-color: rgba(#ef4444, 0.1);
-    color: #ef4444;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.95rem;
-  }
-
-  &__field {
-    margin-bottom: 1.5rem;
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: $dark;
-      font-size: 0.95rem;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid $border;
-      border-radius: 8px;
-      font-size: 1rem;
-      color: $dark;
-      transition: $transition;
-
-      &:focus {
-        outline: none;
-        border-color: $primary;
-        box-shadow: 0 0 0 3px rgba($primary, 0.1);
-      }
-
-      &::placeholder {
-        color: #9ca3af;
-      }
-    }
-
-    &--checkbox {
-      display: flex !important;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-
-      input[type="checkbox"] {
-        width: auto !important;
-        margin: 0;
-        transform: scale(1.2);
-        accent-color: $primary;
-      }
-
-      label {
-        margin: 0 !important;
-        font-weight: 500 !important;
-        cursor: pointer;
-      }
-    }
-  }
-
-  &__row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-
-    @media (max-width: 576px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-}
-
-.card-section,
-.paypal-section {
-  background: rgba($primary, 0.02);
-  border: 1px solid rgba($primary, 0.1);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-
-  .payment-form__field:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.security-note {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: rgba($accent, 0.1);
-  border: 1px solid rgba($accent, 0.2);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  color: #cc7600;
-
-  svg {
-    color: $accent;
-    flex-shrink: 0;
-  }
-}
-
-.form-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: $transition;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 120px;
-
-  &--cancel {
-    background: $light;
-    color: $text;
-    border: 1px solid $border;
-
-    &:hover {
-      background: white;
-      border-color: #cbd5e1;
-    }
-  }
-
-  &--save {
-    background: $primary-gradient;
-    color: white;
-    border: none;
-    box-shadow: 0 4px 12px rgba($primary, 0.2);
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba($primary, 0.3);
-    }
-
-    &:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-      transform: none;
-    }
-  }
-
-  &--delete {
-    background: linear-gradient(45deg, #ef4444, #dc2626);
-    color: white;
-    border: none;
-    box-shadow: 0 4px 12px rgba(#ef4444, 0.2);
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(#ef4444, 0.3);
-    }
-
-    &:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-      transform: none;
-    }
-  }
-}
-
-.button-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s linear infinite;
-}
-
-.confirmation-text {
-  margin: 0 0 2rem;
-  color: $text;
-  text-align: center;
-  font-size: 1.1rem;
-  line-height: 1.5;
-}
-
-.confirmation-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-// ===== RESTO DE ESTILOS (Orders, Settings, etc.) =====
 // Loading orders, orders error, etc...
 .loading-orders,
 .orders-error {
@@ -1174,6 +1013,57 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
     gap: 1rem;
     margin-top: 2rem;
   }
+}
+
+.form-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+
+  &--cancel {
+    background: $light;
+    color: $text;
+    border: 1px solid $border;
+
+    &:hover {
+      background: white;
+      border-color: #cbd5e1;
+    }
+  }
+
+  &--save {
+    background: $primary-gradient;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba($primary, 0.2);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($primary, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+}
+
+.button-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
 }
 
 .field-hint {

@@ -62,7 +62,7 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isLoggedIn: (state) => !!state.token && !!state.user,
     userRole: (state) => state.user?.role || null,
-    userName: (state) => state.user ? `${state.user.firstName} ${state.user.lastName}` : null,
+    userName: (state) => (state.user ? `${state.user.firstName} ${state.user.lastName}` : null),
     isAdmin: (state) => state.user?.role === 'Admin',
     isBusiness: (state) => state.user?.role === 'Business',
     isCustomer: (state) => state.user?.role === 'Customer',
@@ -172,7 +172,7 @@ export const useAuthStore = defineStore('auth', {
           firstName: registerData.firstName,
           lastName: registerData.lastName,
           phoneNumber: registerData.phoneNumber,
-          role: registerData.role || 'Customer'
+          role: registerData.role || 'Customer',
         })
 
         if (response.data.success && response.data.token) {
@@ -237,7 +237,7 @@ export const useAuthStore = defineStore('auth', {
         console.log('🚀 Enviando token de Google al backend...')
 
         const response = await axios.post<AuthResponse>('/auth/google-login', {
-          idToken: googleToken
+          idToken: googleToken,
         })
 
         console.log('📥 Respuesta del backend:', response.data)
@@ -274,9 +274,13 @@ export const useAuthStore = defineStore('auth', {
     async logout() {
       try {
         if (this.token) {
-          await axios.post('/auth/logout', {}, {
-            headers: { Authorization: `Bearer ${this.token}` },
-          })
+          await axios.post(
+            '/auth/logout',
+            {},
+            {
+              headers: { Authorization: `Bearer ${this.token}` },
+            }
+          )
         }
       } catch (error) {
         console.error('⚠️ Error en logout del servidor:', error)
@@ -331,6 +335,100 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('user', JSON.stringify(this.user))
         console.log('👤 Perfil de usuario actualizado')
       }
+    },
+
+    saveAuthData(authData: AuthResponse) {
+      console.log('💾 Guardando datos de autenticación:', authData)
+
+      // Guardar tokens
+      this.token = authData.token!
+      this.refreshToken = authData.refreshToken || null
+
+      // LÓGICA MEJORADA: Preservar foto de Google si ya existe
+      const existingUser = this.user
+      const newUserData = {
+        id: authData.userId!,
+        email: authData.email!,
+        firstName: authData.firstName!,
+        lastName: authData.lastName!,
+        role: authData.role!,
+        businessId: authData.businessId,
+        photoURL: authData.photoURL,
+        googleId: authData.googleId,
+      }
+
+      // Si ya teníamos un usuario con Google ID y foto, y el nuevo login es del mismo usuario de Google
+      if (
+        existingUser?.googleId &&
+        newUserData.googleId &&
+        existingUser.googleId === newUserData.googleId &&
+        existingUser.photoURL &&
+        (!newUserData.photoURL || newUserData.photoURL === '')
+      ) {
+        console.log('🔄 Preservando foto de Google existente:', existingUser.photoURL)
+        newUserData.photoURL = existingUser.photoURL
+      }
+
+      // Crear objeto usuario completo
+      this.user = newUserData
+
+      // ✅ GUARDAR TODO EN LOCALSTORAGE
+      localStorage.setItem('authToken', this.token)
+      localStorage.setItem('user', JSON.stringify(this.user))
+
+      if (this.refreshToken) {
+        localStorage.setItem('refreshToken', this.refreshToken)
+      }
+
+      // Marcar como autenticado
+      this.isAuthenticated = true
+
+      // Configurar axios
+      this.setupAxiosDefaults()
+
+      console.log('✅ Usuario guardado:', this.user)
+      console.log('✅ Es Admin:', this.isAdmin)
+    },
+
+    // Añadir este nuevo método al final de los actions
+    updateUserProfile(updates: Partial<User>) {
+      if (this.user) {
+        // PROTECCIÓN: No permitir sobrescribir foto de usuario de Google con datos vacíos
+        if (this.isGoogleUser && updates.photoURL === '' && this.user.photoURL) {
+          console.log('🛡️ Protegiendo foto de Google de sobrescritura')
+          const { photoURL, ...safeUpdates } = updates // Remover photoURL para evitar sobrescritura
+          this.user = { ...this.user, ...safeUpdates }
+        } else {
+          this.user = { ...this.user, ...updates }
+        }
+
+        localStorage.setItem('user', JSON.stringify(this.user))
+        console.log('👤 Perfil de usuario actualizado')
+      }
+    },
+
+    // Añadir este nuevo método para manejo específico de fotos
+    updateProfilePhoto(photoURL: string | null) {
+      if (!this.user) return
+
+      // PROTECCIÓN: No permitir cambio de foto para usuarios de Google
+      if (this.isGoogleUser) {
+        console.warn('⚠️ Intento de cambiar foto de usuario de Google bloqueado')
+        return
+      }
+
+      this.user.photoURL = photoURL || ''
+      localStorage.setItem('user', JSON.stringify(this.user))
+      console.log('📸 Foto de perfil actualizada:', photoURL)
+    },
+
+    // Añadir este método para sincronizar fotos de Google
+    syncGooglePhoto(googlePhotoURL: string) {
+      if (!this.user || !this.isGoogleUser) return
+
+      console.log('🔄 Sincronizando foto de Google:', googlePhotoURL)
+      this.user.photoURL = googlePhotoURL
+      localStorage.setItem('user', JSON.stringify(this.user))
     },
 
     // =================== INICIALIZAR (llamar desde main.ts) ===================
