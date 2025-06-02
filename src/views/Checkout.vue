@@ -531,41 +531,6 @@
               </div>
             </div>
 
-            <!-- Promo Code -->
-            <div class="promo-section">
-              <h3 class="promo-section__title">Código promocional</h3>
-              <div class="promo-input">
-                <input
-                  type="text"
-                  v-model="promoCode"
-                  class="promo-input__field"
-                  placeholder="Ingresa tu código"
-                />
-                <button
-                  class="promo-input__button"
-                  :disabled="validatingPromo || !promoCode.trim()"
-                  @click="validatePromoCode"
-                >
-                  <span v-if="!validatingPromo">Aplicar</span>
-                  <span v-else class="loading-spinner loading-spinner--small"></span>
-                </button>
-              </div>
-              <div v-if="promoDiscount > 0" class="promo-success">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Código aplicado: -${{ promoDiscount.toFixed(2) }}</span>
-                <button @click="removePromoCode" class="promo-remove">×</button>
-              </div>
-            </div>
-
             <div class="step-actions">
               <button class="btn-secondary" @click="step = 2">
                 <svg
@@ -616,12 +581,8 @@
               <p class="success-subtitle">Tu pedido ha sido procesado exitosamente</p>
 
               <div class="order-summary-final">
-                <div class="order-summary-final__row">
-                  <span>Subtotal original:</span>
-                  <span>${{ finalOrderTotals.original.toFixed(2) }}</span>
-                </div>
                 <div v-if="finalOrderTotals.totalSavings > 0" class="order-summary-final__row order-summary-final__row--savings">
-                  <span>Ahorros totales:</span>
+                  <span>Ahorros por ofertas:</span>
                   <span>-${{ finalOrderTotals.totalSavings.toFixed(2) }}</span>
                 </div>
                 <div class="order-summary-final__row order-summary-final__row--total">
@@ -687,10 +648,6 @@
                 <span>Ahorros por ofertas</span>
                 <span>-${{ cartTotals.totalOfferSavings.toFixed(2) }}</span>
               </div>
-              <div v-if="promoDiscount > 0" class="order-summary__row order-summary__row--promo">
-                <span>Descuento promocional</span>
-                <span>-${{ promoDiscount.toFixed(2) }}</span>
-              </div>
               <div class="order-summary__row">
                 <span>Costo de envío</span>
                 <span v-if="deliveryFee > 0">${{ deliveryFee.toFixed(2) }}</span>
@@ -698,7 +655,7 @@
               </div>
               <div class="order-summary__row order-summary__row--total">
                 <span>Total</span>
-                <span>${{ calculatedTotals.total.toFixed(2) }}</span>
+                <span>${{ finalTotal.toFixed(2) }}</span>
               </div>
             </div>
           </div>
@@ -772,18 +729,13 @@ const scheduledTime = ref<string>('');
 const availableTimeSlots = ref<string[]>([]);
 const deliveryInstructions = ref<string>('');
 
-// ——— 5) Código promocional ———
-const promoCode = ref<string>('');
-const promoDiscount = ref<number>(0);
-const validatingPromo = ref(false);
+// ——— 5) Estado al "colocar pedido" ———
+const placingOrder = ref<boolean>(false);
 
 // ——— 6) Costo de envío que viene del restaurante ———
 const deliveryFee = ref<number>(0);
 
-// ——— 7) Estado al "colocar pedido" ———
-const placingOrder = ref<boolean>(false);
-
-// ——— 8) Getters dependientes del carrito ———
+// ——— 7) Getters dependientes del carrito ———
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() =>
@@ -798,7 +750,7 @@ const cartItems = computed(() =>
   }>
 );
 
-// ——— 9) Procesar cada ítem del carrito (SIN volver a aplicar oferta) ———
+// ——— 8) Procesar cada ítem del carrito con precios robustos ———
 interface ProcessedCartItem {
   id: number;
   productId: number;
@@ -809,22 +761,50 @@ interface ProcessedCartItem {
   appliedOffer?: unknown;
 }
 
+// Helper: obtener precio robusto del producto
+const getProductPrice = (product: any): number => {
+  const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost', 'originalPrice'];
+  for (let field of priceFields) {
+    if (
+      product[field] !== null &&
+      product[field] !== undefined &&
+      product[field] !== ''
+    ) {
+      const testPrice =
+        typeof product[field] === 'number'
+          ? product[field]
+          : parseFloat(product[field]);
+      if (!isNaN(testPrice) && testPrice > 0) {
+        return testPrice;
+      }
+    }
+  }
+  return 9.99; // Precio por defecto si no se encuentra ninguno válido
+};
+
 const processedCartItems = computed<ProcessedCartItem[]>(() => {
   if (!cartItems.value.length) return [];
-  return cartItems.value.map(item => ({
-    id:            item.id,
-    productId:     item.id,
-    name:          item.name,
-    // Asegurarnos de que originalPrice existe; si no, tomar 0
-    originalPrice: typeof item.originalPrice === 'number' ? item.originalPrice : 0,
-    // Igual con price
-    finalPrice:    typeof item.price === 'number' ? item.price : 0,
-    quantity:      item.quantity,
-    appliedOffer:  item.appliedOffer
-  }));
+  return cartItems.value.map(item => {
+    const originalPrice = item.originalPrice && item.originalPrice > 0 
+      ? item.originalPrice 
+      : getProductPrice(item);
+    const finalPrice = item.price && item.price > 0 
+      ? item.price 
+      : originalPrice;
+      
+    return {
+      id:            item.id,
+      productId:     item.id,
+      name:          item.name || 'Producto',
+      originalPrice,
+      finalPrice,
+      quantity:      item.quantity || 1,
+      appliedOffer:  item.appliedOffer
+    };
+  });
 });
 
-// ——— 10) Cálculo de totales antes de promo =====
+// ——— 9) Cálculo de totales ===== 
 const cartTotals = computed(() => {
   const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
     return sum + item.originalPrice * item.quantity;
@@ -843,29 +823,20 @@ const cartTotals = computed(() => {
   };
 });
 
-// ——— 11) Totales tras aplicar promo y envío =====
-const calculatedTotals = computed(() => {
-  const subtotalAfterOffers = cartTotals.value.subtotalWithOffers;
-  const subtotalAfterDiscounts = Math.max(0, subtotalAfterOffers - promoDiscount.value);
-  const total = subtotalAfterDiscounts + deliveryFee.value;
-  return {
-    subtotalAfterDiscounts,
-    total
-  };
+// ——— 10) Total final incluyendo envío ===== 
+const finalTotal = computed(() => {
+  return cartTotals.value.subtotalWithOffers + deliveryFee.value;
 });
 
-// ——— 12) Totales finales para mostrar en paso 4 =====
+// ——— 11) Totales finales simplificados para mostrar en paso 4 =====
 const finalOrderTotals = computed(() => {
-  const original = cartTotals.value.originalSubtotal + deliveryFee.value;
-  const totalSavings = cartTotals.value.totalOfferSavings + promoDiscount.value;
   return {
-    original,
-    total: calculatedTotals.value.total,
-    totalSavings
+    total: finalTotal.value,
+    totalSavings: cartTotals.value.totalOfferSavings
   };
 });
 
-// ——— 13) Fechas mínimas/máximas para programar entrega =====
+// ——— 12) Fechas mínimas/máximas para programar entrega =====
 const minDate = computed(() => {
   const today = new Date();
   return today.toISOString().split('T')[0];
@@ -876,7 +847,7 @@ const maxDate = computed(() => {
   return future.toISOString().split('T')[0];
 });
 
-// ——— 14) Validaciones reactivas para habilitar botones =====
+// ——— 13) Validaciones reactivas para habilitar botones =====
 const canProceedToPayment = computed(() => {
   if (!selectedAddress.value) return false;
   if (deliveryType.value === 'scheduled') {
@@ -902,21 +873,21 @@ const canSavePayment = computed(() => {
   return true;
 });
 
-// ——— 15) onMounted: cargar carrito, direcciones, métodos de pago y restaurante =====
+// ——— 14) onMounted: cargar carrito, direcciones, métodos de pago y restaurante =====
 onMounted(async () => {
-  // 15.a) Asegurarnos de que el carrito esté cargado ANTES de calcular totales
+  // 14.a) Asegurarnos de que el carrito esté cargado ANTES de calcular totales
   if (typeof cartStore.loadFromLocalStorage === 'function') {
     await cartStore.loadFromLocalStorage();
   }
 
-  // 15.b) Chequear autenticación
+  // 14.b) Chequear autenticación
   if (!authStore.isAuthenticated) {
     alert('Por favor, inicia sesión para continuar.');
     router.push('/login?redirect=/checkout');
     return;
   }
 
-  // 15.c) Cargar direcciones, métodos de pago y datos del restaurante en paralelo
+  // 14.c) Cargar direcciones, métodos de pago y datos del restaurante en paralelo
   await Promise.all([
     loadAddresses(),
     loadPaymentMethods(),
@@ -924,7 +895,7 @@ onMounted(async () => {
   ]);
 });
 
-// ——— 16) Cargar direcciones del usuario =====
+// ——— 15) Cargar direcciones del usuario =====
 async function loadAddresses() {
   try {
     loadingAddresses.value = true;
@@ -941,7 +912,7 @@ async function loadAddresses() {
   }
 }
 
-// ——— 17) Cargar métodos de pago =====
+// ——— 16) Cargar métodos de pago =====
 async function loadPaymentMethods() {
   try {
     loadingPayments.value = true;
@@ -958,7 +929,7 @@ async function loadPaymentMethods() {
   }
 }
 
-// ——— 18) Cargar datos del restaurante (para deliveryFee) =====
+// ——— 17) Cargar datos del restaurante (para deliveryFee) =====
 async function fetchRestaurantData() {
   // Si restaurantId es null o 0, no llamamos a la API
   if (!restaurantId.value) {
@@ -985,7 +956,7 @@ async function fetchRestaurantData() {
   }
 }
 
-// ——— 19) Si el usuario programó entrega y cambia la fecha, traer slots =====
+// ——— 18) Si el usuario programó entrega y cambia la fecha, traer slots =====
 watch(scheduledDate, async newDate => {
   if (newDate && restaurantId.value && selectedAddress.value) {
     try {
@@ -1002,37 +973,7 @@ watch(scheduledDate, async newDate => {
   }
 });
 
-// ——— 20) Validar código promocional =====
-const validatePromoCode = async () => {
-  if (!promoCode.value.trim() || !restaurantId.value) return;
-  validatingPromo.value = true;
-  try {
-    const result = await orderStore.validatePromoCode(
-      promoCode.value.trim(),
-      restaurantId.value,
-      cartTotals.value.subtotalWithOffers
-    );
-    if (result.valid) {
-      promoDiscount.value = result.discount;
-    } else {
-      alert(result.message || 'Código promocional inválido');
-      promoCode.value = '';
-      promoDiscount.value = 0;
-    }
-  } catch (error) {
-    alert('Error al validar el código promocional');
-    promoDiscount.value = 0;
-  } finally {
-    validatingPromo.value = false;
-  }
-};
-
-const removePromoCode = () => {
-  promoCode.value = '';
-  promoDiscount.value = 0;
-};
-
-// ——— 21) Guardar un nuevo método de pago =====
+// ——— 19) Guardar un nuevo método de pago =====
 const saveNewPaymentMethod = async () => {
   try {
     const created = await paymentService.addPaymentMethod(newPayment.value);
@@ -1047,7 +988,7 @@ const saveNewPaymentMethod = async () => {
   }
 };
 
-// ——— 22) Construir y enviar el pedido al backend =====
+// ——— 20) Construir y enviar el pedido al backend =====
 const placeOrder = async () => {
   if (!selectedAddress.value || !selectedPaymentMethod.value) {
     alert('Por favor selecciona una dirección de entrega y un método de pago.');
@@ -1071,7 +1012,6 @@ const placeOrder = async () => {
           ? `${scheduledDate.value} ${scheduledTime.value}`
           : null,
       deliveryInstructions: deliveryInstructions.value,
-      promoCode:            promoCode.value.trim() || null,
       items: processedCartItems.value.map(item => ({
         productId: item.productId,
         quantity:  item.quantity,
@@ -1089,7 +1029,7 @@ const placeOrder = async () => {
   }
 };
 
-// ——— 23) Mostrar texto de tiempo de entrega =====
+// ——— 21) Mostrar texto de tiempo de entrega =====
 const getDeliveryTimeText = (): string => {
   if (deliveryType.value === 'now') {
     // Si restaurantData es null, simplemente mostramos "Envío inmediato"
@@ -1101,7 +1041,7 @@ const getDeliveryTimeText = (): string => {
   }
 };
 
-// ——— 24) Helper para presentar un método de pago en la lista =====
+// ——— 22) Helper para presentar un método de pago en la lista =====
 const displayPaymentMethod = (pm: PaymentMethodInfo) => {
   const tipo = pm.type.toLowerCase();
   if (tipo === 'paypal') {
@@ -1758,92 +1698,6 @@ $shadow-elevated: 0 20px 40px rgba(0, 0, 0, 0.1);
   }
 }
 
-// Promo Section
-.promo-section {
-  margin-bottom: 2rem;
-
-  &__title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 1rem;
-  }
-}
-
-.promo-input {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-
-  &__field {
-    flex: 1;
-    padding: 0.75rem;
-    border: 2px solid $medium-gray;
-    border-radius: $border-radius-sm;
-    font-size: 1rem;
-    transition: $transition;
-
-    &:focus {
-      outline: none;
-      border-color: $primary-color;
-      box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
-    }
-  }
-
-  &__button {
-    padding: 0.75rem 1.5rem;
-    background: $primary-gradient;
-    color: white;
-    border: none;
-    border-radius: $border-radius-sm;
-    font-weight: 600;
-    cursor: pointer;
-    transition: $transition;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: $shadow-medium;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-  }
-}
-
-.promo-success {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba($primary-color, 0.1);
-  color: $primary-color;
-  padding: 0.75rem 1rem;
-  border-radius: $border-radius-sm;
-  font-weight: 600;
-
-  .promo-remove {
-    margin-left: auto;
-    background: none;
-    border: none;
-    color: $primary-color;
-    font-size: 1.25rem;
-    cursor: pointer;
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-
-    &:hover {
-      background: rgba($primary-color, 0.1);
-    }
-  }
-}
-
 // Step Actions
 .step-actions {
   display: flex;
@@ -2041,8 +1895,7 @@ $shadow-elevated: 0 20px 40px rgba(0, 0, 0, 0.1);
       margin-bottom: 0;
     }
 
-    &--savings,
-    &--promo {
+    &--savings {
       color: $primary-color;
       font-weight: 700;
     }
