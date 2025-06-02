@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import axios, { type AxiosError } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5290/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://34.224.104.96:3000/api'
 
 export interface User {
   id: number

@@ -341,7 +341,7 @@ const fetchRestaurantData = async (): Promise<void> => {
   if (!restaurantId.value) return;
   
   try {
-    const response = await fetch(`http://localhost:5290/api/restaurants/${restaurantId.value}`, {
+    const response = await fetch(`http://34.224.104.96:3000/api/restaurants/${restaurantId.value}`, {
       headers: {
         'Authorization': authStore.token ? `Bearer ${authStore.token}` : ''
       }
@@ -426,7 +426,7 @@ const fetchActiveOffers = async (): Promise<void> => {
   
   try {
     loadingOffers.value = true;
-    const url = `http://localhost:5290/api/restaurants/${restaurantId.value}/offers/active`;
+    const url = `http://34.224.104.96:3000/api/restaurants/${restaurantId.value}/offers/active`;
     
     const headers: Record<string, string> = {
       'Accept': 'application/json',
