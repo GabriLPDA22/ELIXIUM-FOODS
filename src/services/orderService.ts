@@ -1,10 +1,5 @@
 import { api } from './api'
-import type {
-  Order,
-  CreateOrderRequest,
-  Address,
-  ApiResponse
-} from '@/types'
+import type { Order, CreateOrderRequest, Address, ApiResponse } from '@/types'
 
 export enum OrderStatus {
   PENDING = 'Pending',
@@ -13,7 +8,7 @@ export enum OrderStatus {
   READY_FOR_PICKUP = 'ReadyForPickup',
   ON_THE_WAY = 'OnTheWay',
   DELIVERED = 'Delivered',
-  CANCELLED = 'Cancelled'
+  CANCELLED = 'Cancelled',
 }
 
 export interface OrderResponse {
@@ -122,7 +117,7 @@ class OrderService {
   async updateOrderStatus(orderId: number, status: OrderStatus): Promise<OrderResponse> {
     try {
       const response = await api.put(`${this.baseUrl}/orders/${orderId}/status`, {
-        status
+        status,
       })
       return response.data
     } catch (error: any) {
@@ -134,12 +129,12 @@ class OrderService {
   async cancelOrder(orderId: number, reason?: string): Promise<OrderResponse> {
     try {
       const response = await api.post(`${this.baseUrl}/Orders/${orderId}/cancel`, {
-        reason
+        reason,
       })
       return response.data
     } catch (error: any) {
       console.error('Error cancelling order (original AxiosError):', error)
-      throw error;
+      throw error
     }
   }
 
@@ -152,20 +147,20 @@ class OrderService {
       const response = await api.post(`${this.baseUrl}/promocodes/validate`, {
         code,
         restaurantId,
-        subtotal
+        subtotal,
       })
       return {
         valid: response.data.valid,
         discount: response.data.discount || 0,
         message: response.data.message,
-        code: response.data.code
+        code: response.data.code,
       }
     } catch (error: any) {
       console.error('Error validating promo code:', error)
       return {
         valid: false,
         discount: 0,
-        message: error.response?.data?.message || 'Código promocional inválido'
+        message: error.response?.data?.message || 'Código promocional inválido',
       }
     }
   }
@@ -176,12 +171,9 @@ class OrderService {
     date: string
   ): Promise<string[]> {
     try {
-      const response = await api.get(
-        `${this.baseUrl}/restaurants/${restaurantId}/delivery-times`,
-        {
-          params: { addressId, date }
-        }
-      )
+      const response = await api.get(`${this.baseUrl}/restaurants/${restaurantId}/delivery-times`, {
+        params: { addressId, date },
+      })
       return response.data || []
     } catch (error: any) {
       console.error('Error fetching delivery times:', error)
@@ -197,17 +189,20 @@ class OrderService {
       const response = await api.get(
         `${this.baseUrl}/restaurants/${restaurantId}/estimate-delivery`,
         {
-          params: { addressId }
+          params: { addressId },
         }
       )
       return response.data
     } catch (error: any) {
       console.error('Error estimating delivery time:', error)
       const estimatedMinutes = 35
-      const estimatedTime = new Date(Date.now() + estimatedMinutes * 60000).toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      const estimatedTime = new Date(Date.now() + estimatedMinutes * 60000).toLocaleTimeString(
+        'es-ES',
+        {
+          hour: '2-digit',
+          minute: '2-digit',
+        }
+      )
       return { estimatedMinutes, estimatedTime }
     }
   }
@@ -218,7 +213,7 @@ class OrderService {
     taxRate: number = 0.16,
     promoDiscount: number = 0
   ): OrderSummary {
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
     const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount)
     const tax = subtotalAfterPromo * taxRate
     const total = subtotalAfterPromo + deliveryFee + tax
@@ -229,7 +224,7 @@ class OrderService {
       tax,
       total,
       savings: promoDiscount,
-      itemCount
+      itemCount,
     }
   }
 
@@ -241,7 +236,7 @@ class OrderService {
       [OrderStatus.READY_FOR_PICKUP]: 'Listo para recoger',
       [OrderStatus.ON_THE_WAY]: 'En camino',
       [OrderStatus.DELIVERED]: 'Entregado',
-      [OrderStatus.CANCELLED]: 'Cancelado'
+      [OrderStatus.CANCELLED]: 'Cancelado',
     }
     return statusTexts[status] || status
   }
@@ -276,26 +271,47 @@ class OrderService {
     const now = new Date()
     const diffTime = now.getTime() - date.getTime()
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
     if (diffDays === 0) {
-      return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
+      return `Hoy, ${date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Madrid', // ✅ ARREGLO: Zona horaria española
+      })}`
     } else if (diffDays === 1) {
-      return `Ayer, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
+      return `Ayer, ${date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Madrid', // ✅ ARREGLO: Zona horaria española
+      })}`
     } else if (diffDays < 7) {
       return `Hace ${diffDays} días`
     } else {
       return date.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: 'short',
-        year: diffDays > 365 ? 'numeric' : undefined
+        year: diffDays > 365 ? 'numeric' : undefined,
+        timeZone: 'Europe/Madrid', // ✅ ARREGLO: Zona horaria española
       })
     }
   }
 
+  // ✅ NUEVO: Método helper para formatear fechas consistentemente
+  formatDateWithTimezone(dateString: string): string {
+    const date = new Date(dateString)
+    return date.toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid', // Zona horaria española (GMT+1/GMT+2)
+    })
+  }
+
   summarizeOrderItems(items: { productName: string; quantity: number }[]): string {
     if (!items || items.length === 0) return 'Sin productos'
-    const itemSummary = items
-      .map(item => `${item.quantity}× ${item.productName}`)
-      .join(', ')
+    const itemSummary = items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')
     return itemSummary.length > 60 ? itemSummary.substring(0, 57) + '...' : itemSummary
   }
 
@@ -338,8 +354,8 @@ class OrderService {
           { status: OrderStatus.ACCEPTED, completed: order.status !== OrderStatus.PENDING },
           { status: OrderStatus.PREPARING, completed: false },
           { status: OrderStatus.ON_THE_WAY, completed: false },
-          { status: OrderStatus.DELIVERED, completed: false }
-        ]
+          { status: OrderStatus.DELIVERED, completed: false },
+        ],
       }
     }
   }

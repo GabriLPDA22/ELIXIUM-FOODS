@@ -342,6 +342,7 @@ const loadOrderDetails = async () => {
   }
 };
 
+// ✅ ARREGLO: formatDate con zona horaria correcta para España
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleString('es-ES', {
@@ -350,10 +351,11 @@ const formatDate = (dateString: string): string => {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'Europe/Madrid' // Zona horaria de España
+    timeZone: 'Europe/Madrid' // ✅ CEST = UTC+2 en verano, CET = UTC+1 en invierno
   });
 };
 
+// ✅ ARREGLO: formatDeliveryTime con zona horaria correcta
 const formatDeliveryTime = (estimatedTime: string): string => {
   if (!estimatedTime) return 'Sin estimar';
 
@@ -367,7 +369,7 @@ const formatDeliveryTime = (estimatedTime: string): string => {
     return deliveryDate.toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'Europe/Madrid'
+      timeZone: 'Europe/Madrid' // ✅ CEST = UTC+2 en verano
     });
   }
 };

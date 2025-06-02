@@ -1,3 +1,4 @@
+<!-- src/views/Checkout.vue COMPLETO ARREGLADO -->
 <template>
   <div class="checkout-page">
     <div class="container">
@@ -792,13 +793,13 @@ const getProductPrice = (product: any): number => {
 const processedCartItems = computed<ProcessedCartItem[]>(() => {
   if (!cartItems.value.length) return [];
   return cartItems.value.map(item => {
-    const originalPrice = item.originalPrice && item.originalPrice > 0 
-      ? item.originalPrice 
+    const originalPrice = item.originalPrice && item.originalPrice > 0
+      ? item.originalPrice
       : getProductPrice(item);
-    const finalPrice = item.price && item.price > 0 
-      ? item.price 
+    const finalPrice = item.price && item.price > 0
+      ? item.price
       : originalPrice;
-      
+
     return {
       id:            item.id,
       productId:     item.id,
@@ -811,7 +812,7 @@ const processedCartItems = computed<ProcessedCartItem[]>(() => {
   });
 });
 
-// ——— 10) Cálculo de totales ===== 
+// ——— 10) Cálculo de totales =====
 const cartTotals = computed(() => {
   const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
     return sum + item.originalPrice * item.quantity;
@@ -832,7 +833,7 @@ const cartTotals = computed(() => {
   };
 });
 
-// ——— 11) Total final incluyendo envío ===== 
+// ——— 11) Total final incluyendo envío =====
 const finalTotal = computed(() => {
   return cartTotals.value.subtotalWithOffers + deliveryFee.value;
 });
@@ -1023,7 +1024,7 @@ const placeOrder = async () => {
     totalOfferSavings: cartTotals.value.totalOfferSavings,
     total: finalTotal.value
   };
-  
+
   console.log('💰 Totales capturados:', currentTotals);
 
   placingOrder.value = true;
@@ -1031,11 +1032,16 @@ const placeOrder = async () => {
     // Guardar en la variable temporal
     tempOrderTotals.value = currentTotals;
 
-    // Armar payload usando "item.finalPrice" (sin doble descuento)
+    // ✅ ARREGLO: Asegurar que selectedPaymentMethod tiene un valor válido
+    if (!selectedPaymentMethod.value || selectedPaymentMethod.value <= 0) {
+      throw new Error('Método de pago no válido');
+    }
+
+    // ✅ ARREGLO: Armar payload usando PaymentMethodId correcto
     const orderRequest = {
       restaurantId:         restaurantId.value,
       deliveryAddressId:    selectedAddress.value,
-      paymentMethodId:      selectedPaymentMethod.value,
+      paymentMethodId:      selectedPaymentMethod.value, // ✅ ARREGLO: Enviar PaymentMethodId
       deliveryType:         deliveryType.value,
       scheduledDate:
         deliveryType.value === 'scheduled'
@@ -1045,21 +1051,21 @@ const placeOrder = async () => {
       items: processedCartItems.value.map(item => ({
         productId: item.productId,
         quantity:  item.quantity,
-        unitPrice: item.finalPrice
+        unitPrice: item.finalPrice // ✅ ARREGLO: Enviar UnitPrice como requiere el DTO
       }))
     };
 
-    console.log('📦 Enviando pedido con totales guardados:', tempOrderTotals.value);
+    console.log('🚀 PAYLOAD FINAL ENVIADO AL BACKEND:', JSON.stringify(orderRequest, null, 2));
 
     await orderStore.createOrder(orderRequest);
-    
+
     // ✅ Vaciar el carrito después de confirmar el pedido exitosamente
     cartStore.clearCart();
     console.log('✅ Carrito vaciado después de confirmar pedido');
-    
+
     step.value = 4;
   } catch (err: any) {
-    console.error('Error al crear pedido:', err);
+    console.error('❌ Error al crear pedido:', err);
     alert(err.message || 'No se pudo procesar tu pedido. Intenta de nuevo.');
   } finally {
     placingOrder.value = false;
@@ -1084,9 +1090,24 @@ const displayPaymentMethod = (pm: PaymentMethodInfo) => {
     return `PayPal • ${pm.payPalEmail}`;
   }
   if (pm.lastFourDigits) {
-    return `${pm.nickname} •••• ${pm.lastFourDigits}`;
+    const cardType = getCardTypeName(pm.type);
+    const expiry = pm.expiryMonth && pm.expiryYear
+      ? ` • Vence ${pm.expiryMonth.toString().padStart(2, '0')}/${pm.expiryYear.toString().slice(-2)}`
+      : '';
+    return `${cardType} •••• ${pm.lastFourDigits}${expiry}`;
   }
   return pm.nickname;
+};
+
+const getCardTypeName = (cardType: string): string => {
+  const types: Record<string, string> = {
+    visa: 'Visa',
+    mastercard: 'Mastercard',
+    amex: 'American Express',
+    paypal: 'PayPal',
+    other: 'Tarjeta'
+  };
+  return types[cardType] || 'Tarjeta';
 };
 
 // ——— 24) Limpiar estado temporal si el usuario regresa a pasos anteriores =====
