@@ -578,6 +578,14 @@ const handleScroll = () => {
 
 const handleClickOutside = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
+
+    // Cerrar menú móvil si está abierto y se hace clic fuera
+    if (mobileMenuOpen.value &&
+        !target.closest('.u-header__navigation') &&
+        !target.closest('.u-header__menu-toggle')) {
+        closeMobileMenu();
+    }
+
     if (userMenuOpen.value && !target.closest('.u-header__user-menu') && !target.closest('.u-header__profile-btn')) {
         closeUserMenu();
     }
