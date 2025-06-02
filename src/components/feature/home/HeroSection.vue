@@ -32,19 +32,35 @@
           />
         </div>
 
+        <!-- Botones con funcionalidad de modal -->
         <div class="hero__badges">
-          <div class="hero__badge">
+          <button
+            class="hero__badge hero__badge--clickable"
+            @click="openCategoryModal('restaurants')"
+            aria-label="Información sobre restaurantes locales"
+          >
             <span class="hero__badge-icon">🍽️</span>
             <span class="hero__badge-text">Restaurantes</span>
-          </div>
-          <div class="hero__badge">
+            <span class="hero__badge-info">ℹ️</span>
+          </button>
+          <button
+            class="hero__badge hero__badge--clickable"
+            @click="openCategoryModal('delivery')"
+            aria-label="Información sobre delivery sostenible"
+          >
             <span class="hero__badge-icon">🚚</span>
             <span class="hero__badge-text">Delivery</span>
-          </div>
-          <div class="hero__badge">
+            <span class="hero__badge-info">ℹ️</span>
+          </button>
+          <button
+            class="hero__badge hero__badge--clickable"
+            @click="openCategoryModal('chefs')"
+            aria-label="Información sobre chefs locales"
+          >
             <span class="hero__badge-icon">👨‍🍳</span>
             <span class="hero__badge-text">Chefs</span>
-          </div>
+            <span class="hero__badge-info">ℹ️</span>
+          </button>
         </div>
       </div>
 
@@ -63,18 +79,35 @@
         </path>
       </svg>
     </div>
+
+    <!-- Modal de información de categorías -->
+    <CategoryInfoModal
+      :is-visible="isModalVisible"
+      :category-data="selectedCategoryData"
+      @close="closeModal"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import SearchBox from '@/components/common/SearchBox.vue'
+import CategoryInfoModal from '@/components/modals/CategoryInfoModal.vue'
+import { categoriesData, type CategoryInfo } from '@/data/categoriesData'
 
 const router = useRouter()
 
 // Estado del componente
 const address = ref('')
+const isModalVisible = ref(false)
+const selectedCategoryId = ref<string | null>(null)
+
+// Computed para obtener los datos de la categoría seleccionada
+const selectedCategoryData = computed((): CategoryInfo | null => {
+  if (!selectedCategoryId.value) return null
+  return categoriesData.find(category => category.id === selectedCategoryId.value) || null
+})
 
 // Manejo de búsqueda
 const handleSearch = async (query: string) => {
@@ -87,6 +120,20 @@ const handleSearch = async (query: string) => {
   } catch (error) {
     console.error('Error al navegar a resultados de búsqueda:', error)
   }
+}
+
+// Manejo del modal
+const openCategoryModal = (categoryId: string) => {
+  selectedCategoryId.value = categoryId
+  isModalVisible.value = true
+}
+
+const closeModal = () => {
+  isModalVisible.value = false
+  // Pequeño delay para limpiar la categoría después de la animación
+  setTimeout(() => {
+    selectedCategoryId.value = null
+  }, 300)
 }
 </script>
 
@@ -195,7 +242,7 @@ const handleSearch = async (query: string) => {
     &__search-container {
         position: relative;
         margin-bottom: 2rem;
-        z-index: 10; // Asegurar que esté sobre otros elementos
+        z-index: 10;
 
         @media (min-width: 768px) {
             margin-bottom: 2.5rem;
@@ -224,10 +271,33 @@ const handleSearch = async (query: string) => {
         padding: 0.6rem 1rem;
         backdrop-filter: blur(6px);
         border: 1px solid rgba(255, 255, 255, 0.85);
-        transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+        position: relative;
 
-        &:hover {
+        &--clickable {
+            cursor: pointer;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+
+            &:hover {
+                transform: translateY(-5px);
+                background: rgba(255, 255, 255, 0.98);
+                border-color: rgba(255, 255, 255, 1);
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+
+                .hero__badge-info {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+
+            &:active {
+                transform: translateY(-2px);
+            }
+        }
+
+        &:hover:not(&--clickable) {
             transform: translateY(-3px);
             background: rgba(255, 255, 255, 0.95);
             border-color: rgba(255, 255, 255, 1);
@@ -244,15 +314,30 @@ const handleSearch = async (query: string) => {
             font-size: 0.85rem;
         }
 
+        &-info {
+            margin-left: 0.5rem;
+            font-size: 0.7rem;
+            opacity: 0;
+            transform: translateX(-5px);
+            transition: all 0.3s ease;
+            color: #FF416C;
+        }
+
         @media (min-width: 768px) {
             padding: 0.7rem 1.2rem;
             backdrop-filter: blur(8px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
             &-icon {
                 font-size: 1.2rem;
             }
+
             &-text {
                 font-size: 0.95rem;
+            }
+
+            &-info {
+                font-size: 0.8rem;
             }
         }
     }

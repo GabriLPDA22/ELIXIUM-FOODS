@@ -943,17 +943,19 @@ onUnmounted(() => {
         background: none;
         border: none;
         cursor: pointer;
-        padding: 0.5rem;
-        margin-right: 0.5rem;
+        padding: 0.75rem;
         color: #4b5563;
         line-height: 0;
+        border-radius: 12px;
+        transition: all 0.2s ease;
 
         svg {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
         }
         &:hover {
             color: #FF416C;
+            background-color: rgba(255, 65, 108, 0.1);
         }
 
         @media (max-width: 768px) {
@@ -979,18 +981,20 @@ onUnmounted(() => {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
+            width: 100vw;
+            height: 100vh;
             height: 100dvh;
             border-radius: 0;
             border: none;
             background-color: white;
             box-shadow: none;
-            z-index: 1001;
+            z-index: 1020;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         @media (max-width: 480px) {
-             width: 100%;
+             width: 100vw;
              right: 0;
         }
     }
@@ -1001,10 +1005,12 @@ onUnmounted(() => {
         @media (max-width: 768px) {
             display: flex;
             align-items: center;
-            padding: 0.5rem;
-            padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+            padding: 1rem 1rem 0.75rem;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
             background-color: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
         }
     }
 
@@ -1024,6 +1030,12 @@ onUnmounted(() => {
         transform: translateY(-50%);
         color: #FF416C;
         z-index: 2;
+        @media (max-width: 768px) {
+            position: static;
+            transform: none;
+            margin-right: 0.75rem;
+            color: #64748b;
+        }
     }
 
     &__search-input {
@@ -1039,8 +1051,11 @@ onUnmounted(() => {
         }
         @media (max-width: 768px) {
             flex-grow: 1;
-            font-size: 1rem;
-            padding: 0.75rem 0.5rem;
+            font-size: 1.1rem;
+            padding: 0.75rem 0;
+            &::placeholder {
+                color: #9ca3af;
+            }
         }
     }
 
@@ -1053,9 +1068,12 @@ onUnmounted(() => {
         border: none;
         color: #94a3b8;
         cursor: pointer;
-        padding: 0.25rem;
+        padding: 0.5rem;
         border-radius: 50%;
         transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         &:hover {
             background-color: rgba(255, 65, 108, 0.1);
             color: #FF416C;
@@ -1063,9 +1081,10 @@ onUnmounted(() => {
         @media (max-width: 768px) {
             position: static;
             transform: none;
-            padding: 0.5rem;
-            margin-left: 0.5rem;
+            margin-left: 0.75rem;
             color: #64748b;
+            padding: 0.5rem;
+            border-radius: 8px;
         }
     }
 
@@ -1073,13 +1092,12 @@ onUnmounted(() => {
         max-height: 320px;
         overflow-y: auto;
         @media (max-width: 768px) {
-            flex-grow: 1;
+            flex: 1;
             max-height: none;
             overflow-y: auto;
             background-color: #f8fafc;
-            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
+            padding: 0 1rem;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
         }
     }
 
@@ -1089,7 +1107,10 @@ onUnmounted(() => {
             border-bottom: 1px solid #f8fafc;
         }
          @media (max-width: 768px) {
-            padding: 0.5rem 0;
+            padding: 1rem 0;
+            &:first-child {
+                padding-top: 0.5rem;
+            }
         }
     }
 
@@ -1101,8 +1122,8 @@ onUnmounted(() => {
         text-transform: uppercase;
         letter-spacing: 0.05em;
         @media (max-width: 768px) {
-            padding: 0.5rem 0.25rem 0.5rem;
-            font-size: 0.7rem;
+            padding: 0.5rem 0 0.75rem;
+            font-size: 0.8rem;
          }
     }
 
@@ -1119,6 +1140,7 @@ onUnmounted(() => {
         transition: background-color 0.2s ease;
         font-size: 0.9rem;
         color: #334155;
+        border-radius: 8px;
         &:hover,
         &--active {
             background-color: #fef2f2;
@@ -1130,8 +1152,10 @@ onUnmounted(() => {
             }
         }
          @media (max-width: 768px) {
-            padding: 0.8rem 0.25rem;
-            font-size: 0.9rem;
+            padding: 1rem 0.5rem;
+            font-size: 1rem;
+            border-radius: 12px;
+            margin: 0.25rem 0;
         }
     }
 
@@ -1145,8 +1169,9 @@ onUnmounted(() => {
         gap: 0.5rem;
         padding: 0.5rem 1rem 0.75rem;
         @media (max-width: 768px) {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             gap: 0.75rem;
-            padding: 0.5rem 0.25rem 0.75rem;
+            padding: 0.5rem 0.5rem 0.75rem;
         }
     }
 
@@ -1155,10 +1180,10 @@ onUnmounted(() => {
         flex-direction: column;
         align-items: center;
         gap: 0.25rem;
-        padding: 0.5rem 0.25rem;
+        padding: 0.75rem 0.5rem;
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.2s ease;
         text-decoration: none;
@@ -1168,9 +1193,14 @@ onUnmounted(() => {
             transform: translateY(-1px);
         }
         @media (max-width: 768px) {
-            padding: 0.6rem 0.25rem;
-             .u-header__category-name { font-size: 0.65rem; }
-             .u-header__category-icon { font-size: 1.1rem; }
+            padding: 1rem 0.5rem;
+            border-radius: 16px;
+            .u-header__category-name {
+                font-size: 0.75rem;
+            }
+            .u-header__category-icon {
+                font-size: 1.5rem;
+            }
         }
     }
 
@@ -1295,8 +1325,7 @@ onUnmounted(() => {
         transform-origin: top right;
         @media (max-width: 480px) {
             width: calc(100vw - 32px);
-            right: -16px;
-            left: 16px;
+            right: -2px;
         }
         &::before {
             content: '';
@@ -1337,6 +1366,7 @@ onUnmounted(() => {
                 white-space: normal;
                 word-break: break-all;
                 line-height: 1.4;
+                display: flex
             }
         }
         &-badge {
@@ -1432,7 +1462,7 @@ onUnmounted(() => {
 .search-dropdown-leave-active {
     transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     @media (max-width: 768px) {
-        transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+        transition: opacity 0.3s ease-out, transform 0.3s ease-out;
     }
 }
 
@@ -1442,7 +1472,7 @@ onUnmounted(() => {
     transform: translateY(-10px) scaleY(0.95);
     @media (max-width: 768px) {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
 }
 </style>

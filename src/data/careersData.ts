@@ -4,7 +4,7 @@ export interface JobOpening {
   title: string
   department: string
   location: string
-  type: string
+  type: string // E.g., 'Jornada Completa', 'Media Jornada', 'Autónomo/Freelance'
   slug: string
   shortDescription: string
   responsibilities?: string[]
@@ -306,7 +306,98 @@ export const jobOpenings: JobOpening[] = [
       'Excelentes habilidades de comunicación, presentación y liderazgo técnico.',
     ],
   },
-]
+  // --- NUEVAS OFERTAS PARA REPARTIDORES ---
+  {
+    id: 'delivery001',
+    title: 'Repartidor/a en Moto/Bicicleta',
+    department: 'Operaciones',
+    location: 'Madrid, España',
+    type: 'Autónomo/Freelance (Horas Flexibles)',
+    slug: 'repartidor-madrid-flexible',
+    shortDescription:
+      'Únete a nuestro equipo de repartidores en Madrid. Entrega pedidos con tu propio vehículo (moto o bici) y gestiona tu tiempo. ¡Gana dinero extra!',
+    responsibilities: [
+      'Recoger pedidos de restaurantes y entregarlos a los clientes de forma puntual y eficiente.',
+      'Mantener una comunicación fluida con el equipo de operaciones.',
+      'Proporcionar un excelente servicio al cliente durante la entrega.',
+      'Cumplir con las normativas de seguridad vial y de la empresa.',
+    ],
+    qualifications: [
+      'Ser mayor de edad.',
+      'Disponer de vehículo propio (moto o bicicleta) y carnet de conducir correspondiente (si aplica).',
+      'Smartphone con conexión a internet para usar nuestra app de repartidores.',
+      'Conocimiento de las calles de Madrid.',
+      'Actitud proactiva, responsable y amable.',
+      'Estar dado de alta como autónomo o disposición para hacerlo.',
+    ],
+  },
+  {
+    id: 'delivery002',
+    title: 'Repartidor/a (Vehículo de Empresa)',
+    department: 'Operaciones',
+    location: 'Barcelona, España',
+    type: 'Jornada Completa (Turnos Rotativos)',
+    slug: 'repartidor-barcelona-jornada-completa',
+    shortDescription:
+      'Buscamos repartidores para nuestra flota en Barcelona. Ofrecemos contrato laboral, vehículo de empresa y la oportunidad de crecer.',
+    responsibilities: [
+      'Realizar entregas de pedidos utilizando el vehículo proporcionado por la empresa.',
+      'Seguir rutas optimizadas y cumplir con los horarios de entrega.',
+      'Mantener el vehículo limpio y en buen estado, reportando cualquier incidencia.',
+      'Colaborar con el equipo para garantizar la eficiencia operativa.',
+    ],
+    qualifications: [
+      'Carnet de conducir B (coche) o AM/A1 (moto/scooter), según el vehículo asignado.',
+      'Experiencia previa como repartidor/a valorable.',
+      'Buen conocimiento de Barcelona y alrededores.',
+      'Responsabilidad, puntualidad y buena presencia.',
+      'Capacidad para trabajar en equipo y bajo presión en momentos de alta demanda.',
+    ],
+  },
+  {
+    id: 'delivery003',
+    title: 'Repartidor/a Fines de Semana',
+    department: 'Operaciones',
+    location: 'Valencia, España',
+    type: 'Media Jornada (Fines de Semana y Festivos)',
+    slug: 'repartidor-valencia-fines-semana',
+    shortDescription:
+      '¿Buscas un trabajo compatible con tus estudios u otra actividad? Únete como repartidor/a en Valencia durante los fines de semana.',
+    responsibilities: [
+      'Entregar pedidos a domicilio con tu propio vehículo (moto, bici o coche).',
+      'Asegurar la calidad y rapidez en cada entrega.',
+      'Comunicación efectiva con clientes y el centro de operaciones.',
+    ],
+    qualifications: [
+      'Vehículo propio (moto, bicicleta o coche) y documentación en regla.',
+      'Disponibilidad para trabajar viernes por la tarde/noche, sábados y domingos (horarios flexibles).',
+      'Conocimiento de la ciudad de Valencia.',
+      'Persona dinámica y con buena actitud de servicio.',
+    ],
+  },
+  {
+    id: 'delivery004',
+    title: 'Repartidor/a Nocturno/a (Contrato)',
+    department: 'Operaciones',
+    location: 'Sevilla, España',
+    type: 'Jornada Parcial (Horario Nocturno)',
+    slug: 'repartidor-sevilla-nocturno',
+    shortDescription:
+      'Forma parte de nuestro equipo de repartidores nocturnos en Sevilla. Ideal si prefieres trabajar por la noche. Ofrecemos contrato.',
+    responsibilities: [
+      'Realizar entregas eficientes y seguras durante el turno de noche.',
+      'Gestionar pedidos a través de nuestra aplicación móvil.',
+      'Asegurar la satisfacción del cliente en cada interacción.',
+    ],
+    qualifications: [
+      'Carnet de conducir y vehículo propio (preferiblemente moto).',
+      'Disponibilidad para trabajar en horario nocturno (ej. 20:00 a 02:00).',
+      'Experiencia como repartidor o en trabajos nocturnos es un plus.',
+      'Residencia en Sevilla o alrededores con buen conocimiento de la ciudad.',
+      'Compromiso y fiabilidad.',
+    ],
+  },
+];
 
 export const companyValues = [
   // Mantengo los mismos valores de empresa
@@ -336,4 +427,4 @@ export const companyValues = [
     title: 'Cultura Positiva',
     description: 'Fomentamos un ambiente de trabajo flexible, inclusivo y donde cada voz cuenta.',
   },
-]
+];

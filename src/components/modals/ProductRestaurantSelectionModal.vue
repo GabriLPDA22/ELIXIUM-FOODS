@@ -117,23 +117,36 @@ const enhancedOfferings = ref<RestaurantProductOfferingDto[]>([]);
 
 const fetchOfferForProductInRestaurant = async (productId: number, restaurantId: number, originalPrice: number): Promise<OfferDetails | null> => {
   try {
-    // const response = await api.get(`/restaurants/${restaurantId}/products/${productId}/active-offer`);
-    // if (response.data && response.data.isActive) {
-    //   const offerData = response.data;
-    //   let discountedPrice = originalPrice;
-    //   let offerText = '';
-    //   if (offerData.discountType === 'percentage') {
-    //     discountedPrice = originalPrice * (1 - offerData.discountValue / 100);
-    //     offerText = `${offerData.discountValue}% OFF`;
-    //   } else if (offerData.discountType === 'fixed') {
-    //     discountedPrice = Math.max(0, originalPrice - offerData.discountValue);
-    //     offerText = `€${offerData.discountValue.toFixed(2)} OFF`;
-    //   }
-    //   return { hasOffer: true, discountedPrice, offerText, originalPrice };
-    // }
+    // ✅ URL CORREGIDA: Agregar /api/ al inicio
+    const response = await api.get(`/api/restaurants/${restaurantId}/products/${productId}/active-offer`);
+
+    // ✅ LÓGICA ACTUALIZADA: El backend ahora devuelve 200 con hasOffer: true/false
+    if (response.data && response.data.hasOffer && response.data.isActive) {
+      const offerData = response.data;
+      let discountedPrice = originalPrice;
+      let offerText = '';
+
+      if (offerData.discountType === 'percentage') {
+        discountedPrice = originalPrice * (1 - offerData.discountValue / 100);
+        offerText = `${offerData.discountValue}% OFF`;
+      } else if (offerData.discountType === 'fixed') {
+        discountedPrice = Math.max(0, originalPrice - offerData.discountValue);
+        offerText = `€${offerData.discountValue.toFixed(2)} OFF`;
+      }
+
+      return {
+        hasOffer: true,
+        discountedPrice,
+        offerText,
+        originalPrice
+      };
+    }
+
+    // Si no hay oferta o no está activa, devolver null
     return null;
   } catch (error) {
-    console.error(`API error fetching offer for product ${productId} at restaurant ${restaurantId}:`, error);
+    // ✅ MANEJO MEJORADO: Solo log del error, pero no lanzar excepción
+    console.warn(`No se pudo obtener oferta para producto ${productId} en restaurante ${restaurantId}:`, error);
     return null;
   }
 };
@@ -157,10 +170,19 @@ const processOfferings = async (rawOfferings: BaseRestaurantProductOfferingDto[]
   try {
     const processed = await Promise.all(
       rawOfferings.map(async (offering) => {
-        const offerDetails = await fetchOfferForProductInRestaurant(props.product!.id, offering.restaurantId, offering.price);
+        const offerDetails = await fetchOfferForProductInRestaurant(
+          props.product!.id,
+          offering.restaurantId,
+          offering.price
+        );
+
         return {
           ...offering,
-          offerDetails: offerDetails || { hasOffer: false, discountedPrice: offering.price, offerText: '' }
+          offerDetails: offerDetails || {
+            hasOffer: false,
+            discountedPrice: offering.price,
+            offerText: ''
+          }
         };
       })
     );
@@ -168,6 +190,8 @@ const processOfferings = async (rawOfferings: BaseRestaurantProductOfferingDto[]
   } catch (error) {
     console.error("Error processing offerings:", error);
     localError.value = "No se pudieron cargar las opciones del restaurante.";
+
+    // ✅ FALLBACK MEJORADO: Mostrar los datos básicos sin ofertas
     enhancedOfferings.value = rawOfferings.map(o => ({
         ...o,
         offerDetails: { hasOffer: false, discountedPrice: o.price, offerText: '' }
@@ -184,7 +208,6 @@ watch(() => props.offerings, (newOfferings) => {
     enhancedOfferings.value = [];
   }
 }, { immediate: true, deep: true });
-
 
 watch(() => props.isLoadingInitialOfferings, (newVal) => {
   isLoading.value = newVal ?? false;
@@ -203,19 +226,26 @@ onMounted(() => {
   if (props.offerings && !localError.value) {
      processOfferings(props.offerings);
   } else if (!props.offerings && !isLoading.value && !localError.value) {
-    enhancedOfferings.value = []; // Asegurar que esté vacío si no hay offerings iniciales
+    enhancedOfferings.value = [];
   }
 });
 
 const sortedOfferings = computed(() => {
   return [...enhancedOfferings.value].sort((a, b) => {
+    // 1. Productos disponibles primero
     if (a.isAvailable && !b.isAvailable) return -1;
     if (!a.isAvailable && b.isAvailable) return 1;
+
+    // 2. Ofertas activas primero (entre los disponibles)
     if (a.offerDetails?.hasOffer && !b.offerDetails?.hasOffer) return -1;
     if (!a.offerDetails?.hasOffer && b.offerDetails?.hasOffer) return 1;
+
+    // 3. Ordenar por precio (precio con descuento si hay oferta)
     const priceA = a.offerDetails?.hasOffer ? a.offerDetails.discountedPrice : a.price;
     const priceB = b.offerDetails?.hasOffer ? b.offerDetails.discountedPrice : b.price;
     if (priceA !== priceB) return priceA - priceB;
+
+    // 4. Finalmente por nombre del restaurante
     return (a.restaurantName || '').localeCompare(b.restaurantName || '');
   });
 });

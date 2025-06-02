@@ -1,4 +1,4 @@
-// src/services/api.ts - ARREGLADO CON NOMBRES CONSISTENTES
+// src/services/api.ts - OPTIMIZADO SIN LOGS INNECESARIOS
 import axios from 'axios';
 
 // Crear instancia de axios con configuración base
@@ -14,106 +14,105 @@ export const api = axios.create({
 // Flag para evitar múltiples redirects simultáneos
 let isRedirecting = false;
 
+// ✅ RUTAS PÚBLICAS QUE NO NECESITAN AUTENTICACIÓN
+const PUBLIC_ROUTES = [
+  '/api/Restaurants',
+  '/api/Restaurants/with-status',
+  '/api/Restaurants/search',
+  '/api/Restaurants/by-tipo',
+  '/api/Restaurants/popular',
+  '/api/Auth/login',
+  '/api/Auth/register',
+  '/api/Auth/google-login',
+  '/api/Auth/forgot-password',
+  '/api/Auth/reset-password'
+];
+
+// ✅ FUNCIÓN HELPER PARA VERIFICAR SI UNA RUTA ES PÚBLICA
+const isPublicRoute = (url: string): boolean => {
+  return PUBLIC_ROUTES.some(route => url.includes(route));
+};
+
 // ✅ FUNCIÓN HELPER PARA OBTENER TOKEN
 const getAuthToken = (): string | null => {
-  // Intentar ambos nombres para compatibilidad
   return localStorage.getItem('authToken') || localStorage.getItem('token');
 };
 
 // ✅ FUNCIÓN HELPER PARA LIMPIAR TOKENS
 const clearAuthData = () => {
   localStorage.removeItem('authToken');
-  localStorage.removeItem('token'); // Limpiar ambos por compatibilidad
+  localStorage.removeItem('token');
   localStorage.removeItem('user');
   localStorage.removeItem('cart');
 };
 
-// Interceptor para agregar el token a las solicitudes
+// ✅ INTERCEPTOR OPTIMIZADO - Solo autenticación cuando es necesaria
 api.interceptors.request.use(
   config => {
-    const token = getAuthToken();
+    // Si es ruta pública, no agregar token
+    if (isPublicRoute(config.url || '')) {
+      return config;
+    }
 
+    // Solo para rutas privadas, intentar agregar token
+    const token = getAuthToken();
     if (token) {
       config.headers = config.headers || {};
 
-      // Verificar si el token parece ser un JWT válido
+      // Verificar si es JWT válido (básico)
       if (token.split('.').length === 3) {
         config.headers['Authorization'] = `Bearer ${token}`;
-        console.log(`🔑 Enviando JWT válido: ${token.substring(0, 20)}...`);
       } else {
-        console.warn('⚠️ Token no parece ser JWT válido:', token.substring(0, 20));
         config.headers['Authorization'] = `Bearer ${token}`;
       }
-    } else {
-      console.log('❌ No hay token disponible para la petición a:', config.url);
     }
+    // Si no hay token en ruta privada, la request continuará y el servidor responderá 401 si es necesario
 
     return config;
   },
   error => Promise.reject(error)
 );
 
-// Interceptor para manejar errores de respuesta
+// ✅ INTERCEPTOR DE RESPUESTA SIMPLIFICADO
 api.interceptors.response.use(
   response => response,
   async error => {
     const originalRequest = error.config;
 
-    console.log('🚨 Error en API interceptor:', {
-      status: error.response?.status,
-      url: originalRequest?.url,
-      currentPath: window.location.pathname,
-      isRedirecting,
-      hasToken: !!getAuthToken()
-    });
-
-    // Si el error es 401 (Unauthorized)
-    if (error.response?.status === 401 && !originalRequest._retry && !isRedirecting) {
-      console.log('🔓 Error 401 detectado, procesando...');
-
-      // Marcar que ya intentamos procesar este error
+    // Solo manejar 401 en rutas privadas y evitar loops
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isRedirecting &&
+      !isPublicRoute(originalRequest?.url || '')
+    ) {
       originalRequest._retry = true;
 
       const currentPath = window.location.pathname;
 
-      // ✅ VERIFICACIONES MEJORADAS PARA EVITAR LOOPS
-
-      // 1. No redirigir si ya estamos en rutas de auth
-      const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
-      const isInAuthRoute = authRoutes.some(route => currentPath.startsWith(route));
-
-      // 2. No redirigir si es una ruta pública
-      const publicRoutes = ['/', '/about', '/contact', '/restaurants'];
-      const isPublicRoute = publicRoutes.some(route =>
+      // ✅ RUTAS QUE NO REQUIEREN REDIRECT
+      const noRedirectRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/', '/about', '/contact'];
+      const shouldNotRedirect = noRedirectRoutes.some(route =>
         currentPath === route || (route === '/restaurants' && currentPath.startsWith('/restaurants'))
       );
 
-      // 3. Solo limpiar datos si realmente hay un problema de auth
-      if (error.response?.data?.message?.includes('token') ||
-          error.response?.data?.message?.includes('unauthorized') ||
-          error.response?.data?.message?.includes('expired')) {
-
-        console.log('🧹 Limpiando datos de autenticación por token inválido...');
+      // Solo limpiar datos si el error indica problema real de autenticación
+      if (error.response?.data?.message?.toLowerCase().includes('token') ||
+          error.response?.data?.message?.toLowerCase().includes('unauthorized') ||
+          error.response?.data?.message?.toLowerCase().includes('expired')) {
         clearAuthData();
       }
 
-      // ✅ REDIRIGIR SOLO SI ES NECESARIO
-      if (!isInAuthRoute && !isPublicRoute && !isRedirecting) {
+      // Redirigir solo si es necesario
+      if (!shouldNotRedirect && !isRedirecting) {
         isRedirecting = true;
 
-        console.log('🔀 Redirigiendo al login desde:', currentPath);
-
-        // Pequeño delay para evitar conflictos con router guards
         setTimeout(() => {
           const returnUrl = currentPath !== '/' && !currentPath.startsWith('/login')
             ? encodeURIComponent(currentPath)
             : null;
 
-          const loginUrl = returnUrl
-            ? `/login?returnUrl=${returnUrl}`
-            : '/login';
-
-          console.log('🔀 Redirect URL:', loginUrl);
+          const loginUrl = returnUrl ? `/login?returnUrl=${returnUrl}` : '/login';
           window.location.href = loginUrl;
 
           // Reset flag después de redirect
@@ -124,7 +123,6 @@ api.interceptors.response.use(
       }
     }
 
-    // Para otros errores, no hacer nada especial
     return Promise.reject(error);
   }
 );
@@ -140,21 +138,28 @@ export const isTokenValid = (): boolean => {
   if (!token) return false;
 
   try {
-    // Si es JWT, verificar expiración
     if (token.split('.').length === 3) {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const now = Math.floor(Date.now() / 1000);
 
       if (payload.exp && payload.exp < now) {
-        console.log('🕐 Token expirado detectado');
         return false;
       }
     }
     return true;
-  } catch (error) {
-    console.warn('⚠️ Error verificando validez del token:', error);
+  } catch {
     return false;
   }
 };
+
+// ✅ API ESPECÍFICA PARA RUTAS PÚBLICAS (opcional, para mayor claridad)
+export const publicApi = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5290',
+  timeout: 10000, // Timeout más corto para rutas públicas
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
+});
 
 export default api;

@@ -316,150 +316,89 @@
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { restaurantService } from '@/services/restaurantService';
-import { api } from '@/services/api';
+import { api, publicApi } from '@/services/api';
 
 // Router
 const router = useRouter();
 const route = useRoute();
 
-// Estado
-const restaurants = ref([]);
+// Estado principal - SIMPLIFICADO
+const allRestaurants = ref([]); // Cache de todos los restaurantes
 const loading = ref(true);
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 const sortBy = ref('popularity');
-
-// Paginación
 const currentPage = ref(1);
+const isMobile = ref(window.innerWidth <= 768);
+
+// Constantes
 const itemsPerPage = 8;
-
-// Mobile detection
-const isMobile = ref(false);
-
-// Categorías - ACTUALIZADAS para coincidir con las del Home
 const categories = [
   { id: 'all', name: 'Todos' },
-  { id: 1, name: 'Americano' },
-  { id: 2, name: 'Italiano' },
-  { id: 3, name: 'Mexicano' },
-  { id: 4, name: 'Asiático' },
-  { id: 5, name: 'Fast Food' },
-  { id: 6, name: 'Saludable' },
-  { id: 7, name: 'Postres' },
-  { id: 8, name: 'Vegano' }
+  { id: 1, name: 'Americano', icon: '🍔' },
+  { id: 2, name: 'Italiano', icon: '🍕' },
+  { id: 3, name: 'Mexicano', icon: '🌮' },
+  { id: 4, name: 'Asiático', icon: '🍜' },
+  { id: 5, name: 'Fast Food', icon: '🍟' },
+  { id: 6, name: 'Saludable', icon: '🥗' },
+  { id: 7, name: 'Postres', icon: '🍦' },
+  { id: 8, name: 'Vegano', icon: '🥑' }
 ];
 
-// Iconos para categorías - ACTUALIZADOS
-const getCategoryIcon = (categoryId) => {
-  const icons = {
-    1: '🍔',
-    2: '🍕',
-    3: '🌮',
-    4: '🍜',
-    5: '🍟',
-    6: '🥗',
-    7: '🍦',
-    8: '🥑'
-  };
-  return icons[categoryId] || '';
-};
-
-// Obtener nombre del tipo de restaurante
-const getTipoName = (tipo) => {
-  const category = categories.find(c => c.id === tipo);
-  return category ? category.name : 'Variado';
-};
-
-// Leer parámetros de la URL
-const initializeFromURL = () => {
-  const categoryParam = route.query.category;
-  if (categoryParam && categoryParam !== 'all') {
-    const categoryId = parseInt(categoryParam);
-    if (categories.find(c => c.id === categoryId)) {
-      selectedCategory.value = categoryId;
-    }
-  }
-};
-
-// Obtener restaurantes con estado
-const fetchRestaurants = async () => {
-  loading.value = true;
-
+// CARGA ÚNICA Y RÁPIDA - Solo una llamada a la API PÚBLICA
+const loadAllRestaurants = async () => {
   try {
-    let data;
-
-    if (selectedCategory.value !== 'all') {
-      // Para categorías específicas, usar el endpoint con status y filtrar
-      try {
-        const response = await api.get('/api/Restaurants/with-status');
-        console.log('✅ Restaurantes con estado cargados:', response.data);
-        data = response.data.filter(r => r.tipo === selectedCategory.value);
-      } catch (statusError) {
-        console.warn('⚠️ Endpoint with-status falló, usando fallback:', statusError.message);
-        // Fallback al endpoint por tipo
-        data = await restaurantService.getRestaurantsByTipo(selectedCategory.value);
-        data = data.map(restaurant => ({
-          ...restaurant,
-          isCurrentlyOpen: restaurant.isOpen,
-          status: restaurant.isOpen ? 'Abierto' : 'Cerrado',
-          statusMessage: restaurant.isOpen ? 'Abierto ahora' : 'Cerrado'
-        }));
-      }
-    } else {
-      // Para "todos", usar el endpoint con status
-      try {
-        const response = await api.get('/api/Restaurants/with-status');
-        console.log('✅ Todos los restaurantes con estado cargados:', response.data);
-        data = response.data;
-      } catch (statusError) {
-        console.warn('⚠️ Endpoint with-status falló, usando fallback:', statusError.message);
-        // Fallback al endpoint original
-        data = await restaurantService.getAllRestaurants();
-        data = data.map(restaurant => ({
-          ...restaurant,
-          isCurrentlyOpen: restaurant.isOpen,
-          status: restaurant.isOpen ? 'Abierto' : 'Cerrado',
-          statusMessage: restaurant.isOpen ? 'Abierto ahora' : 'Cerrado'
-        }));
-      }
-    }
-
-    restaurants.value = data;
-    console.log('📍 Restaurantes finales:', restaurants.value.map(r => ({
-      id: r.id,
-      name: r.name,
-      isOpen: r.isOpen,
-      isCurrentlyOpen: r.isCurrentlyOpen,
-      statusMessage: r.statusMessage
-    })));
-
+    // Usar API pública para mayor velocidad
+    const response = await publicApi.get('/api/Restaurants/with-status');
+    allRestaurants.value = response.data;
   } catch (error) {
-    console.error('❌ Error general al cargar restaurantes:', error);
-    restaurants.value = [];
+    // Fallback simple sin logs excesivos
+    try {
+      const fallback = await publicApi.get('/api/Restaurants');
+      allRestaurants.value = fallback.data.map(r => ({
+        ...r,
+        isCurrentlyOpen: r.isOpen || false,
+        statusMessage: r.isOpen ? 'Abierto ahora' : 'Cerrado'
+      }));
+    } catch (fallbackError) {
+      allRestaurants.value = [];
+    }
   } finally {
     loading.value = false;
   }
 };
 
-// Filtrar restaurantes
+// FILTRADO COMPUTADO - Todo en memoria, súper rápido
 const filteredRestaurants = computed(() => {
-  let result = restaurants.value;
+  let result = allRestaurants.value;
 
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter(restaurant =>
-      restaurant.name.toLowerCase().includes(query) ||
-      (restaurant.description && restaurant.description.toLowerCase().includes(query))
+  // Filtrar por categoría
+  if (selectedCategory.value !== 'all') {
+    result = result.filter(r => r.tipo === selectedCategory.value);
+  }
+
+  // Filtrar por búsqueda
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    result = result.filter(r =>
+      r.name.toLowerCase().includes(query) ||
+      (r.description && r.description.toLowerCase().includes(query))
     );
   }
 
-  if (sortBy.value === 'rating') {
-    result = [...result].sort((a, b) => b.averageRating - a.averageRating);
-  } else if (sortBy.value === 'delivery') {
-    result = [...result].sort((a, b) => a.estimatedDeliveryTime - b.estimatedDeliveryTime);
-  } else if (sortBy.value === 'price') {
-    result = [...result].sort((a, b) => a.deliveryFee - b.deliveryFee);
+  // Ordenar
+  switch (sortBy.value) {
+    case 'rating':
+      result = [...result].sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+      break;
+    case 'delivery':
+      result = [...result].sort((a, b) => (a.estimatedDeliveryTime || 999) - (b.estimatedDeliveryTime || 999));
+      break;
+    case 'price':
+      result = [...result].sort((a, b) => (a.deliveryFee || 0) - (b.deliveryFee || 0));
+      break;
+    default: // popularity
+      result = [...result].sort((a, b) => (b.totalOrders || 0) - (a.totalOrders || 0));
   }
 
   return result;
@@ -467,11 +406,9 @@ const filteredRestaurants = computed(() => {
 
 // Paginación computada
 const totalPages = computed(() => Math.ceil(filteredRestaurants.value.length / itemsPerPage));
-
 const paginatedRestaurants = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  return filteredRestaurants.value.slice(start, end);
+  return filteredRestaurants.value.slice(start, start + itemsPerPage);
 });
 
 const paginationInfo = computed(() => {
@@ -480,20 +417,14 @@ const paginationInfo = computed(() => {
   return { start, end, total: filteredRestaurants.value.length };
 });
 
-// Métodos
+// Métodos simples
 const selectCategory = (categoryId) => {
   selectedCategory.value = categoryId;
   currentPage.value = 1;
 
-  // Actualizar URL sin recargar página
-  router.replace({
-    query: {
-      ...route.query,
-      category: categoryId === 'all' ? undefined : categoryId
-    }
-  });
-
-  fetchRestaurants();
+  // Update URL without reload
+  const query = categoryId === 'all' ? {} : { category: categoryId };
+  router.replace({ query });
 };
 
 const resetFilters = () => {
@@ -501,146 +432,131 @@ const resetFilters = () => {
   selectedCategory.value = 'all';
   sortBy.value = 'popularity';
   currentPage.value = 1;
-
-  // Limpiar parámetros de URL
   router.replace({ query: {} });
-
-  fetchRestaurants();
 };
 
 const goToRestaurant = (restaurantId) => {
   router.push(`/restaurant/${restaurantId}`);
 };
 
-// Funciones de paginación
+// Navegación de páginas
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
-    document.querySelector('.restaurants-section').scrollIntoView({ behavior: 'smooth' });
+    // Scroll suave a la sección
+    document.querySelector('.restaurants-section')?.scrollIntoView({ behavior: 'smooth' });
   }
 };
 
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    goToPage(currentPage.value + 1);
-  }
-};
+const nextPage = () => currentPage.value < totalPages.value && goToPage(currentPage.value + 1);
+const previousPage = () => currentPage.value > 1 && goToPage(currentPage.value - 1);
 
-const previousPage = () => {
-  if (currentPage.value > 1) {
-    goToPage(currentPage.value - 1);
-  }
-};
-
+// Páginas visibles para paginación
 const getVisiblePages = () => {
+  const total = totalPages.value;
+  const current = currentPage.value;
   const delta = 2;
-  const range = [];
-  const rangeWithDots = [];
 
-  for (let i = Math.max(2, currentPage.value - delta);
-       i <= Math.min(totalPages.value - 1, currentPage.value + delta);
-       i++) {
-    range.push(i);
+  if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+
+  const pages = [];
+  pages.push(1);
+
+  if (current - delta > 2) pages.push('...');
+
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+    pages.push(i);
   }
 
-  if (currentPage.value - delta > 2) {
-    rangeWithDots.push(1, '...');
-  } else {
-    rangeWithDots.push(1);
-  }
+  if (current + delta < total - 1) pages.push('...');
+  if (total > 1) pages.push(total);
 
-  rangeWithDots.push(...range);
-
-  if (currentPage.value + delta < totalPages.value - 1) {
-    rangeWithDots.push('...', totalPages.value);
-  } else {
-    rangeWithDots.push(totalPages.value);
-  }
-
-  return rangeWithDots;
+  return pages;
 };
 
 // Helpers para badges
 const isNew = (restaurant) => {
   if (!restaurant.createdAt) return false;
-  const twoMonthsAgo = new Date();
-  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-  return new Date(restaurant.createdAt) > twoMonthsAgo;
+  const twoMonthsAgo = Date.now() - (60 * 24 * 60 * 60 * 1000); // 60 días
+  return new Date(restaurant.createdAt).getTime() > twoMonthsAgo;
 };
 
-const isFastDelivery = (restaurant) => {
-  return restaurant.estimatedDeliveryTime <= 20;
-};
+const isFastDelivery = (restaurant) => (restaurant.estimatedDeliveryTime || 999) <= 20;
 
-// Navegación en carrusel - Solo para desktop
+const getTipoName = (tipo) => categories.find(c => c.id === tipo)?.name || 'Variado';
+const getCategoryIcon = (categoryId) => categories.find(c => c.id === categoryId)?.icon || '';
+
+// Scroll para categorías (solo desktop)
 const categoriesContainer = ref(null);
 const showLeftScroll = ref(false);
 const showRightScroll = ref(true);
-
-const checkMobile = () => {
-  isMobile.value = window.innerWidth <= 768;
-};
 
 const checkScrollPosition = () => {
   if (!categoriesContainer.value || isMobile.value) return;
 
   const container = categoriesContainer.value;
   showLeftScroll.value = container.scrollLeft > 10;
-  showRightScroll.value = container.scrollLeft < (container.scrollWidth - container.clientWidth - 10);
+  showRightScroll.value = container.scrollLeft < container.scrollWidth - container.clientWidth - 10;
 };
 
 const scrollCategories = (direction) => {
   if (!categoriesContainer.value || isMobile.value) return;
 
-  const container = categoriesContainer.value;
-  const scrollAmount = container.offsetWidth * 0.75;
-
-  if (direction === 'left') {
-    container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-  } else {
-    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-  }
+  const scrollAmount = categoriesContainer.value.offsetWidth * 0.75;
+  categoriesContainer.value.scrollBy({
+    left: direction === 'left' ? -scrollAmount : scrollAmount,
+    behavior: 'smooth'
+  });
 
   setTimeout(checkScrollPosition, 300);
 };
 
-// Inicialización
-onMounted(() => {
-  // Primero inicializar desde URL, luego cargar datos
-  initializeFromURL();
-  fetchRestaurants();
-  checkMobile();
+// Event handlers
+const handleResize = () => {
+  isMobile.value = window.innerWidth <= 768;
+};
 
-  window.addEventListener('resize', checkMobile);
+// INICIALIZACIÓN ULTRA RÁPIDA
+onMounted(async () => {
+  // 1. Leer URL params inmediatamente
+  const categoryParam = route.query.category;
+  if (categoryParam && categoryParam !== 'all') {
+    const categoryId = parseInt(categoryParam);
+    if (categories.find(c => c.id === categoryId)) {
+      selectedCategory.value = categoryId;
+    }
+  }
 
+  // 2. Cargar datos (única llamada API)
+  await loadAllRestaurants();
+
+  // 3. Setup listeners
+  window.addEventListener('resize', handleResize);
+
+  // 4. Setup scroll detection
   setTimeout(() => {
     if (categoriesContainer.value) {
       checkScrollPosition();
       categoriesContainer.value.addEventListener('scroll', checkScrollPosition);
     }
-  }, 300);
+  }, 100);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile);
+  window.removeEventListener('resize', handleResize);
 });
 
-// Watchers
-watch(searchQuery, () => {
-  currentPage.value = 1;
-});
+// WATCHERS MÍNIMOS - Solo lo esencial
+watch(searchQuery, () => currentPage.value = 1);
+watch(sortBy, () => currentPage.value = 1);
 
-watch(sortBy, () => {
-  currentPage.value = 1;
-});
-
-// Watch para cambios en los parámetros de la URL
+// Watch URL changes sin recargar datos
 watch(() => route.query.category, (newCategory) => {
   if (newCategory && newCategory !== selectedCategory.value) {
     const categoryId = newCategory === 'all' ? 'all' : parseInt(newCategory);
-    if (categories.find(c => c.id === categoryId)) {
+    if (categories.find(c => c.id === categoryId) || categoryId === 'all') {
       selectedCategory.value = categoryId;
-      fetchRestaurants();
+      currentPage.value = 1;
     }
   }
 });

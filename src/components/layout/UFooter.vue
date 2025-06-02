@@ -11,13 +11,13 @@
             <p class="u-footer__tagline">Deliciosa comida entregada a tu puerta. Los mejores restaurantes locales a tu
               alcance.</p>
             <div class="u-footer__social">
-              <a href="#" class="u-footer__social-link" aria-label="Facebook">
+              <a href="https://facebook.com/elixiumfoods" target="_blank" rel="noopener noreferrer" class="u-footer__social-link" aria-label="Facebook">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
                 </svg>
               </a>
-              <a href="#" class="u-footer__social-link" aria-label="Twitter">
+              <a href="https://twitter.com/elixiumfoods" target="_blank" rel="noopener noreferrer" class="u-footer__social-link" aria-label="Twitter">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
                   <path
@@ -25,7 +25,7 @@
                   </path>
                 </svg>
               </a>
-              <a href="#" class="u-footer__social-link" aria-label="Instagram">
+              <a href="https://instagram.com/elixiumfoods" target="_blank" rel="noopener noreferrer" class="u-footer__social-link" aria-label="Instagram">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -33,7 +33,7 @@
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                 </svg>
               </a>
-              <a href="#" class="u-footer__social-link" aria-label="YouTube">
+              <a href="https://youtube.com/@elixiumfoods" target="_blank" rel="noopener noreferrer" class="u-footer__social-link" aria-label="YouTube">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
                   <path
@@ -44,11 +44,11 @@
               </a>
             </div>
             <div class="u-footer__apps">
-              <a href="#" class="u-footer__app-link">
+              <a href="https://apps.apple.com/app/elixium-foods/id123456789" target="_blank" rel="noopener noreferrer" class="u-footer__app-link">
                 <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
                   alt="Descarga en App Store" class="u-footer__app-image">
               </a>
-              <a href="#" class="u-footer__app-link">
+              <a href="https://play.google.com/store/games?hl=es/store/apps/details?id=com.elixiumfoods.app" target="_blank" rel="noopener noreferrer" class="u-footer__app-link">
                 <img src="https://play.google.com/intl/en_us/badges/static/images/badges/es_badge_web_generic.png"
                   alt="Disponible en Google Play" class="u-footer__app-image">
               </a>
@@ -98,21 +98,21 @@
           <p class="u-footer__copyright">© {{ new Date().getFullYear() }} Elixium Foods. Todos los derechos reservados.
           </p>
           <div class="u-footer__payment">
-            <a href="#" class="u-footer__payment-link" title="American Express">
+            <a href="https://www.americanexpress.com/es/" target="_blank" rel="noopener noreferrer" class="u-footer__payment-link" title="American Express">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/1200px-American_Express_logo_%282018%29.svg.png"
                 alt="American Express" class="u-footer__payment-img">
             </a>
-            <a href="#" class="u-footer__payment-link" title="Mastercard">
+            <a href="https://www.mastercard.es/" target="_blank" rel="noopener noreferrer" class="u-footer__payment-link" title="Mastercard">
               <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/MasterCard_early_1990s_logo.png"
                 alt="Mastercard" class="u-footer__payment-img">
             </a>
-            <a href="#" class="u-footer__payment-link" title="Visa">
+            <a href="https://www.visa.es/" target="_blank" rel="noopener noreferrer" class="u-footer__payment-link" title="Visa">
               <img
                 src="https://www.visa.es/dam/VCOM/regional/ve/unitedkingdom/in-page-images/click-to-pay/consumer/uk-visa-clicktopay-logo-800x450.jpg"
                 alt="Visa" class="u-footer__payment-img">
             </a>
-            <a href="https://www.top-bank.ch/es/banca-online-movil/paypal" class="u-footer__payment-link"
+            <a href="https://www.paypal.com/es/home" target="_blank" rel="noopener noreferrer" class="u-footer__payment-link"
               title="PayPal">
               <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="PayPal"
                 class="u-footer__payment-img">

@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router'; // Asegúrate de que createRouter y createWebHistory estén importados en tu main.ts o archivo de router principal
+import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -107,15 +107,39 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/delivery-zones',
+    name: 'delivery-zones',
+    component: () => import('@/views/DeliveryZonesView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/chefs',
+    name: 'chefs',
+    component: () => import('@/views/ChefsView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/chefs/:slug',
+    name: 'chef-detail',
+    component: () => import('@/views/ChefDetailView.vue'),
+    meta: { requiresAuth: false },
+    props: true
+  },
+  // ✅ NUEVA RUTA PARA CHEF SIGNUP
+  {
+    path: '/chef-signup',
+    name: 'chef-signup',
+    component: () => import('@/views/ChefSignupForm.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/for-business',
     name: 'for-business',
     component: () => import('@/views/ForBusiness.vue'),
     meta: {
       requiresAuth: false,
-      // hideHeaderFooter: true,
     }
   },
-    // --- NUEVAS RUTAS DEL BLOG ---
   {
     path: '/blog',
     name: 'blog',
@@ -129,7 +153,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
     props: true
   },
-   {
+    {
     path: '/centro-de-ayuda',
     name: 'help-center',
     component: () => import('@/views/HelpCenterPage.vue'),
@@ -159,11 +183,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/BusinessRegisterForm.vue'),
     meta: {
       requiresAuth: false,
-      // hideHeaderFooter: true,
     }
   },
   {
-    path: '/contact', // Ruta para la página de contacto
+    path: '/contact',
     name: 'contact',
     component: () => import('@/views/ContactPage.vue'),
     meta: { requiresAuth: false }
