@@ -1,4 +1,4 @@
-<!-- views/admin/AdminOrders.vue -->
+<!-- views/admin/AdminOrders.vue - Actualizado para usar nuevos DTOs -->
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
@@ -69,13 +69,15 @@
           <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-gray-50">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ order.id }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
+              <!-- ✅ ARREGLO: Usar las nuevas propiedades -->
               <div v-if="order.user" class="text-sm font-medium text-gray-900">
                 {{ order.user.firstName || '' }} {{ order.user.lastName || '' }}
               </div>
-              <div v-if="order.user" class="text-sm text-gray-500">{{ order.user.email || '' }}</div>
+              <div v-if="order.user && order.user.email" class="text-sm text-gray-500">{{ order.user.email }}</div>
               <div v-if="!order.user" class="text-sm text-gray-500">Usuario no disponible</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
+              <!-- ✅ ARREGLO: Usar las nuevas propiedades -->
               <div v-if="order.restaurant" class="text-sm font-medium text-gray-900">{{ order.restaurant.name || 'N/A' }}</div>
               <div v-else class="text-sm text-gray-500">Restaurante no disponible</div>
             </td>
@@ -89,6 +91,7 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
+              <!-- ✅ ARREGLO: Usar las nuevas propiedades -->
               <div v-if="order.deliveryPerson">
                 <div class="text-sm font-medium text-gray-900">
                   {{ order.deliveryPerson.firstName || '' }} {{ order.deliveryPerson.lastName || '' }}
@@ -122,7 +125,6 @@
                       d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <!-- Botón de eliminar -->
                 <button @click="confirmDelete(order)" class="text-red-600 hover:text-red-900">
                   <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -186,20 +188,23 @@
               <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="mb-3">
                   <span class="text-sm text-gray-500">Cliente:</span>
+                  <!-- ✅ ARREGLO: Usar las nuevas propiedades -->
                   <p v-if="viewingOrder.user" class="font-medium">
                     {{ viewingOrder.user.firstName || '' }} {{ viewingOrder.user.lastName || '' }}
                   </p>
-                  <p v-if="viewingOrder.user" class="text-sm text-gray-600">{{ viewingOrder.user.email || '' }}</p>
+                  <p v-if="viewingOrder.user && viewingOrder.user.email" class="text-sm text-gray-600">{{ viewingOrder.user.email }}</p>
                   <p v-if="viewingOrder.user && viewingOrder.user.phoneNumber" class="text-sm text-gray-600">{{ viewingOrder.user.phoneNumber }}</p>
                   <p v-if="!viewingOrder.user" class="text-sm text-gray-600">Usuario no disponible</p>
                 </div>
                 <div class="mb-3">
                   <span class="text-sm text-gray-500">Restaurante:</span>
+                  <!-- ✅ ARREGLO: Usar las nuevas propiedades -->
                   <p v-if="viewingOrder.restaurant" class="font-medium">{{ viewingOrder.restaurant.name || 'N/A' }}</p>
                   <p v-else class="text-sm text-gray-600">Restaurante no disponible</p>
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Repartidor:</span>
+                  <!-- ✅ ARREGLO: Usar las nuevas propiedades -->
                   <div v-if="viewingOrder.deliveryPerson">
                     <p class="font-medium">
                       {{ viewingOrder.deliveryPerson.firstName || '' }} {{ viewingOrder.deliveryPerson.lastName || '' }}
@@ -227,11 +232,12 @@
                 </div>
                 <div>
                   <span class="text-sm text-gray-500">Dirección de entrega:</span>
-                  <div v-if="viewingOrder.deliveryAddress" class="font-medium">
-                    <p>{{ viewingOrder.deliveryAddress.street || '' }} {{ viewingOrder.deliveryAddress.number || '' }}</p>
-                    <p>{{ viewingOrder.deliveryAddress.city || '' }} {{ viewingOrder.deliveryAddress.zipCode || '' }}</p>
-                    <p v-if="viewingOrder.deliveryAddress.interior" class="text-sm text-gray-600">Interior: {{ viewingOrder.deliveryAddress.interior }}</p>
-                    <p v-if="viewingOrder.deliveryAddress.phone" class="text-sm text-gray-600">Tel: {{ viewingOrder.deliveryAddress.phone }}</p>
+                  <!-- ✅ ARREGLO: Usar deliveryAddressDetails -->
+                  <div v-if="viewingOrder.deliveryAddressDetails" class="font-medium">
+                    <p>{{ viewingOrder.deliveryAddressDetails.street || '' }} {{ viewingOrder.deliveryAddressDetails.number || '' }}</p>
+                    <p>{{ viewingOrder.deliveryAddressDetails.city || '' }} {{ viewingOrder.deliveryAddressDetails.zipCode || '' }}</p>
+                    <p v-if="viewingOrder.deliveryAddressDetails.interior" class="text-sm text-gray-600">Interior: {{ viewingOrder.deliveryAddressDetails.interior }}</p>
+                    <p v-if="viewingOrder.deliveryAddressDetails.phone" class="text-sm text-gray-600">Tel: {{ viewingOrder.deliveryAddressDetails.phone }}</p>
                   </div>
                   <p v-else class="text-sm text-gray-600">Dirección no disponible</p>
                 </div>
@@ -255,7 +261,8 @@
                 <tbody class="divide-y divide-gray-200">
                   <tr v-for="item in viewingOrder.orderItems" :key="item.id">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {{ item.product?.name || 'Producto no disponible' }}
+                      <!-- ✅ ARREGLO: Priorizar producto completo si está disponible -->
+                      {{ item.product?.name || item.productName || 'Producto no disponible' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                       {{ item.quantity || 0 }}
@@ -276,10 +283,6 @@
                   <tr>
                     <td colspan="3" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Gastos de envío:</td>
                     <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.deliveryFee ? viewingOrder.deliveryFee.toFixed(2) : '0.00' }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Impuestos:</td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">€{{ viewingOrder.tax ? viewingOrder.tax.toFixed(2) : '0.00' }}</td>
                   </tr>
                   <tr class="bg-gray-100">
                     <td colspan="3" class="px-6 py-3 text-right text-base font-semibold text-gray-900">Total:</td>
@@ -509,12 +512,11 @@ const defaultOrder = {
   id: 0,
   user: null,
   restaurant: null,
-  deliveryAddress: null,
+  deliveryAddressDetails: null, // ✅ ARREGLO: Usar deliveryAddressDetails
   deliveryPerson: null,
   status: '',
   subtotal: 0,
   deliveryFee: 0,
-  tax: 0,
   total: 0,
   estimatedDeliveryTime: new Date(),
   createdAt: new Date(),
