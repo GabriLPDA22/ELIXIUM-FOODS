@@ -665,7 +665,6 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -735,7 +734,15 @@ const placingOrder = ref<boolean>(false);
 // ——— 6) Costo de envío que viene del restaurante ———
 const deliveryFee = ref<number>(0);
 
-// ——— 7) Getters dependientes del carrito ———
+// ——— 7) Variables temporales para mostrar en la confirmación ———
+const tempOrderTotals = ref<{
+  originalSubtotal: number;
+  subtotalWithOffers: number;
+  totalOfferSavings: number;
+  total: number;
+} | null>(null);
+
+// ——— 8) Getters dependientes del carrito ———
 const restaurantId = computed(() => cartStore.restaurantId);
 const restaurantName = computed(() => cartStore.restaurantName || 'Restaurante');
 const cartItems = computed(() =>
@@ -750,7 +757,7 @@ const cartItems = computed(() =>
   }>
 );
 
-// ——— 8) Procesar cada ítem del carrito con precios robustos ———
+// ——— 9) Procesar cada ítem del carrito con precios robustos ———
 interface ProcessedCartItem {
   id: number;
   productId: number;
@@ -804,7 +811,7 @@ const processedCartItems = computed<ProcessedCartItem[]>(() => {
   });
 });
 
-// ——— 9) Cálculo de totales ===== 
+// ——— 10) Cálculo de totales ===== 
 const cartTotals = computed(() => {
   const originalSubtotal = processedCartItems.value.reduce((sum, item) => {
     return sum + item.originalPrice * item.quantity;
@@ -823,20 +830,28 @@ const cartTotals = computed(() => {
   };
 });
 
-// ——— 10) Total final incluyendo envío ===== 
+// ——— 11) Total final incluyendo envío ===== 
 const finalTotal = computed(() => {
   return cartTotals.value.subtotalWithOffers + deliveryFee.value;
 });
 
-// ——— 11) Totales finales simplificados para mostrar en paso 4 =====
+// ——— 12) Totales finales simplificados para mostrar en paso 4 =====
 const finalOrderTotals = computed(() => {
+  // Si tenemos totales temporales (después de limpiar carrito), usar esos
+  if (tempOrderTotals.value) {
+    return {
+      total: tempOrderTotals.value.total,
+      totalSavings: tempOrderTotals.value.totalOfferSavings
+    };
+  }
+  // Si no, usar los valores actuales del carrito
   return {
     total: finalTotal.value,
     totalSavings: cartTotals.value.totalOfferSavings
   };
 });
 
-// ——— 12) Fechas mínimas/máximas para programar entrega =====
+// ——— 13) Fechas mínimas/máximas para programar entrega =====
 const minDate = computed(() => {
   const today = new Date();
   return today.toISOString().split('T')[0];
@@ -847,7 +862,7 @@ const maxDate = computed(() => {
   return future.toISOString().split('T')[0];
 });
 
-// ——— 13) Validaciones reactivas para habilitar botones =====
+// ——— 14) Validaciones reactivas para habilitar botones =====
 const canProceedToPayment = computed(() => {
   if (!selectedAddress.value) return false;
   if (deliveryType.value === 'scheduled') {
@@ -873,21 +888,21 @@ const canSavePayment = computed(() => {
   return true;
 });
 
-// ——— 14) onMounted: cargar carrito, direcciones, métodos de pago y restaurante =====
+// ——— 15) onMounted: cargar carrito, direcciones, métodos de pago y restaurante =====
 onMounted(async () => {
-  // 14.a) Asegurarnos de que el carrito esté cargado ANTES de calcular totales
+  // 15.a) Asegurarnos de que el carrito esté cargado ANTES de calcular totales
   if (typeof cartStore.loadFromLocalStorage === 'function') {
     await cartStore.loadFromLocalStorage();
   }
 
-  // 14.b) Chequear autenticación
+  // 15.b) Chequear autenticación
   if (!authStore.isAuthenticated) {
     alert('Por favor, inicia sesión para continuar.');
     router.push('/login?redirect=/checkout');
     return;
   }
 
-  // 14.c) Cargar direcciones, métodos de pago y datos del restaurante en paralelo
+  // 15.c) Cargar direcciones, métodos de pago y datos del restaurante en paralelo
   await Promise.all([
     loadAddresses(),
     loadPaymentMethods(),
@@ -895,7 +910,7 @@ onMounted(async () => {
   ]);
 });
 
-// ——— 15) Cargar direcciones del usuario =====
+// ——— 16) Cargar direcciones del usuario =====
 async function loadAddresses() {
   try {
     loadingAddresses.value = true;
@@ -912,7 +927,7 @@ async function loadAddresses() {
   }
 }
 
-// ——— 16) Cargar métodos de pago =====
+// ——— 17) Cargar métodos de pago =====
 async function loadPaymentMethods() {
   try {
     loadingPayments.value = true;
@@ -929,7 +944,7 @@ async function loadPaymentMethods() {
   }
 }
 
-// ——— 17) Cargar datos del restaurante (para deliveryFee) =====
+// ——— 18) Cargar datos del restaurante (para deliveryFee) =====
 async function fetchRestaurantData() {
   // Si restaurantId es null o 0, no llamamos a la API
   if (!restaurantId.value) {
@@ -956,7 +971,7 @@ async function fetchRestaurantData() {
   }
 }
 
-// ——— 18) Si el usuario programó entrega y cambia la fecha, traer slots =====
+// ——— 19) Si el usuario programó entrega y cambia la fecha, traer slots =====
 watch(scheduledDate, async newDate => {
   if (newDate && restaurantId.value && selectedAddress.value) {
     try {
@@ -973,7 +988,7 @@ watch(scheduledDate, async newDate => {
   }
 });
 
-// ——— 19) Guardar un nuevo método de pago =====
+// ——— 20) Guardar un nuevo método de pago =====
 const saveNewPaymentMethod = async () => {
   try {
     const created = await paymentService.addPaymentMethod(newPayment.value);
@@ -988,7 +1003,7 @@ const saveNewPaymentMethod = async () => {
   }
 };
 
-// ——— 20) Construir y enviar el pedido al backend =====
+// ——— 21) Construir y enviar el pedido al backend =====
 const placeOrder = async () => {
   if (!selectedAddress.value || !selectedPaymentMethod.value) {
     alert('Por favor selecciona una dirección de entrega y un método de pago.');
@@ -999,8 +1014,21 @@ const placeOrder = async () => {
     return;
   }
 
+  // 🔄 GUARDAR TOTALES INMEDIATAMENTE al inicio, antes de cualquier operación
+  const currentTotals = {
+    originalSubtotal: cartTotals.value.originalSubtotal,
+    subtotalWithOffers: cartTotals.value.subtotalWithOffers,
+    totalOfferSavings: cartTotals.value.totalOfferSavings,
+    total: finalTotal.value
+  };
+  
+  console.log('💰 Totales capturados:', currentTotals);
+
   placingOrder.value = true;
   try {
+    // Guardar en la variable temporal
+    tempOrderTotals.value = currentTotals;
+
     // Armar payload usando "item.finalPrice" (sin doble descuento)
     const orderRequest = {
       restaurantId:         restaurantId.value,
@@ -1019,6 +1047,8 @@ const placeOrder = async () => {
       }))
     };
 
+    console.log('📦 Enviando pedido con totales guardados:', tempOrderTotals.value);
+
     await orderStore.createOrder(orderRequest);
     
     // ✅ Vaciar el carrito después de confirmar el pedido exitosamente
@@ -1034,19 +1064,18 @@ const placeOrder = async () => {
   }
 };
 
-// ——— 21) Mostrar texto de tiempo de entrega =====
+// ——— 22) Mostrar texto de tiempo de entrega =====
 const getDeliveryTimeText = (): string => {
   if (deliveryType.value === 'now') {
     // Si restaurantData es null, simplemente mostramos "Envío inmediato"
-    return restaurantData.value
-      ? `Envío inmediato (aprox. ${restaurantData.value.estimatedDeliveryTime ?? 30} min)`
-      : `Envío inmediato`;
+    const estimatedTime = restaurantData.value?.estimatedDeliveryTime ?? 30;
+    return `Envío inmediato (aprox. ${estimatedTime} min)`;
   } else {
     return `Programado: ${scheduledDate.value} a las ${scheduledTime.value}`;
   }
 };
 
-// ——— 22) Helper para presentar un método de pago en la lista =====
+// ——— 23) Helper para presentar un método de pago en la lista =====
 const displayPaymentMethod = (pm: PaymentMethodInfo) => {
   const tipo = pm.type.toLowerCase();
   if (tipo === 'paypal') {
@@ -1057,6 +1086,19 @@ const displayPaymentMethod = (pm: PaymentMethodInfo) => {
   }
   return pm.nickname;
 };
+
+// ——— 24) Limpiar estado temporal si el usuario regresa a pasos anteriores =====
+const clearTempOrderData = () => {
+  tempOrderTotals.value = null;
+};
+
+// ——— 25) Watch para limpiar datos temporales si retrocede =====
+watch(step, (newStep) => {
+  if (newStep < 4 && tempOrderTotals.value) {
+    clearTempOrderData();
+    console.log('🧹 Limpiando datos temporales del pedido');
+  }
+});
 </script>
 
 
