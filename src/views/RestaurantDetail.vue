@@ -509,10 +509,21 @@ const cartTotals = computed(() => {
     (sum, item) => sum + item.originalPrice * item.quantity,
     0
   )
-  const totalSavings = originalSubtotal - subtotal
+  
+  // 🔄 Redondear ahorros hacia ARRIBA para beneficiar al cliente
+  const rawSavings = originalSubtotal - subtotal
+  const totalSavings = rawSavings > 0 ? Math.ceil(rawSavings * 100) / 100 : 0
+  
   const deliveryFeeValue = restaurant.value ? safeNumber(restaurant.value.deliveryFee) : 0
   const total = subtotal + deliveryFeeValue
-  return { subtotal, originalSubtotal, totalSavings, deliveryFee: deliveryFeeValue, total }
+  
+  return { 
+    subtotal, 
+    originalSubtotal, 
+    totalSavings, 
+    deliveryFee: deliveryFeeValue, 
+    total 
+  }
 })
 
 const getSelectedCategoryName = () => {

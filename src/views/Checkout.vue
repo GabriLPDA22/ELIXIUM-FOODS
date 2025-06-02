@@ -821,7 +821,9 @@ const cartTotals = computed(() => {
     return sum + item.finalPrice * item.quantity;
   }, 0);
 
-  const totalOfferSavings = originalSubtotal - subtotalWithOffers;
+  // 🔄 Redondear ahorros hacia ARRIBA para beneficiar al cliente
+  const rawSavings = originalSubtotal - subtotalWithOffers;
+  const totalOfferSavings = rawSavings > 0 ? Math.ceil(rawSavings * 100) / 100 : 0;
 
   return {
     originalSubtotal,

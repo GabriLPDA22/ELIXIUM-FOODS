@@ -30,7 +30,10 @@ export const useCartStore = defineStore('cart', () => {
     items.value.reduce((total, item) => total + (item.price * item.quantity), 0)
   )
 
-  const totalSavings = computed(() => originalSubtotal.value - subtotalWithOffers.value)
+  const totalSavings = computed(() => {
+    const rawSavings = originalSubtotal.value - subtotalWithOffers.value;
+    return rawSavings > 0 ? Math.ceil(rawSavings * 100) / 100 : 0;
+  })
 
   const cartSummary = computed(() => ({
     originalSubtotal: originalSubtotal.value,

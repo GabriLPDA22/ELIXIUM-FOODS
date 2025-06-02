@@ -375,7 +375,7 @@ const safeNumber = (value: any, defaultValue: number = 0): number => {
   return isNaN(num) ? defaultValue : num;
 };
 
-// Obtener precio “base” del producto (para originalPrice)
+// Obtener precio "base" del producto (para originalPrice)
 const getProductPrice = (product: any): number => {
   const priceFields = ['price', 'unitPrice', 'basePrice', 'salePrice', 'cost'];
   for (let field of priceFields) {
@@ -535,8 +535,9 @@ const cartTotals = computed(() => {
     return sum + item.originalPrice * item.quantity;
   }, 0);
 
-  // totalOfferSavings = diferencia
-  const totalOfferSavings = originalSubtotal - subtotal;
+  // 🔄 Redondear ahorros hacia ARRIBA para beneficiar al cliente
+  const rawSavings = originalSubtotal - subtotal;
+  const totalOfferSavings = rawSavings > 0 ? Math.ceil(rawSavings * 100) / 100 : 0;
 
   return {
     subtotal,
