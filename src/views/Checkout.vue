@@ -1020,6 +1020,11 @@ const placeOrder = async () => {
     };
 
     await orderStore.createOrder(orderRequest);
+    
+    // ✅ Vaciar el carrito después de confirmar el pedido exitosamente
+    cartStore.clearCart();
+    console.log('✅ Carrito vaciado después de confirmar pedido');
+    
     step.value = 4;
   } catch (err: any) {
     console.error('Error al crear pedido:', err);
