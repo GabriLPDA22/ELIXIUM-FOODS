@@ -642,7 +642,7 @@
             </div>
             <div class="order-summary__content">
               <div class="order-summary__row">
-                <span>Subtotal (sin descuentos)</span>
+                <span>Subtotal </span>
                 <span>${{ cartTotals.originalSubtotal.toFixed(2) }}</span>
               </div>
               <div v-if="cartTotals.totalOfferSavings > 0" class="order-summary__row order-summary__row--savings">

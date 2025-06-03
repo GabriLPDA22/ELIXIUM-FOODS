@@ -69,7 +69,7 @@
               <input type="file" accept="image/*" @change="handlePhotoUpload" class="file-input"
                 :disabled="uploading" />
             </label>
-            <button v-if="localUserInfo.photoURL && !uploading" @click="removePhoto" type="button"
+            <button v-if="localUserInfo.photoURL && !uploading" @click="showDeleteConfirm" type="button"
               class="remove-btn">
               Eliminar
             </button>
@@ -154,14 +154,31 @@
         </button>
       </div>
     </form>
+
+    <!-- ✅ NUEVO: Diálogo de confirmación personalizado -->
+    <ConfirmDialog
+      :visible="showConfirmDialog"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-text="confirmDialog.confirmText"
+      :cancel-text="confirmDialog.cancelText"
+      @confirm="confirmDialog.onConfirm"
+      @cancel="hideConfirmDialog"
+    />
+
+    <!-- ✅ NUEVO: Componente de notificaciones -->
+    <ToastNotification ref="toastRef" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted, watch, computed } from 'vue'; // Import computed
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import userService, { type UserProfile } from '@/services/userService';
 import { ImageService } from '@/services/imageService';
 import { useAuthStore } from '@/stores/auth';
+// ✅ NUEVOS: Importar componentes UI personalizados
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import ToastNotification from '@/components/ui/ToastNotification.vue';
 
 const authStore = useAuthStore();
 
@@ -171,6 +188,19 @@ const uploading = ref(false);
 const error = ref('');
 const updateSuccess = ref(false);
 const originalUserInfo = ref<UserProfile | null>(null);
+
+// ✅ NUEVOS: Estados para diálogo de confirmación
+const showConfirmDialog = ref(false);
+const confirmDialog = reactive({
+  title: '',
+  message: '',
+  confirmText: 'Confirmar',
+  cancelText: 'Cancelar',
+  onConfirm: () => {}
+});
+
+// ✅ NUEVO: Referencia al componente de toast
+const toastRef = ref<InstanceType<typeof ToastNotification>>();
 
 const localUserInfo = reactive<UserProfile>({
   id: authStore.user?.id || 0,
@@ -210,6 +240,40 @@ const toggleDietaryPreference = (prefId: string) => {
   }
 }
 
+// ✅ NUEVOS: Métodos para manejar UI personalizada
+const showToast = () => {
+  return toastRef.value?.useToast() || {
+    success: (msg: string) => console.log('✅', msg),
+    error: (msg: string) => console.error('❌', msg),
+    warning: (msg: string) => console.warn('⚠️', msg),
+    info: (msg: string) => console.info('ℹ️', msg)
+  };
+};
+
+const hideConfirmDialog = () => {
+  showConfirmDialog.value = false;
+};
+
+const showDeleteConfirm = () => {
+  if (isGoogleUser.value) {
+    showToast().warning(
+      'No puedes eliminar la foto de perfil de una cuenta de Google',
+      'Cuenta de Google'
+    );
+    return;
+  }
+
+  confirmDialog.title = 'Eliminar foto de perfil';
+  confirmDialog.message = '¿Estás seguro de que quieres eliminar tu foto de perfil? Esta acción no se puede deshacer.';
+  confirmDialog.confirmText = 'Eliminar';
+  confirmDialog.cancelText = 'Cancelar';
+  confirmDialog.onConfirm = async () => {
+    hideConfirmDialog();
+    await removePhoto();
+  };
+  showConfirmDialog.value = true;
+};
+
 // Métodos para manejo de foto de perfil
 const handlePhotoUpload = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0];
@@ -217,7 +281,10 @@ const handlePhotoUpload = async (event: Event) => {
 
   // Prevenir cambio de foto para usuarios de Google
   if (isGoogleUser.value) {
-    showError('No puedes cambiar la foto de perfil de una cuenta de Google');
+    showToast().warning(
+      'Tu foto de perfil se sincroniza automáticamente desde Google y no se puede cambiar aquí',
+      'Cuenta de Google'
+    );
     // Clear the file input immediately
     (event.target as HTMLInputElement).value = '';
     return;
@@ -229,7 +296,7 @@ const handlePhotoUpload = async (event: Event) => {
     // Validar imagen
     const validation = ImageService.validateImage(file);
     if (!validation.valid) {
-      showError(validation.errors.join('\n'));
+      showToast().error(validation.errors.join('\n'), 'Error de validación');
       return;
     }
 
@@ -243,11 +310,14 @@ const handlePhotoUpload = async (event: Event) => {
       // Guardar inmediatamente en el servidor
       await updatePhotoURL(result.imageUrl);
 
-      showSuccess('Foto de perfil actualizada correctamente');
+      showToast().success('Foto de perfil actualizada correctamente');
     }
   } catch (err: any) {
     console.error('Error subiendo foto:', err);
-    showError('Error al subir la imagen: ' + (err.response?.data?.message || err.message || 'Error desconocido'));
+    showToast().error(
+      err.response?.data?.message || err.message || 'Error desconocido al subir la imagen',
+      'Error al subir imagen'
+    );
   } finally {
     uploading.value = false;
     // Limpiar el input
@@ -256,13 +326,14 @@ const handlePhotoUpload = async (event: Event) => {
 };
 
 const removePhoto = async () => {
-  // Prevenir eliminación de foto para usuarios de Google
+  // Prevenir eliminación de foto para usuarios de Google (doble verificación)
   if (isGoogleUser.value) {
-    showError('No puedes eliminar la foto de perfil de una cuenta de Google');
+    showToast().warning(
+      'No puedes eliminar la foto de perfil de una cuenta de Google',
+      'Cuenta de Google'
+    );
     return;
   }
-
-  if (!confirm('¿Estás seguro de que quieres eliminar tu foto de perfil?')) return;
 
   try {
     uploading.value = true;
@@ -281,10 +352,10 @@ const removePhoto = async () => {
     localUserInfo.photoURL = '';
     await updatePhotoURL('');
 
-    showSuccess('Foto de perfil eliminada correctamente');
+    showToast().success('Foto de perfil eliminada correctamente');
   } catch (err: any) {
     console.error('Error eliminando foto:', err);
-    showError('Error al eliminar la foto de perfil');
+    showToast().error('Error al eliminar la foto de perfil', 'Error');
   } finally {
     uploading.value = false;
   }
@@ -402,14 +473,12 @@ const saveInfo = async () => {
     Object.assign(localUserInfo, updatedUserData);
     originalUserInfo.value = JSON.parse(JSON.stringify(localUserInfo));
 
-    updateSuccess.value = true;
-    setTimeout(() => {
-      updateSuccess.value = false;
-    }, 3000);
+    // ✅ NUEVO: Usar toast en lugar de variable local
+    showToast().success('Los cambios se han guardado correctamente', 'Perfil actualizado');
 
   } catch (err: any) {
     console.error('Error al guardar información del usuario (UserInfo.vue):', err);
-    error.value = err.message || 'Error al guardar los cambios.';
+    showToast().error(err.message || 'Error al guardar los cambios', 'Error al guardar');
   } finally {
     saving.value = false;
   }
@@ -423,24 +492,7 @@ const resetForm = () => {
   error.value = '';
 };
 
-// Métodos de utilidad
-const showSuccess = (message: string) => {
-  // Puedes reemplazar con tu sistema de notificaciones
-  console.log('✅', message);
-  updateSuccess.value = true;
-  setTimeout(() => {
-    updateSuccess.value = false;
-  }, 3000);
-};
-
-const showError = (message: string) => {
-  // Puedes reemplazar con tu sistema de notificaciones
-  console.error('❌', message);
-  error.value = message;
-  setTimeout(() => {
-    error.value = '';
-  }, 5000);
-};
+// ✅ ELIMINADOS: Métodos showSuccess y showError (ahora usamos toast)
 
 onMounted(() => {
   if (authStore.isAuthenticated) {

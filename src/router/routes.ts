@@ -206,6 +206,44 @@ const routes: RouteRecordRaw[] = [
       hideHeaderFooter: true,
     }
   },
+  // 🎓 ELIXIUM ACADEMY ROUTES
+  {
+    path: '/academy',
+    name: 'academy-landing',
+    component: () => import('@/views/academy/AcademyLanding.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/academy/dashboard',
+    name: 'academy-dashboard',
+    component: () => import('@/views/academy/AcademyDashboard.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/academy/courses',
+    name: 'academy-courses',
+    component: () => import('@/views/academy/AcademyCourses.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/academy/course/:id',
+    name: 'academy-course-detail',
+    component: () => import('@/views/academy/AcademyCourseDetail.vue'),
+    meta: { requiresAuth: false },
+    props: true
+  },
+  {
+    path: '/academy/achievements',
+    name: 'academy-achievements',
+    component: () => import('@/views/academy/AcademyAchievements.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/academy/leaderboard',
+    name: 'academy-leaderboard',
+    component: () => import('@/views/academy/AcademyLeaderboard.vue'),
+    meta: { requiresAuth: false }
+  },
   {
     path: '/business/dashboard',
     component: () => import('@/views/BusinessDashboard.vue'),

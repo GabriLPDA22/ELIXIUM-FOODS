@@ -12,7 +12,7 @@
     <div class="profile-content">
       <div class="container">
         <div class="profile-tabs">
-          <button v-for="tab in tabs" :key="tab.id" @click="changeTab(tab.id)"
+          <button v-for="tab in availableTabs" :key="tab.id" @click="changeTab(tab.id)"
             :class="['profile-tab', { 'profile-tab--active': activeTab === tab.id }]">
             <span class="profile-tab__icon" v-html="tab.icon"></span>
             <span class="profile-tab__text">{{ tab.label }}</span>
@@ -92,11 +92,13 @@
             </div>
           </div>
 
-          <!-- Configuración -->
+          <!-- Configuración (solo para usuarios no-Google) -->
           <div v-if="activeTab === 'settings'" class="profile-panel">
             <div class="settings-section">
               <h2 class="settings-title">Seguridad</h2>
-              <div class="settings-card">
+
+              <!-- Solo mostrar cambio de contraseña si NO es usuario de Google -->
+              <div v-if="!isGoogleUser" class="settings-card">
                 <h3 class="settings-card__title">Cambiar contraseña</h3>
                 <p class="settings-card__description">
                   Actualiza tu contraseña regularmente para mantener tu cuenta segura.
@@ -105,14 +107,33 @@
                   Cambiar contraseña
                 </button>
               </div>
+
+              <!-- Mensaje para usuarios de Google -->
+              <div v-else class="settings-card settings-card--info">
+                <h3 class="settings-card__title">Cuenta de Google</h3>
+                <p class="settings-card__description">
+                  Tu cuenta está vinculada con Google. La seguridad y contraseña se gestionan directamente desde tu cuenta de Google.
+                </p>
+                <div class="google-account-badge">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  Cuenta de Google
+                </div>
+              </div>
+
+              <!-- Otras configuraciones podrían ir aquí -->
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal para cambiar contraseña -->
-    <div v-if="showPasswordModal" class="modal">
+    <!-- Modal para cambiar contraseña (solo para usuarios no-Google) -->
+    <div v-if="showPasswordModal && !isGoogleUser" class="modal">
       <div class="modal__backdrop" @click="showPasswordModal = false"></div>
       <div class="modal__container modal__container--small">
         <div class="modal__header">
@@ -179,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useOrderStore } from '@/stores/orderStore';
@@ -215,7 +236,32 @@ const passwordForm = reactive({
   confirmPassword: ''
 });
 
-// Pestañas disponibles
+// Detectar si es usuario de Google
+const isGoogleUser = computed(() => {
+  if (!authStore.user) return false;
+
+  // Múltiples formas de detectar usuario de Google
+  // Ajusta según tu implementación específica
+  return (
+    // Opción 1: Si tienes un campo provider
+    (authStore.user as any)?.provider === 'google' ||
+    (authStore.user as any)?.authProvider === 'google' ||
+
+    // Opción 2: Si el email contiene información de Google OAuth
+    (authStore.user as any)?.authMethod === 'google' ||
+
+    // Opción 3: Si no hay password_hash (usuarios locales tienen password)
+    (authStore.user as any)?.isGoogleAuth === true ||
+
+    // Opción 4: Verificar por el campo photoURL de Google
+    (authStore.user?.photoURL && authStore.user.photoURL.includes('googleusercontent.com')) ||
+
+    // Opción 5: Verificar si existe un campo específico de Google ID
+    !!(authStore.user as any)?.googleId
+  );
+});
+
+// Pestañas disponibles (filtradas según tipo de usuario)
 const tabs = [
   {
     id: 'info',
@@ -243,6 +289,12 @@ const tabs = [
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>'
   }
 ];
+
+// Tabs disponibles según el tipo de usuario
+const availableTabs = computed(() => {
+  // Siempre mostrar la pestaña de configuración, pero el contenido cambia
+  return tabs;
+});
 
 // Información del usuario
 const userInfo = reactive<UserProfile>({
@@ -409,8 +461,13 @@ const handleAddressesUpdate = () => {
   console.log('Lista de direcciones actualizada');
 };
 
-// Métodos de gestión de contraseña
+// Métodos de gestión de contraseña (solo para usuarios no-Google)
 const changePassword = async () => {
+  if (isGoogleUser.value) {
+    console.warn('Intento de cambio de contraseña en usuario de Google');
+    return;
+  }
+
   passwordError.value = '';
   passwordSuccess.value = '';
 
@@ -622,7 +679,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-// Resto de estilos (como antes)...
+// Resto de estilos...
 .modal {
   position: fixed;
   top: 0;
@@ -920,6 +977,11 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   border-radius: $border-radius;
   margin-bottom: 1.5rem;
 
+  &--info {
+    background-color: rgba(#4285F4, 0.05);
+    border-color: rgba(#4285F4, 0.2);
+  }
+
   &__title {
     font-size: 1.1rem;
     font-weight: 600;
@@ -952,6 +1014,19 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
       border-color: $primary;
     }
   }
+}
+
+.google-account-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border: 1px solid rgba(#4285F4, 0.3);
+  border-radius: 50px;
+  color: #4285F4;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .password-form {

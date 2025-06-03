@@ -63,6 +63,8 @@
                 <li><router-link :to="{ name: 'blog' }" class="u-footer__link">Blog</router-link></li>
                 <li><router-link :to="{ name: 'for-business' }" class="u-footer__link">Elixium Busines</router-link>
                 <li><router-link :to="{ name: 'careers' }" class="u-footer__link">Empleos</router-link>
+                <li><router-link :to="{ name: 'academy-landing' }" class="u-footer__link">Academy</router-link>
+                </li>
                 </li>
                 </li>
               </ul>
