@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5290/api';
+const API_BASE_URL = 'https://api.elixiumfoods.com/api';
 
 export interface SearchRestaurant {
   id: number;

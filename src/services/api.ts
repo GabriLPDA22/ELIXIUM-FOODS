@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Crear instancia de axios con configuración base
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5290',
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.elixiumfoods.com',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export const isTokenValid = (): boolean => {
 
 // ✅ API ESPECÍFICA PARA RUTAS PÚBLICAS (opcional, para mayor claridad)
 export const publicApi = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5290',
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.elixiumfoods.com',
   timeout: 10000, // Timeout más corto para rutas públicas
   headers: {
     'Content-Type': 'application/json',

@@ -1,4 +1,4 @@
-<!-- views/admin/AdminOrders.vue - Actualizado para usar nuevos DTOs -->
+<!-- views/Admin/AdminOrders.vue - Actualizado para usar nuevos DTOs -->
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">

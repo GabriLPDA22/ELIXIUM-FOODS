@@ -5,7 +5,7 @@
         <div class="u-footer__content">
           <div class="u-footer__brand">
             <div class="u-footer__logo">
-             <img src="/docs/Images/LOGO CHIQUITO.png" alt="Elixium Foods Logo" style="height: 30px; width: fit-content; vertical-align: middle;">
+             <img src="/images/LOGO CHIQUITO.png" alt="Elixium Foods Logo" style="height: 30px; width: fit-content; vertical-align: middle;">
               <h2 class="u-footer__logo-text">Elixium Foods</h2>
             </div>
             <p class="u-footer__tagline">Deliciosa comida entregada a tu puerta. Los mejores restaurantes locales a tu

@@ -1,4 +1,4 @@
-<!-- views/admin/AdminSystemLogs.vue -->
+<!-- views/Admin/AdminSystemLogs.vue -->
 <template>
   <div class="space-y-6">
     <!-- Header con estadísticas -->
