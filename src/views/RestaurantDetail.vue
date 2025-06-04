@@ -738,20 +738,20 @@ const recalculateCartPrices = (): void => {
 }
 
 const addToCart = async (item: MenuItem): Promise<void> => {
+  const toast = window.useToast()
+
   if (!item || !item.id) return
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert(
-      `No puedes agregar productos al carrito porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`
-    )
+    toast.error(`No puedes agregar productos al carrito porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`)
     return
   }
   const realPrice = getProductPrice(item)
   if (realPrice <= 0) {
-    alert('Este producto no tiene un precio válido o no está disponible.')
+    toast.error('Este producto no tiene un precio válido o no está disponible.')
     return
   }
   if (item.isAvailable === false) {
-    alert('Este producto no está disponible en este momento.')
+    toast.error('Este producto no está disponible en este momento.')
     return
   }
   if (cartStore.restaurantId && cartStore.restaurantId !== restaurantId.value) {
@@ -819,8 +819,10 @@ const syncToStore = (): void => {
 }
 
 const incrementItem = (itemId: number): void => {
+  const toast = window.useToast()
+
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert('No puedes modificar el carrito mientras el restaurante está cerrado.')
+    toast.error('No puedes modificar el carrito mientras el restaurante está cerrado.')
     return
   }
   const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
@@ -832,8 +834,10 @@ const incrementItem = (itemId: number): void => {
 }
 
 const decrementItem = (itemId: number): void => {
+  const toast = window.useToast()
+
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert('No puedes modificar el carrito mientras el restaurante está cerrado.')
+    toast.error('No puedes modificar el carrito mientras el restaurante está cerrado.')
     return
   }
   const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
@@ -858,24 +862,30 @@ const removeItem = (itemId: number): void => {
 }
 
 const clearCart = (): void => {
-  if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
-    localCartItems.value = []
-    cartStore.clearCart()
-  }
+  const toast = window.useToast()
+
+  // Eliminamos la confirmación de confirm(...) y vaciamos el carrito directamente:
+  localCartItems.value = []
+  cartStore.clearCart()
+
+  // Mostramos un toast de éxito:
+  toast.success('Carrito vaciado correctamente')
 }
 
 const proceedToCheckout = (): void => {
+  const toast = window.useToast()
+
   if (!authStore.isAuthenticated) {
-    alert('Por favor, inicia sesión para continuar con tu pedido.')
+    toast.error('Por favor, inicia sesión para continuar con tu pedido.')
     router.push('/login')
     return
   }
   if (localCartItems.value.length === 0) {
-    alert('Tu carrito está vacío. Agrega productos antes de continuar.')
+    toast.warning('Tu carrito está vacío. Agrega productos antes de continuar.')
     return
   }
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert(
+    toast.error(
       `No puedes continuar con el pedido porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`
     )
     return
@@ -905,6 +915,7 @@ watch(
 onMounted(async () => {
   await fetchRestaurantData()
 })
+
 </script>
 
 <style lang="scss" scoped>
