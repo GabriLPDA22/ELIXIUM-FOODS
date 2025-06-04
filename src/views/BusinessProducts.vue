@@ -144,7 +144,7 @@
     <div v-else-if="viewMode === 'grid'" class="business-products__grid">
       <div v-for="product in filteredProducts" :key="product.id" class="business-products__card">
         <div class="business-products__card-image">
-          <img :src="product.imageUrl || '/images/product-placeholder.png'" :alt="product.name" loading="lazy">
+          <img :src="product.imageUrl || '/Images/product-placeholder.png'" :alt="product.name" loading="lazy">
           <div class="business-products__card-overlay">
             <div class="business-products__card-actions">
               <button @click="manageRestaurantAssignments(product)" class="business-products__action-btn business-products__action-btn--assign">
@@ -237,7 +237,7 @@
           <tr v-for="product in filteredProducts" :key="product.id" class="business-products__row">
             <td class="business-products__cell business-products__cell--image">
               <img
-                :src="product.imageUrl || '/images/product-placeholder.png'"
+                :src="product.imageUrl || '/Images/product-placeholder.png'"
                 :alt="product.name"
                 class="business-products__thumbnail"
                 loading="lazy"
@@ -507,7 +507,7 @@
           <div class="business-products__restaurant-assignments">
             <div class="business-products__product-info">
               <div class="business-products__product-summary">
-                <img :src="selectedProduct?.imageUrl || '/images/product-placeholder.png'" :alt="selectedProduct?.name" class="business-products__product-thumb">
+                <img :src="selectedProduct?.imageUrl || '/Images/product-placeholder.png'" :alt="selectedProduct?.name" class="business-products__product-thumb">
                 <div>
                   <h4>{{ selectedProduct?.name }}</h4>
                   <p>Precio base: {{ formatPrice(selectedProduct?.basePrice) }}</p>

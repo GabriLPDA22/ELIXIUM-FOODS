@@ -11,7 +11,7 @@ export class ImageService {
    */
   static async uploadBase64(base64Image, fileName = 'image', folder = 'general') {
     try {
-      const response = await api.post('/api/images/upload/base64', {
+      const response = await api.post('/api/Images/upload/base64', {
         base64Image,
         fileName,
         folder
@@ -34,7 +34,7 @@ export class ImageService {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await api.post(`/api/images/upload?folder=${folder}`, formData, {
+      const response = await api.post(`/api/Images/upload?folder=${folder}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -59,7 +59,7 @@ export class ImageService {
         formData.append('files', file);
       });
       
-      const response = await api.post(`/api/images/upload/multiple?folder=${folder}`, formData, {
+      const response = await api.post(`/api/Images/upload/multiple?folder=${folder}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

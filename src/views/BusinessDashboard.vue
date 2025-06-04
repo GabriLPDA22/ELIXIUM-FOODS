@@ -52,7 +52,7 @@
       <div class="business-dashboard__sidebar" :class="{ 'business-dashboard__sidebar--open': isSidebarOpen }">
         <div class="business-dashboard__sidebar-header">
           <div class="business-dashboard__logo">
-            <img :src="business?.logoUrl || '/images/restaurant-placeholder.png'"
+            <img :src="business?.logoUrl || '/Images/restaurant-placeholder.png'"
               :alt="`Logo de ${business?.name || 'Mi Negocio'}`" class="business-dashboard__logo-img" />
             <h2 class="business-dashboard__restaurant-name">{{ business?.name || 'Mi Negocio' }}</h2>
           </div>

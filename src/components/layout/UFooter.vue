@@ -5,7 +5,7 @@
         <div class="u-footer__content">
           <div class="u-footer__brand">
             <div class="u-footer__logo">
-             <img src="/docs/images/LOGO CHIQUITO.png" alt="Elixium Foods Logo" style="height: 30px; width: fit-content; vertical-align: middle;">
+             <img src="/docs/Images/LOGO CHIQUITO.png" alt="Elixium Foods Logo" style="height: 30px; width: fit-content; vertical-align: middle;">
               <h2 class="u-footer__logo-text">Elixium Foods</h2>
             </div>
             <p class="u-footer__tagline">Deliciosa comida entregada a tu puerta. Los mejores restaurantes locales a tu
@@ -49,7 +49,7 @@
                   alt="Descarga en App Store" class="u-footer__app-image">
               </a>
               <a href="https://play.google.com/store/games?hl=es/store/apps/details?id=com.elixiumfoods.app" target="_blank" rel="noopener noreferrer" class="u-footer__app-link">
-                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/es_badge_web_generic.png"
+                <img src="https://play.google.com/intl/en_us/badges/static/Images/badges/es_badge_web_generic.png"
                   alt="Disponible en Google Play" class="u-footer__app-image">
               </a>
             </div>

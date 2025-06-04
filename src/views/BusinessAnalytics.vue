@@ -198,7 +198,7 @@
                 <tr v-for="product in topProducts" :key="product.id" class="business-analytics__table-row">
                   <td>
                     <div class="business-analytics__product-info">
-                      <img :src="product.imageUrl || '/images/product-placeholder.png'" :alt="product.name" class="business-analytics__product-image">
+                      <img :src="product.imageUrl || '/Images/product-placeholder.png'" :alt="product.name" class="business-analytics__product-image">
                       <span class="business-analytics__product-name">{{ product.name }}</span>
                     </div>
                   </td>
@@ -236,7 +236,7 @@
                 <tr v-for="restaurant in restaurantStats" :key="restaurant.id" class="business-analytics__table-row">
                   <td>
                     <div class="business-analytics__restaurant-info">
-                      <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name" class="business-analytics__restaurant-image">
+                      <img :src="restaurant.logoUrl || '/Images/restaurant-placeholder.png'" :alt="restaurant.name" class="business-analytics__restaurant-image">
                       <span class="business-analytics__restaurant-name">{{ restaurant.name }}</span>
                     </div>
                   </td>

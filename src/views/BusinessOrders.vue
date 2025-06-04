@@ -279,7 +279,7 @@
                     <td>
                       <div class="business-orders__product">
                         <div class="business-orders__product-image">
-                          <img :src="item.product?.imageUrl || '/images/product-placeholder.png'" :alt="item.product?.name">
+                          <img :src="item.product?.imageUrl || '/Images/product-placeholder.png'" :alt="item.product?.name">
                         </div>
                         <div class="business-orders__product-info">
                           <span class="business-orders__product-name">{{ item.product?.name || 'Producto' }}</span>

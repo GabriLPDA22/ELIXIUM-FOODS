@@ -188,7 +188,7 @@
           @click="selectRestaurant(restaurant.id)"
         >
           <div class="business-home__restaurant-image">
-            <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name">
+            <img :src="restaurant.logoUrl || '/Images/restaurant-placeholder.png'" :alt="restaurant.name">
             <div v-if="!restaurant.isOpen" class="business-home__restaurant-status business-home__restaurant-status--closed">
               Cerrado
             </div>
@@ -288,7 +288,7 @@
         <div v-if="popularProducts.length > 0" class="business-home__products-grid">
           <div v-for="product in popularProducts.slice(0, 4)" :key="product.id" class="business-home__product-card">
             <div class="business-home__product-image">
-              <img :src="product.image || '/images/product-placeholder.png'" :alt="product.name">
+              <img :src="product.image || '/Images/product-placeholder.png'" :alt="product.name">
             </div>
             <div class="business-home__product-info">
               <h4 class="business-home__product-name">{{ product.name }}</h4>
