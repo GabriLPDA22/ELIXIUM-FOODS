@@ -245,8 +245,8 @@ const toggleFaq = (faqItem: FaqItem) => {
   color: var(--white, #ffffff);
   border-color: var(--primary, #FF416C);
   &:hover {
-    background-color: var(--primary-dark, darken(#FF416C, 10%));
-    border-color: var(--primary-dark, darken(#FF416C, 10%));
+    background-color: var(--primary-dark, #FF416C, 10%);
+    border-color: var(--primary-dark, #FF416C);
     transform: translateY(-2px);
   }
 }
@@ -257,8 +257,8 @@ const toggleFaq = (faqItem: FaqItem) => {
   border-color: var(--primary, #FF416C);
   &:hover {
     background-color: rgba(var(--primary-rgb, 255,65,108), 0.08);
-    color: var(--primary-dark, darken(#FF416C, 10%));
-    border-color: var(--primary-dark, darken(#FF416C, 10%));
+    color: var(--primary-dark, #FF416C, 10%);
+    border-color: var(--primary-dark, #FF416C, 10%);
     transform: translateY(-2px);
   }
 }

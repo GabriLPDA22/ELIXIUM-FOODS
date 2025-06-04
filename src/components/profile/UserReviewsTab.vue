@@ -115,7 +115,7 @@
           :key="review.id"
           :review="review"
           @edit="editReview"
-          @delete="deleteReview"
+          @delete="showDeleteDialog"
         />
       </div>
 
@@ -185,7 +185,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { getUserReviews, deleteReview, loading, error } = useReviews()
+const { getUserReviews, deleteReview: deleteReviewFromAPI, loading, error } = useReviews()
 
 const userReviews = ref<Review[]>([])
 const editingReview = ref<Review | null>(null)
@@ -239,7 +239,7 @@ const editReview = (review: Review) => {
   showEditModal.value = true
 }
 
-const deleteReview = (review: Review) => {
+const showDeleteDialog = (review: Review) => {
   reviewToDelete.value = review
   showDeleteModal.value = true
 }
@@ -248,7 +248,7 @@ const confirmDelete = async () => {
   if (!reviewToDelete.value) return
   
   try {
-    await deleteReview(reviewToDelete.value.id)
+    await deleteReviewFromAPI(reviewToDelete.value.id)  // <- Usar función renombrada
     userReviews.value = userReviews.value.filter(r => r.id !== reviewToDelete.value!.id)
     showDeleteModal.value = false
     reviewToDelete.value = null
@@ -256,7 +256,6 @@ const confirmDelete = async () => {
     console.error('Error deleting review:', err)
   }
 }
-
 const onEditSuccess = () => {
   closeEditModal()
   loadUserReviews() // Reload reviews

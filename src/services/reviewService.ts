@@ -11,7 +11,7 @@ import type {
   ProductReviewSummary 
 } from '@/types/review'
 
-const API_BASE = '/api/reviews'
+const API_BASE = '/reviews'
 
 export const reviewService = {
   // Obtener reseñas de restaurante
