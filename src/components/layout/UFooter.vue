@@ -49,7 +49,7 @@
                   alt="Descarga en App Store" class="u-footer__app-image">
               </a>
               <a href="https://play.google.com/store/games?hl=es/store/apps/details?id=com.elixiumfoods.app" target="_blank" rel="noopener noreferrer" class="u-footer__app-link">
-                <img src="https://play.google.com/intl/en_us/badges/static/Images/badges/es_badge_web_generic.png"
+                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/es_badge_web_generic.png"
                   alt="Disponible en Google Play" class="u-footer__app-image">
               </a>
             </div>
