@@ -543,6 +543,10 @@ $transition: all 0.3s ease;
   max-width: 1200px;
   margin: 0 auto;
 
+  @media (max-width: 430px) {
+    padding: 0.5rem;
+  }
+
   &__header {
     display: flex;
     justify-content: space-between;
@@ -553,6 +557,11 @@ $transition: all 0.3s ease;
       flex-direction: column;
       gap: 1rem;
     }
+
+    @media (max-width: 430px) {
+      margin-bottom: 1rem;
+      gap: 0.75rem;
+    }
   }
 
   &__title {
@@ -560,6 +569,11 @@ $transition: all 0.3s ease;
     font-weight: 700;
     color: $dark;
     margin: 0;
+
+    @media (max-width: 430px) {
+      font-size: 1.25rem;
+      text-align: center;
+    }
   }
 
   &__add-btn {
@@ -575,9 +589,20 @@ $transition: all 0.3s ease;
     transition: $transition;
     font-weight: 600;
 
+    @media (max-width: 430px) {
+      width: 100%;
+      justify-content: center;
+      padding: 1rem 1.5rem;
+      font-size: 0.95rem;
+    }
+
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 15px rgba($primary, 0.3);
+
+      @media (max-width: 430px) {
+        transform: none;
+      }
     }
   }
 
@@ -639,6 +664,51 @@ $transition: all 0.3s ease;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+
+    /* Estilos personalizados para scrollbar */
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba($border, 0.3);
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba($primary, 0.6);
+      border-radius: 4px;
+
+      &:hover {
+        background: rgba($primary, 0.8);
+      }
+    }
+
+    /* Para Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba($primary, 0.6) rgba($border, 0.3);
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      max-height: 60vh;
+    }
+
+    @media (max-width: 430px) {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 0 0.5rem;
+      max-height: 55vh;
+      padding-right: 0.25rem;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+    }
   }
 }
 
@@ -651,6 +721,11 @@ $transition: all 0.3s ease;
   transition: $transition;
   cursor: pointer;
 
+  @media (max-width: 430px) {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
@@ -658,6 +733,11 @@ $transition: all 0.3s ease;
 
     .payment-card__actions {
       opacity: 1;
+    }
+
+    @media (max-width: 430px) {
+      transform: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -713,6 +793,11 @@ $transition: all 0.3s ease;
     border-radius: 50px;
     font-size: 0.75rem;
     font-weight: 600;
+
+    @media (max-width: 430px) {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+    }
   }
 
   &__actions {
@@ -724,6 +809,16 @@ $transition: all 0.3s ease;
     padding: 1rem;
     opacity: 0;
     transition: $transition;
+
+    @media (max-width: 430px) {
+      position: static;
+      opacity: 1;
+      justify-content: center;
+      margin-top: 1rem;
+      padding: 0;
+      border-top: 1px solid $border;
+      padding-top: 1rem;
+    }
   }
 
   &__action-btn {
@@ -737,9 +832,19 @@ $transition: all 0.3s ease;
     align-items: center;
     justify-content: center;
 
+    @media (max-width: 430px) {
+      width: 44px;
+      height: 44px;
+    }
+
     svg {
       color: currentColor;
       transition: $transition;
+
+      @media (max-width: 430px) {
+        width: 18px;
+        height: 18px;
+      }
     }
 
     &--edit {
