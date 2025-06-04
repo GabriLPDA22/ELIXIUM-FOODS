@@ -398,7 +398,7 @@ const loadUserOrders = async () => {
 // Cargar conteo de reseñas del usuario
 const loadUserReviewsCount = async () => {
   if (!authStore.user?.id) return;
-  
+
   try {
     const reviews = await getUserReviews(authStore.user.id);
     userReviewsCount.value = reviews.length;
@@ -560,7 +560,7 @@ watch(() => route.query.tab, (newTab) => {
     if (newTab === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
       loadUserOrders();
     }
-    
+
     if (newTab === 'reviews' && userReviewsCount.value === 0) {
       loadUserReviewsCount();
     }
@@ -571,7 +571,7 @@ watch(() => route.query.tab, (newTab) => {
 onMounted(async () => {
   initializeTabFromQuery();
   loadUserData();
-  
+
   // Cargar conteo de reseñas inmediatamente
   await loadUserReviewsCount();
 

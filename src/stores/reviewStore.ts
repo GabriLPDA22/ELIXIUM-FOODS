@@ -3,13 +3,13 @@
 // src/stores/reviewStore.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { 
-  Review, 
-  CreateReviewDto, 
-  UpdateReviewDto, 
-  ReviewFilter, 
-  RestaurantReviewSummary, 
-  ProductReviewSummary 
+import type {
+  Review,
+  CreateReviewDto,
+  UpdateReviewDto,
+  ReviewFilter,
+  RestaurantReviewSummary,
+  ProductReviewSummary
 } from '@/types/review'
 import { reviewService } from '@/services/reviewService'
 
@@ -40,12 +40,12 @@ export const useReviewStore = defineStore('review', () => {
   })
 
   const getUserReviewForRestaurant = computed(() => {
-    return (userId: number, restaurantId: number) => 
+    return (userId: number, restaurantId: number) =>
       reviews.value.find(r => r.userId === userId && r.restaurantId === restaurantId && !r.productId)
   })
 
   const getUserReviewForProduct = computed(() => {
-    return (userId: number, productId: number) => 
+    return (userId: number, productId: number) =>
       reviews.value.find(r => r.userId === userId && r.productId === productId)
   })
 
@@ -55,7 +55,7 @@ export const useReviewStore = defineStore('review', () => {
     error.value = null
     try {
       const fetchedReviews = await reviewService.getRestaurantReviews(restaurantId, filter)
-      
+
       // Update reviews array, avoiding duplicates
       fetchedReviews.forEach(newReview => {
         const existingIndex = reviews.value.findIndex(r => r.id === newReview.id)
@@ -65,7 +65,7 @@ export const useReviewStore = defineStore('review', () => {
           reviews.value.push(newReview)
         }
       })
-      
+
       return fetchedReviews
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Error al cargar reseñas'
@@ -80,7 +80,7 @@ export const useReviewStore = defineStore('review', () => {
     error.value = null
     try {
       const fetchedReviews = await reviewService.getProductReviews(productId, filter)
-      
+
       // Update reviews array, avoiding duplicates
       fetchedReviews.forEach(newReview => {
         const existingIndex = reviews.value.findIndex(r => r.id === newReview.id)
@@ -90,7 +90,7 @@ export const useReviewStore = defineStore('review', () => {
           reviews.value.push(newReview)
         }
       })
-      
+
       return fetchedReviews
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Error al cargar reseñas'
@@ -106,7 +106,7 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const summary = await reviewService.getRestaurantReviewSummary(restaurantId)
       restaurantSummaries.value.set(restaurantId, summary)
-      
+
       // Also update reviews with recent reviews from summary
       summary.recentReviews.forEach(review => {
         const existingIndex = reviews.value.findIndex(r => r.id === review.id)
@@ -116,7 +116,7 @@ export const useReviewStore = defineStore('review', () => {
           reviews.value.push(review)
         }
       })
-      
+
       return summary
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Error al cargar resumen'
@@ -132,7 +132,7 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const summary = await reviewService.getProductReviewSummary(productId)
       productSummaries.value.set(productId, summary)
-      
+
       // Also update reviews with recent reviews from summary
       summary.recentReviews.forEach(review => {
         const existingIndex = reviews.value.findIndex(r => r.id === review.id)
@@ -142,7 +142,7 @@ export const useReviewStore = defineStore('review', () => {
           reviews.value.push(review)
         }
       })
-      
+
       return summary
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Error al cargar resumen'
@@ -173,13 +173,13 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const newReview = await reviewService.createReview(reviewData)
       reviews.value.unshift(newReview)
-      
+
       // Invalidate summaries to force reload
       if (reviewData.productId) {
         productSummaries.value.delete(reviewData.productId)
       }
       restaurantSummaries.value.delete(reviewData.restaurantId)
-      
+
       return newReview
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Error al crear reseña'
@@ -194,25 +194,25 @@ export const useReviewStore = defineStore('review', () => {
     error.value = null
     try {
       const updatedReview = await reviewService.updateReview(reviewId, reviewData)
-      
+
       // Update in reviews array
       const index = reviews.value.findIndex(r => r.id === reviewId)
       if (index !== -1) {
         reviews.value[index] = updatedReview
       }
-      
+
       // Update in userReviews if present
       const userIndex = userReviews.value.findIndex(r => r.id === reviewId)
       if (userIndex !== -1) {
         userReviews.value[userIndex] = updatedReview
       }
-      
+
       // Invalidate summaries to force reload
       if (updatedReview.productId) {
         productSummaries.value.delete(updatedReview.productId)
       }
       restaurantSummaries.value.delete(updatedReview.restaurantId)
-      
+
       return updatedReview
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Error al actualizar reseña'
@@ -227,13 +227,13 @@ export const useReviewStore = defineStore('review', () => {
     error.value = null
     try {
       const reviewToDelete = reviews.value.find(r => r.id === reviewId)
-      
+
       await reviewService.deleteReview(reviewId)
-      
+
       // Remove from arrays
       reviews.value = reviews.value.filter(r => r.id !== reviewId)
       userReviews.value = userReviews.value.filter(r => r.id !== reviewId)
-      
+
       // Invalidate summaries to force reload
       if (reviewToDelete) {
         if (reviewToDelete.productId) {
@@ -252,13 +252,13 @@ export const useReviewStore = defineStore('review', () => {
   const markAsHelpful = async (reviewId: number) => {
     try {
       await reviewService.markAsHelpful(reviewId)
-      
+
       // Update helpful count locally
       const review = reviews.value.find(r => r.id === reviewId)
       if (review) {
         review.helpfulCount++
       }
-      
+
       const userReview = userReviews.value.find(r => r.id === reviewId)
       if (userReview) {
         userReview.helpfulCount++
@@ -305,7 +305,7 @@ export const useReviewStore = defineStore('review', () => {
     userReviews,
     loading,
     error,
-    
+
     // Getters
     getRestaurantSummary,
     getProductSummary,
@@ -313,7 +313,7 @@ export const useReviewStore = defineStore('review', () => {
     getReviewsByProduct,
     getUserReviewForRestaurant,
     getUserReviewForProduct,
-    
+
     // Actions
     fetchRestaurantReviews,
     fetchProductReviews,
