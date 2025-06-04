@@ -914,28 +914,29 @@ onUnmounted(() => {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    backdrop-filter: blur(10px);
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
     &--active {
-      background: rgba(34, 197, 94, 0.2);
-      border: 1px solid rgba(34, 197, 94, 0.5);
-      color: #16a34a;
+      background: #22c55e;
+      color: white;
+      border: 2px solid #16a34a;
     }
 
     &--coming_soon {
-      background: rgba(245, 158, 11, 0.2);
-      border: 1px solid rgba(245, 158, 11, 0.5);
-      color: #d97706;
+      background: #f59e0b;
+      color: white;
+      border: 2px solid #d97706;
     }
 
     &--planned {
-      background: rgba(107, 114, 128, 0.2);
-      border: 1px solid rgba(107, 114, 128, 0.5);
-      color: #374151;
+      background: #6b7280;
+      color: white;
+      border: 2px solid #4b5563;
     }
   }
 
@@ -1001,13 +1002,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 20px;
-  color: #92400e;
-  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  background: #f59e0b;
+  border: 2px solid #d97706;
+  border-radius: 25px;
+  color: white;
+  font-weight: 700;
   font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .zones-filters {
@@ -1090,24 +1092,28 @@ onUnmounted(() => {
   &__coverage {
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    padding: 0.4rem 1rem;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 2px solid;
 
     &--complete {
-      background: #d1fae5;
-      color: #065f46;
+      background: #22c55e;
+      color: white;
+      border-color: #16a34a;
     }
 
     &--partial {
-      background: #fef3c7;
-      color: #92400e;
+      background: #f59e0b;
+      color: white;
+      border-color: #d97706;
     }
 
     &--limited {
-      background: #fee2e2;
-      color: #991b1b;
+      background: #ef4444;
+      color: white;
+      border-color: #dc2626;
     }
   }
 

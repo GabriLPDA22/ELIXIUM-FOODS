@@ -120,6 +120,84 @@
                   </svg>
                 </div>
                 <p class="empty-state__text">No tienes direcciones guardadas</p>
+                <!-- 🆕 NUEVO: Botón para añadir dirección -->
+                <button class="btn-primary" @click="showAddAddressForm = true" style="margin-top: 1rem;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Añadir dirección</span>
+                </button>
+              </div>
+
+              <!-- 🆕 NUEVO: Formulario para añadir dirección -->
+              <div v-if="showAddAddressForm" class="form-section add-address-form">
+                <h3 class="form-section__title">Nueva dirección de entrega</h3>
+                <div class="new-address-form">
+                  <div class="input-group">
+                    <label for="addressName" class="input-label">Nombre de la dirección</label>
+                    <input
+                      id="addressName"
+                      v-model="newAddress.name"
+                      type="text"
+                      class="form-input"
+                      placeholder="Ej: Casa, Trabajo, etc."
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label for="addressStreet" class="input-label">Calle y número *</label>
+                    <input
+                      id="addressStreet"
+                      v-model="newAddress.street"
+                      type="text"
+                      class="form-input"
+                      placeholder="Ej: Calle Mayor 123, 2º B"
+                    />
+                  </div>
+
+                  <div class="input-row">
+                    <div class="input-group">
+                      <label for="addressCity" class="input-label">Ciudad *</label>
+                      <input
+                        id="addressCity"
+                        v-model="newAddress.city"
+                        type="text"
+                        class="form-input"
+                        placeholder="Ej: Madrid"
+                      />
+                    </div>
+                    <div class="input-group">
+                      <label for="addressPostalCode" class="input-label">Código postal</label>
+                      <input
+                        id="addressPostalCode"
+                        v-model="newAddress.postalCode"
+                        type="text"
+                        class="form-input"
+                        placeholder="Ej: 28001"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-actions" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button
+                      class="btn-secondary"
+                      @click="cancelAddAddress"
+                      style="flex: 1;"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      class="btn-primary"
+                      @click="saveNewAddress"
+                      :disabled="!canSaveAddress"
+                      style="flex: 1;"
+                    >
+                      <span v-if="!savingAddress">Guardar dirección</span>
+                      <span v-else class="loading-spinner loading-spinner--small"></span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -701,6 +779,16 @@ const userAddresses = ref<Address[]>([]);
 const loadingAddresses = ref(false);
 const selectedAddress = ref<number | null>(null);
 
+// 🆕 NUEVO: Estados para agregar dirección
+const showAddAddressForm = ref(false);
+const savingAddress = ref(false);
+const newAddress = ref({
+  name: '',
+  street: '',
+  city: '',
+  postalCode: ''
+});
+
 // ——— 2) Estados para métodos de pago ———
 const paymentMethods = ref<PaymentMethodInfo[]>([]);
 const loadingPayments = ref(false);
@@ -873,6 +961,7 @@ const canProceedToPayment = computed(() => {
   }
   return true;
 });
+
 const canSavePayment = computed(() => {
   if (!newPayment.value.nickname?.trim()) return false;
   if (!newPayment.value.type) return false;
@@ -889,6 +978,11 @@ const canSavePayment = computed(() => {
     );
   }
   return true;
+});
+
+// 🆕 NUEVO: Computed para validar si se puede guardar la dirección
+const canSaveAddress = computed(() => {
+  return newAddress.value.street?.trim() && newAddress.value.city?.trim();
 });
 
 // ——— 15) onMounted: cargar carrito, direcciones, métodos de pago y restaurante =====
@@ -1003,6 +1097,64 @@ const saveNewPaymentMethod = async () => {
     step.value = 3;
   } catch (err: any) {
     alert(err.message || 'No se pudo guardar el método de pago');
+  }
+};
+
+// 🆕 NUEVO: Función para cancelar agregar dirección
+const cancelAddAddress = () => {
+  showAddAddressForm.value = false;
+  newAddress.value = {
+    name: '',
+    street: '',
+    city: '',
+    postalCode: ''
+  };
+};
+
+// 🆕 NUEVO: Función para guardar nueva dirección
+const saveNewAddress = async () => {
+  if (!canSaveAddress.value) return;
+
+  savingAddress.value = true;
+  try {
+    // ✅ ARREGLO: Usar addAddress en lugar de createAddress
+    const addressData = {
+      name: newAddress.value.name || '',
+      street: newAddress.value.street,
+      number: '', // Campo number si es necesario
+      interior: '',
+      neighborhood: '',
+      city: newAddress.value.city,
+      state: '',
+      zipCode: newAddress.value.postalCode || '',
+      phone: '',
+      isDefault: false
+    };
+
+    await userService.addAddress(addressData);
+
+    // Recargar las direcciones
+    await loadAddresses();
+
+    // Ocultar formulario y limpiar
+    showAddAddressForm.value = false;
+    newAddress.value = {
+      name: '',
+      street: '',
+      city: '',
+      postalCode: ''
+    };
+
+    // Seleccionar la nueva dirección (será la última)
+    if (userAddresses.value.length > 0) {
+      selectedAddress.value = userAddresses.value[userAddresses.value.length - 1].id;
+    }
+
+  } catch (err: any) {
+    console.error('Error guardando dirección:', err);
+    alert(err.message || 'No se pudo guardar la dirección');
+  } finally {
+    savingAddress.value = false;
   }
 };
 
@@ -1445,6 +1597,25 @@ $shadow-elevated: 0 20px 40px rgba(0, 0, 0, 0.1);
       transform: translate(-50%, -50%) scale(1);
     }
   }
+}
+
+// 🆕 NUEVO: Estilos para formulario de nueva dirección
+.add-address-form {
+  background: rgba(6, 193, 103, 0.02);
+  border: 1px solid rgba(6, 193, 103, 0.1);
+  border-radius: $border-radius-sm;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.new-address-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-actions {
+  margin-top: 1rem;
 }
 
 // Delivery Options

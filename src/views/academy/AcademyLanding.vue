@@ -419,7 +419,7 @@ const testimonials = [
     id: 1,
     name: 'Carlos Rodríguez',
     role: 'Senior Operations Manager',
-    avatar: 'CR',
+    avatar: 'https://img.freepik.com/foto-gratis/retrato-hombre-negocios-maduro-computadora-portatil-sobre-escritorio-restaurante_23-2147956344.jpg?semt=ais_items_boosted&w=740',
     quote: 'The Leadership course completely transformed how I manage my team. I\'ve seen a 40% improvement in team efficiency since applying what I learned.',
     achievement: {
       icon: '📈',
@@ -430,7 +430,7 @@ const testimonials = [
     id: 2,
     name: 'María González',
     role: 'Customer Experience Lead',
-    avatar: 'MG',
+    avatar: 'https://img.freepik.com/foto-gratis/cerrar-persona-sonriente-sala-conferencias_23-2149085987.jpg?semt=ais_items_boosted&w=740',
     quote: 'Elixium Academy helped me develop skills I never knew I needed. The customer service training directly led to our highest satisfaction scores ever.',
     achievement: {
       icon: '⭐',
@@ -441,7 +441,7 @@ const testimonials = [
     id: 3,
     name: 'David Chen',
     role: 'Technology Coordinator',
-    avatar: 'DC',
+    avatar: 'https://img.freepik.com/foto-gratis/desarrollador-software-centro-servidores-que-mantiene-rendimiento-optimo-red_482257-113699.jpg?semt=ais_items_boosted&w=740',
     quote: 'The tech courses are incredibly practical. I implemented new systems that reduced our processing time by 30% and got recognition from senior management.',
     achievement: {
       icon: '🚀',

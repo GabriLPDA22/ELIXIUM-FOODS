@@ -9,7 +9,7 @@
       </div>
 
       <div class="categories__grid">
-        <router-link v-for="category in categories" :key="category.id" 
+        <router-link v-for="category in categories" :key="category.id"
           :to="`/restaurants?category=${category.id}`"
           class="category-card">
           <div class="category-card__image-wrapper">
@@ -94,7 +94,7 @@ const categories = [
 
 <style lang="scss" scoped>
 .categories {
-  padding: 7rem 0;
+  padding: 4rem 0;
   background-color: #f8fafc;
   position: relative;
   overflow: hidden;

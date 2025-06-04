@@ -454,11 +454,15 @@ const allCategories = computed(() => [
       z-index: -1;
       animation: gradient-border 3s ease infinite;
     }
+
+    .chef-card__image-container {
+      height: 280px;
+    }
   }
 
   &__image-container {
     position: relative;
-    height: 200px;
+    height: 240px;
     overflow: hidden;
   }
 
@@ -466,10 +470,11 @@ const allCategories = computed(() => [
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center top;
     transition: transform 0.3s ease;
 
     .chef-card:hover & {
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
   }
 
@@ -479,25 +484,28 @@ const allCategories = computed(() => [
     left: 1rem;
     background: linear-gradient(135deg, #f093fb, #f5576c);
     color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    padding: 0.4rem 1rem;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
   }
 
   &__rating {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
+    padding: 0.4rem 1rem;
+    border-radius: 25px;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    font-size: 0.8rem;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
     backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   &__content {
@@ -636,6 +644,16 @@ const allCategories = computed(() => [
 
   .chef-card--featured {
     min-width: unset;
+  }
+
+  .chef-card {
+    &__image-container {
+      height: 220px;
+    }
+
+    &--featured .chef-card__image-container {
+      height: 260px;
+    }
   }
 }
 </style>

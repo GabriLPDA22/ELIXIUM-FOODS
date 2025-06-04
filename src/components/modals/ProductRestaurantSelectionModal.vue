@@ -1,9 +1,8 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-content">
-      <button class="modal-close-button" @click="$emit('close')" aria-label="Cerrar modal">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="modal-close" @click="$emit('close')" aria-label="Cerrar modal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -11,77 +10,86 @@
 
       <div class="modal-header">
         <h3 class="modal-title" v-if="product">
-          <span class="modal-title-icon">🛍️</span>
-          Ver "{{ product.name }}" en:
+          Disponible en
         </h3>
+        <p class="product-name" v-if="product">{{ product.name }}</p>
       </div>
 
       <div v-if="isLoading" class="loading-state">
         <div class="spinner"></div>
         <p>Cargando restaurantes...</p>
       </div>
-      <div v-else-if="localError" class="error-message">
-        <p>⚠️ {{ localError }}</p>
+
+      <div v-else-if="localError" class="error-state">
+        <p>{{ localError }}</p>
+        <button class="retry-btn" @click="processOfferings(props.offerings)">
+          Reintentar
+        </button>
       </div>
-      <ul v-else-if="sortedOfferings && sortedOfferings.length" class="restaurant-list">
-        <li
+
+      <div v-else-if="sortedOfferings && sortedOfferings.length" class="restaurant-list">
+        <div
           v-for="offering in sortedOfferings"
           :key="offering.restaurantId"
-          class="restaurant-list-item"
-          :class="{ 'unavailable-item': !offering.isAvailable }"
+          class="restaurant-item"
+          :class="{ 'unavailable': !offering.isAvailable }"
           @click="selectRestaurant(offering)"
-          role="button"
-          :aria-disabled="!offering.isAvailable"
-          :tabindex="offering.isAvailable ? 0 : -1"
         >
-          <div class="item-main-info">
-            <div class="restaurant-logo-container">
+          <div class="offer-badge" v-if="offering.offerDetails?.hasOffer">
+            {{ offering.offerDetails.offerText }}
+          </div>
+
+          <div class="restaurant-info">
+            <div class="restaurant-logo">
               <img
                 v-if="offering.restaurantLogoUrl"
                 :src="offering.restaurantLogoUrl"
                 :alt="offering.restaurantName || 'Logo'"
-                class="restaurant-logo"
               />
-              <div v-else class="restaurant-logo-placeholder">
+              <div v-else class="logo-placeholder">
                 {{ offering.restaurantName ? offering.restaurantName.charAt(0).toUpperCase() : 'R' }}
               </div>
             </div>
+
             <div class="restaurant-details">
-              <span class="restaurant-name">{{ offering.restaurantName || 'Restaurante Desconocido' }}</span>
-              <div class="price-and-offer-info">
-                <template v-if="offering.isAvailable">
-                  <span
-                    v-if="offering.offerDetails && offering.offerDetails.hasOffer"
-                    class="price-container"
-                  >
-                    <span class="original-price">€{{ offering.price.toFixed(2) }}</span>
-                    <span class="discounted-price">€{{ offering.offerDetails.discountedPrice.toFixed(2) }}</span>
-                    <span class="offer-badge">{{ offering.offerDetails.offerText }}</span>
-                  </span>
-                  <span v-else class="restaurant-price">€{{ offering.price.toFixed(2) }}</span>
-                </template>
-                <span v-else class="restaurant-unavailable">No disponible</span>
+              <h4 class="restaurant-name">{{ offering.restaurantName || 'Restaurante Desconocido' }}</h4>
+              <div class="status">
+                <span class="status-dot" :class="{ 'available': offering.isAvailable }"></span>
+                {{ offering.isAvailable ? 'Disponible' : 'No disponible' }}
               </div>
             </div>
           </div>
-          <div class="restaurant-actions" v-if="offering.isAvailable">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                 class="select-arrow-icon">
+
+          <div class="price-info">
+            <template v-if="offering.isAvailable">
+              <div v-if="offering.offerDetails && offering.offerDetails.hasOffer" class="price-offer">
+                <span class="old-price">€{{ offering.price.toFixed(2) }}</span>
+                <span class="new-price">€{{ offering.offerDetails.discountedPrice.toFixed(2) }}</span>
+              </div>
+              <div v-else class="price-normal">
+                €{{ offering.price.toFixed(2) }}
+              </div>
+            </template>
+            <span v-else class="price-unavailable">No disponible</span>
+          </div>
+
+          <div class="select-arrow" v-if="offering.isAvailable">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </div>
-        </li>
-      </ul>
-      <div v-else class="no-offerings">
-        <p>Este producto no parece estar disponible en ningún restaurante en este momento.</p>
+        </div>
+      </div>
+
+      <div v-else class="empty-state">
+        <p>Este producto no está disponible en ningún restaurante.</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 import type { SearchProduct, RestaurantProductOfferingDto as BaseRestaurantProductOfferingDto } from '@/services/searchService';
 import { api } from '@/services/api';
 
@@ -117,10 +125,8 @@ const enhancedOfferings = ref<RestaurantProductOfferingDto[]>([]);
 
 const fetchOfferForProductInRestaurant = async (productId: number, restaurantId: number, originalPrice: number): Promise<OfferDetails | null> => {
   try {
-    // ✅ URL CORREGIDA: Agregar /api/ al inicio
     const response = await api.get(`/api/restaurants/${restaurantId}/products/${productId}/active-offer`);
 
-    // ✅ LÓGICA ACTUALIZADA: El backend ahora devuelve 200 con hasOffer: true/false
     if (response.data && response.data.hasOffer && response.data.isActive) {
       const offerData = response.data;
       let discountedPrice = originalPrice;
@@ -142,10 +148,8 @@ const fetchOfferForProductInRestaurant = async (productId: number, restaurantId:
       };
     }
 
-    // Si no hay oferta o no está activa, devolver null
     return null;
   } catch (error) {
-    // ✅ MANEJO MEJORADO: Solo log del error, pero no lanzar excepción
     console.warn(`No se pudo obtener oferta para producto ${productId} en restaurante ${restaurantId}:`, error);
     return null;
   }
@@ -191,7 +195,6 @@ const processOfferings = async (rawOfferings: BaseRestaurantProductOfferingDto[]
     console.error("Error processing offerings:", error);
     localError.value = "No se pudieron cargar las opciones del restaurante.";
 
-    // ✅ FALLBACK MEJORADO: Mostrar los datos básicos sin ofertas
     enhancedOfferings.value = rawOfferings.map(o => ({
         ...o,
         offerDetails: { hasOffer: false, discountedPrice: o.price, offerText: '' }
@@ -221,6 +224,9 @@ watch(() => props.errorInitialOfferings, (newVal) => {
 });
 
 onMounted(() => {
+  // Bloquear scroll del body cuando el modal se abre
+  document.body.style.overflow = 'hidden';
+
   isLoading.value = props.isLoadingInitialOfferings ?? false;
   localError.value = props.errorInitialOfferings ?? null;
   if (props.offerings && !localError.value) {
@@ -230,22 +236,23 @@ onMounted(() => {
   }
 });
 
+onUnmounted(() => {
+  // Restaurar scroll del body cuando el modal se cierra
+  document.body.style.overflow = '';
+});
+
 const sortedOfferings = computed(() => {
   return [...enhancedOfferings.value].sort((a, b) => {
-    // 1. Productos disponibles primero
     if (a.isAvailable && !b.isAvailable) return -1;
     if (!a.isAvailable && b.isAvailable) return 1;
 
-    // 2. Ofertas activas primero (entre los disponibles)
     if (a.offerDetails?.hasOffer && !b.offerDetails?.hasOffer) return -1;
     if (!a.offerDetails?.hasOffer && b.offerDetails?.hasOffer) return 1;
 
-    // 3. Ordenar por precio (precio con descuento si hay oferta)
     const priceA = a.offerDetails?.hasOffer ? a.offerDetails.discountedPrice : a.price;
     const priceB = b.offerDetails?.hasOffer ? b.offerDetails.discountedPrice : b.price;
     if (priceA !== priceB) return priceA - priceB;
 
-    // 4. Finalmente por nombre del restaurante
     return (a.restaurantName || '').localeCompare(b.restaurantName || '');
   });
 });
@@ -271,280 +278,362 @@ const selectRestaurant = (offering: RestaurantProductOfferingDto) => {
 </script>
 
 <style scoped lang="scss">
+// Mobile-first, simple styles
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
-  padding: 20px;
+  padding: 16px;
 }
 
 .modal-content {
-  background: #ffffff;
-  padding: 24px;
+  background: white;
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
   width: 100%;
-  max-width: 480px;
-  position: relative;
-  animation: slideInUp 0.3s ease-out;
-  max-height: calc(100vh - 40px);
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  @media (min-width: 768px) {
+    max-width: 700px;
+    border-radius: 20px;
+  }
+
+  @media (min-width: 1024px) {
+    max-width: 900px;
+  }
 }
 
-@keyframes slideInUp {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+
+  &:hover {
+    background: #e5e7eb;
   }
 }
 
 .modal-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
+  padding: 20px;
+  border-bottom: 1px solid #f3f4f6;
+
+  @media (min-width: 768px) {
+    padding: 24px;
+  }
 }
 
 .modal-title {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+
+  @media (min-width: 768px) {
+    font-size: 1.25rem;
+  }
+}
+
+.product-name {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
   color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-grow: 1;
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
 }
 
-.modal-title-icon {
-  color: #f97316;
-  font-size: 1.5rem;
-}
-
-.modal-close-button {
-  background: transparent;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  transition: color 0.2s ease;
-  padding: 8px;
-  margin-left: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-close-button:hover {
-  color: #ef4444;
-}
-
-.loading-state,
-.error-message,
-.no-offerings {
-  text-align: center;
+.loading-state, .error-state, .empty-state {
   padding: 40px 20px;
-  font-size: 1rem;
-  color: #4b5563;
+  text-align: center;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 .spinner {
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #f97316;
-  border-radius: 50%;
   width: 32px;
   height: 32px;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 16px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
-.error-message p {
-  color: #ef4444;
+.retry-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #2563eb;
+  }
 }
 
 .restaurant-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
   flex-grow: 1;
-  padding-right: 4px;
-}
-
-.restaurant-list-item {
+  overflow-y: auto;
+  padding: 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f3f4f6;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  flex-direction: column;
+  gap: 12px;
+
+  @media (min-width: 768px) {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
 }
 
-.restaurant-list-item:last-child {
-  border-bottom: none;
-}
-
-.restaurant-list-item:hover:not(.unavailable-item) {
-  background-color: #fff7ed;
-}
-
-.restaurant-list-item.unavailable-item {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.item-main-info {
+.restaurant-item {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-grow: 1;
-  min-width: 0;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+
+  @media (min-width: 768px) {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px 16px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &:hover:not(.unavailable) {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  }
+
+  &.unavailable {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f9fafb;
+  }
 }
 
-.restaurant-logo-container {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background-color: #f3f4f6;
+.offer-badge {
+  position: absolute;
+  top: -6px;
+  right: 12px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  @media (min-width: 768px) {
+    top: -8px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+}
+
+.restaurant-info {
   display: flex;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    width: 100%;
+  }
 }
 
 .restaurant-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f3f4f6;
+
+  @media (min-width: 768px) {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
-.restaurant-logo-placeholder {
+.logo-placeholder {
   width: 100%;
   height: 100%;
-  background-color: #fdba74;
-  color: #fff;
+  background: #3b82f6;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
 .restaurant-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex-grow: 1;
+  flex: 1;
   min-width: 0;
 }
 
 .restaurant-name {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
-  font-size: 0.95rem;
-  line-height: 1.3;
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  @media (min-width: 768px) {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
 }
 
-.price-and-offer-info {
+.status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.restaurant-price {
-  color: #16a34a;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.price-container {
-  display: flex;
-  align-items: baseline;
   gap: 6px;
+  font-size: 0.875rem;
+  color: #6b7280;
+
+  @media (min-width: 768px) {
+    justify-content: center;
+  }
 }
 
-.original-price {
-  text-decoration: line-through;
-  color: #9ca3af;
-  font-size: 0.8rem;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+
+  &.available {
+    background: #10b981;
+  }
 }
 
-.discounted-price {
-  color: #f97316;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.offer-badge {
-  background-color: #f97316;
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  line-height: 1;
-}
-
-.restaurant-unavailable {
-  color: #ef4444;
-  font-size: 0.85rem;
-  font-style: italic;
-  font-weight: 500;
-}
-
-.restaurant-actions {
-  color: #9ca3af;
-  margin-left: 12px;
+.price-info {
   flex-shrink: 0;
+  text-align: right;
+
+  @media (min-width: 768px) {
+    text-align: center;
+    width: 100%;
+  }
 }
 
-.select-arrow-icon {
-  transition: transform 0.15s ease-in-out;
+.price-offer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.restaurant-list-item:hover:not(.unavailable-item) .select-arrow-icon {
-  color: #f97316;
+.old-price {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.new-price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.price-normal {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+.price-unavailable {
+  font-size: 0.875rem;
+  color: #ef4444;
+  font-style: italic;
+}
+
+.select-arrow {
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  @media (min-width: 768px) {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+  }
+}
+
+.restaurant-item:hover:not(.unavailable) .select-arrow {
+  color: #3b82f6;
   transform: translateX(2px);
 }
 
 .restaurant-list::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
 }
+
 .restaurant-list::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .restaurant-list::-webkit-scrollbar-thumb {
   background: #d1d5db;
-  border-radius: 10px;
-}
-.restaurant-list::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  border-radius: 4px;
 }
 </style>

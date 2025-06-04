@@ -213,7 +213,7 @@
           </div>
           <div class="about-story__image">
             <img
-              src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80"
+              src="https://images.unsplash.com/photo-1584799580661-53b7c6b99430?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjZ8fGRlbGl2ZXJ5fGVufDB8fDB8fHww"
               alt="Restaurante local asociado" class="about-story__img" />
             <div class="about-story__overlay-text">
               <span>"Apoyamos lo que hace único a cada lugar"</span>

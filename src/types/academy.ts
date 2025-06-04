@@ -107,7 +107,7 @@ export const coursesData: Course[] = [
     instructor: "Carlos Rodríguez",
     rating: 4.8,
     studentsCount: 1247,
-    thumbnail: "/images/courses/delivery-excellence.jpg",
+    thumbnail: "https://images.unsplash.com/photo-1646920912229-bc0d5d94e68b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8RGVsaXZlcnklMjBFeGNlbGxlbmNlJTIwTWFzdGVyeXxlbnwwfHwwfHx8MA%3D%3D",
     tags: ["🚚 Logistics", "⭐ Customer Focus", "📱 Technology"],
     isNew: true,
     modules: [
@@ -167,7 +167,7 @@ export const coursesData: Course[] = [
     instructor: "María González",
     rating: 4.9,
     studentsCount: 892,
-    thumbnail: "/images/courses/leadership.jpg",
+    thumbnail: "https://images.unsplash.com/photo-1578366941741-9e517759c620?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8TGVhZGVyc2hpcCUyMGluJTIwRm9vZCUyMFNlcnZpY2V8ZW58MHx8MHx8fDA%3D",
     tags: ["👥 Team Building", "🎯 Strategy", "💬 Communication"],
     isFeatured: true,
     modules: [
@@ -204,7 +204,7 @@ export const coursesData: Course[] = [
     instructor: "Ana López",
     rating: 4.7,
     studentsCount: 1584,
-    thumbnail: "/images/courses/customer-experience.jpg",
+    thumbnail: "https://images.unsplash.com/photo-1717457779714-33b88744eab3?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGN1c3RvbWVyJTIwZXhwZXJpZW5jaWV8ZW58MHx8MHx8fDA%3D",
     tags: ["😊 Satisfaction", "🔄 Retention", "📞 Support"],
     modules: [
       {
@@ -233,7 +233,7 @@ export const coursesData: Course[] = [
     instructor: "Dr. Roberto Sánchez",
     rating: 4.9,
     studentsCount: 2156,
-    thumbnail: "/images/courses/food-safety.jpg",
+    thumbnail: "https://plus.unsplash.com/premium_photo-1661438098400-757859c2f6fe?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Rm9vZCUyMFNhZmV0eSUyMCUyNiUyMEh5Z2llbmUlMjBTdGFuZGFyZHN8ZW58MHx8MHx8fDA%3D",
     tags: ["🧼 Hygiene", "✅ Compliance", "🛡️ Safety"],
     modules: [
       {
@@ -255,7 +255,7 @@ export const coursesData: Course[] = [
     instructor: "Lucía Fernández",
     rating: 4.6,
     studentsCount: 634,
-    thumbnail: "/images/courses/digital-marketing.jpg",
+    thumbnail: "https://images.unsplash.com/photo-1728044849280-10a1a75cff83?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fERpZ2l0YWwlMjBNYXJrZXRpbmclMjBmb3IlMjBSZXN0YXVyYW50c3xlbnwwfHwwfHx8MA%3D%3D",
     tags: ["📱 Social Media", "📊 Analytics", "🎯 Targeting"],
     modules: [
       {
@@ -277,7 +277,7 @@ export const coursesData: Course[] = [
     instructor: "Diego Martín",
     rating: 4.5,
     studentsCount: 758,
-    thumbnail: "/images/courses/tech-skills.jpg",
+    thumbnail: "https://plus.unsplash.com/premium_photo-1678565869434-c81195861939?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dGVjaCUyMHNraWxsc3xlbnwwfHwwfHx8MA%3D%3D",
     tags: ["💻 Software", "📱 Apps", "🔧 Tools"],
     modules: [
       {
