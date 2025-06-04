@@ -474,7 +474,7 @@
         <div class="about-team__grid">
           <div class="about-team__member">
             <div class="about-team__member-image">
-              <img src="../../Images/Abuelo.jpg" alt="CEO" />
+              <img src="/images/Abuelo.jpg" alt="CEO" />
             </div>
             <h3 class="about-team__member-name">Presi Martínez</h3>
             <p class="about-team__member-role">CEO & Fundador</p>
@@ -489,7 +489,7 @@
           </div>
           <div class="about-team__member">
             <div class="about-team__member-image">
-              <img src="../../Images/BigBoss.jpg" alt="CTO" />
+              <img src="/images/BigBoss.jpg" alt="CTO" />
             </div>
             <h3 class="about-team__member-name">Francisco Villa</h3>
             <p class="about-team__member-role">CTO & Co-fundador</p>
@@ -504,7 +504,7 @@
           </div>
           <div class="about-team__member">
             <div class="about-team__member-image">
-              <img src="../../Images/Claudia.png" alt="IA Assistant" />
+              <img src="/images/Claudia.png" alt="IA Assistant" />
             </div>
             <h3 class="about-team__member-name">Claude</h3>
             <p class="about-team__member-role">Asistente IA Ético</p>
