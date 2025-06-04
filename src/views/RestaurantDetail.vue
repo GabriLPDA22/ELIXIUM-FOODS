@@ -343,6 +343,16 @@
           </div>
         </div>
       </section>
+
+      <!-- ✨ NUEVA SECCIÓN DE RESEÑAS ✨ -->
+      <section class="restaurant-reviews">
+        <div class="container">
+          <ReviewsSection 
+            :restaurant-id="restaurantId || 0" 
+            title="del restaurante"
+          />
+        </div>
+      </section>
     </template>
 
     <div v-else-if="!loading && !restaurant && !error" class="not-found">
@@ -367,6 +377,7 @@ import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuI
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import ReviewsSection from '@/components/reviews/ReviewsSection.vue'
 
 interface ProductOffer {
   id: number
@@ -833,7 +844,6 @@ onMounted(async () => {
 })
 </script>
 
-
 <style lang="scss" scoped>
 // Variables elegantes
 $primary-gradient: linear-gradient(135deg, #FF416C, #FF4B2B);
@@ -870,6 +880,31 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 .restaurant-detail-page {
   background: linear-gradient(to bottom, $white, $light-gray);
   min-height: 100vh;
+}
+
+// ✨ NUEVA SECCIÓN DE RESEÑAS ✨
+.restaurant-reviews {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, 
+    rgba(248, 250, 252, 0.8) 0%, 
+    rgba(255, 255, 255, 0.9) 50%, 
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: $primary-gradient;
+  }
+
+  @media (max-width: 768px) {
+    padding: 3rem 0;
+  }
 }
 
 // Loading container elegante
@@ -2090,6 +2125,10 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     justify-content: flex-start;
     overflow-x: auto;
     padding: 0 1rem;
+  }
+
+  .restaurant-reviews {
+    padding: 3rem 0;
   }
 }
 </style>

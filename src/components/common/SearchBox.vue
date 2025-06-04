@@ -431,7 +431,7 @@ watch(() => props.autoFocus, (newValue) => {
   }
 
   &:hover:not(:disabled) {
-    background: linear-gradient(to right, darken(#FF416C, 5%), darken(#FF4B2B, 5%));
+    background: linear-gradient(to right, #FF416C #FF4B2B, 5%);
   }
 
   &:disabled {
