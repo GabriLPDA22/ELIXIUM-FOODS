@@ -383,6 +383,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification ref="toastNotification" />
   </div>
 </template>
 
@@ -390,8 +393,12 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 const authStore = useAuthStore()
+
+// Toast notification ref
+const toastNotification = ref()
 
 // Estados
 const loading = ref(true)
@@ -744,10 +751,13 @@ const updateStatus = async (order: any, newStatus: string) => {
       if (selectedOrder.value && selectedOrder.value.id === order.id) {
         selectedOrder.value = { ...selectedOrder.value, status: newStatus }
       }
+
+      // Mostrar notificación de éxito
+      toastNotification.value?.useToast().success(`Estado del pedido actualizado a: ${getStatusLabel(newStatus)}`)
     }
   } catch (error) {
     console.error('Error actualizando estado del pedido:', error)
-    // Aquí podrías mostrar una notificación de error
+    toastNotification.value?.useToast().error('Error al actualizar el estado del pedido')
   } finally {
     statusUpdateOrder.value = null
   }

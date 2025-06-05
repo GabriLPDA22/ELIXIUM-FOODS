@@ -191,6 +191,9 @@
         </main>
       </div>
     </template>
+
+    <!-- Toast Notification Component -->
+    <ToastNotification ref="toastRef" />
   </div>
 </template>
 
@@ -199,10 +202,21 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Toast ref
+const toastRef = ref(null)
+
+// Toast helper function
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  if (toastRef.value) {
+    toastRef.value.useToast()[type](message, title)
+  }
+}
 
 const isSidebarOpen = ref(false)
 const business = ref(null)
@@ -230,16 +244,19 @@ const loadBusiness = async () => {
     if (!userId) {
       console.error('No se encontró ID de usuario')
       business.value = null
+      showToast('error', 'No se encontró información del usuario', 'Error de sesión')
       return false
     }
     const response = await api.get(`/api/Business/user/${userId}`)
 
     if (response.data && response.data.id) {
       business.value = response.data
+      showToast('success', `Bienvenido a ${response.data.name}`, '¡Carga exitosa!')
       return true
     } else {
       console.warn('⚠️ Usuario no tiene business asignado')
       business.value = null
+      showToast('warning', 'No tienes un negocio asignado a tu cuenta', 'Acceso limitado')
       return false
     }
   } catch (error: any) {
@@ -248,11 +265,13 @@ const loadBusiness = async () => {
 
     // Si es un 404, significa que no tiene business
     if (error.response?.status === 404) {
+      showToast('info', 'No se encontró ningún negocio asociado a tu cuenta', 'Sin negocio')
       return false
     }
 
     // Para otros errores, mostrar en consola pero no redirigir inmediatamente
     console.error('Error de red o servidor:', error.message)
+    showToast('error', 'Error al conectar con el servidor. Intenta de nuevo.', 'Error de conexión')
     return false
   } finally {
     isLoadingBusiness.value = false
@@ -262,6 +281,7 @@ const loadBusiness = async () => {
 
 const refreshBusiness = async () => {
   hasCheckedBusiness.value = false
+  showToast('info', 'Verificando información del negocio...', 'Verificando')
   await loadBusiness()
 }
 
@@ -270,6 +290,7 @@ const toggleSidebar = () => {
 }
 
 const logout = async () => {
+  showToast('info', 'Cerrando sesión...', 'Hasta pronto')
   await authStore.logout()
   router.push({ name: 'home' })
 }
@@ -281,6 +302,7 @@ onMounted(async () => {
     const isAuth = await authStore.checkAuth()
     if (!isAuth) {
       console.error('❌ Usuario no autenticado')
+      showToast('error', 'Debes iniciar sesión para acceder', 'No autorizado')
       router.push('/login')
       return
     }
@@ -290,6 +312,7 @@ onMounted(async () => {
   const userRole = authStore.user?.role
   if (userRole !== 'Business' && userRole !== 'Admin') {
     console.error(`❌ Rol inválido para business dashboard: ${userRole}`)
+    showToast('error', 'No tienes permisos para acceder a esta sección', 'Acceso denegado')
     router.push('/unauthorized')
     return
   }

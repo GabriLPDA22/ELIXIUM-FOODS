@@ -406,6 +406,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification ref="toastNotification" />
   </div>
 </template>
 
@@ -414,6 +417,7 @@ import { ref, computed, onMounted, watch, defineComponent, h } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
 import { ImageService } from '@/services/imageService'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 // Tipos TypeScript
 interface Business {
@@ -538,6 +542,9 @@ const SettingsIcon = defineComponent(() => h('svg', {
 
 // Store
 const authStore = useAuthStore()
+
+// Toast notification ref
+const toastNotification = ref()
 
 // Estado reactivo
 const loading = ref(true)
@@ -1221,13 +1228,13 @@ const resetAddressForm = () => {
   }
 }
 
-// Métodos de utilidad
+// Métodos de utilidad actualizados para usar ToastNotification
 const showSuccess = (message: string) => {
-  alert(message) // Puedes reemplazar con tu sistema de notificaciones
+  toastNotification.value?.useToast().success(message)
 }
 
 const showError = (message: string) => {
-  alert(message) // Puedes reemplazar con tu sistema de notificaciones
+  toastNotification.value?.useToast().error(message)
 }
 
 const retryLoad = async () => {
