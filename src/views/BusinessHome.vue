@@ -330,6 +330,8 @@
       </div>
     </div>
 
+    <!-- Toast Notification Component -->
+    <ToastNotification ref="toastRef" />
   </div>
 </template>
 
@@ -338,9 +340,20 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Toast ref
+const toastRef = ref(null)
+
+// Toast helper function
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  if (toastRef.value) {
+    toastRef.value.useToast()[type](message, title)
+  }
+}
 
 // Estados básicos
 const business = ref(null)
@@ -484,6 +497,7 @@ const loadBusiness = async () => {
   } catch (error) {
     console.error('Error cargando business:', error)
     business.value = null
+    showToast('error', 'No se pudo cargar la información del negocio', 'Error de conexión')
   }
 }
 
@@ -511,6 +525,7 @@ const loadRestaurants = async () => {
             }
           } catch (error) {
             console.warn(`Error verificando estado del restaurante ${restaurant.id}:`, error)
+            showToast('warning', `No se pudo verificar el estado de ${restaurant.name}`, 'Advertencia')
             // Usar valor por defecto si falla
           }
 
@@ -534,6 +549,7 @@ const loadRestaurants = async () => {
   } catch (error) {
     console.error('Error cargando restaurantes:', error)
     restaurants.value = []
+    showToast('error', 'No se pudieron cargar los restaurantes', 'Error de conexión')
   }
 }
 
@@ -558,6 +574,7 @@ const loadOrders = async () => {
         }
       } catch (error) {
         console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
+        showToast('warning', `No se pudieron cargar los pedidos de ${restaurant.name}`, 'Advertencia')
       }
     }
 
@@ -566,6 +583,7 @@ const loadOrders = async () => {
   } catch (error) {
     console.error('Error cargando pedidos:', error)
     allOrders.value = []
+    showToast('error', 'Error general al cargar los pedidos', 'Error de conexión')
   } finally {
     loadingOrders.value = false
   }
@@ -573,6 +591,8 @@ const loadOrders = async () => {
 
 const selectRestaurant = (restaurantId: number | string) => {
   selectedRestaurantId.value = restaurantId
+  const restaurantName = restaurantId === 'all' ? 'todos los restaurantes' : restaurants.value.find(r => r.id === restaurantId)?.name || 'restaurante'
+  showToast('info', `Vista cambiada a ${restaurantName}`, 'Filtro actualizado')
   console.log('Restaurante seleccionado:', restaurantId)
 }
 
@@ -587,6 +607,9 @@ const refreshData = async () => {
     await loadBusiness()
     await loadRestaurants() // Primero restaurantes
     await loadOrders()      // Luego pedidos
+    showToast('success', 'Todos los datos han sido actualizados correctamente', '¡Actualización exitosa!')
+  } catch (error) {
+    showToast('error', 'Ocurrió un error durante la actualización', 'Error')
   } finally {
     isRefreshing.value = false
   }
@@ -594,10 +617,13 @@ const refreshData = async () => {
 
 const toggleRestaurantOpen = () => {
   isRestaurantOpen.value = !isRestaurantOpen.value
+  const status = isRestaurantOpen.value ? 'abierto' : 'cerrado'
+  showToast('success', `${selectedRestaurantName.value} está ahora ${status}`, 'Estado actualizado')
 }
 
 const viewOrderDetails = (order: any) => {
   selectedOrder.value = order
+  showToast('info', `Mostrando detalles del pedido #${order.id}`, 'Detalles del pedido')
 }
 
 const closeOrderDetails = () => {
@@ -609,6 +635,7 @@ onMounted(async () => {
   if (!authStore.isAuthenticated) {
     const isAuth = await authStore.checkAuth()
     if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
+      showToast('error', 'Necesitas iniciar sesión como propietario de negocio', 'Acceso denegado')
       router.push('/login')
       return
     }
@@ -618,6 +645,11 @@ onMounted(async () => {
   await loadBusiness()
   await loadRestaurants()
   await loadOrders()
+
+  // Mensaje de bienvenida después de cargar todo
+  if (business.value) {
+    showToast('success', `¡Bienvenido de nuevo a ${business.value.name}!`, '¡Hola!')
+  }
 })
 </script>
 

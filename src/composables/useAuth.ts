@@ -242,7 +242,6 @@ export function useAuth() {
     getAvatarUrl,
     getDisplayName,
     forceRefreshAuth,
-
     // Store directo (por si necesitas acceso completo)
     authStore,
   }

@@ -414,6 +414,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification ref="toastNotification" />
   </div>
 </template>
 
@@ -424,9 +427,13 @@ import { productOfferService, type ProductOfferDto, offerUtils } from '@/service
 import { productService, type Product } from '@/services/productService'
 import { restaurantService, type RestaurantCard } from '@/services/restaurantService'
 import { useAuthStore } from '@/stores/auth'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 // Auth store to get business info
 const authStore = useAuthStore()
+
+// Toast notification ref
+const toastNotification = ref()
 
 // Estado reactivo
 const loadingRestaurants = ref(true)
@@ -723,7 +730,7 @@ const closeModal = () => {
 // Guardar promoción (nueva o editada)
 const savePromotion = async () => {
   if (!promotionForm.value.productId || !selectedRestaurantId.value) {
-    alert('Por favor selecciona un producto')
+    toastNotification.value?.useToast().error('Por favor selecciona un producto')
     return
   }
 
@@ -755,7 +762,7 @@ const savePromotion = async () => {
     await loadPromotions()
     showPromotionModal.value = false
   } catch (err: any) {
-    alert(err.message || 'Error guardando promoción')
+    toastNotification.value?.useToast().error(err.message || 'Error guardando promoción')
   } finally {
     submitting.value = false
   }
@@ -841,7 +848,7 @@ const confirmAction = async () => {
     pendingAction.value = null
     pendingPromotionId.value = null
   } catch (err: any) {
-    alert(err.message || 'Error procesando acción')
+    toastNotification.value?.useToast().error(err.message || 'Error procesando acción')
   } finally {
     submitting.value = false
   }

@@ -826,6 +826,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification ref="toastNotification" />
   </div>
 </template>
 
@@ -835,6 +838,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { api } from '@/services/api';
 import { ImageService } from '@/services/imageService';
+import ToastNotification from '@/components/ui/ToastNotification.vue';
 
 interface Product {
   id?: number;
@@ -867,6 +871,9 @@ interface RestaurantAssignment {
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+// Toast notification ref
+const toastNotification = ref();
 
 // Estados principales
 const business = ref(null);
@@ -1173,7 +1180,7 @@ const toggleProductAvailability = async (product: Product) => {
     product.isAvailable = newAvailability;
   } catch (error) {
     console.error('Error actualizando disponibilidad:', error);
-    alert('Error al actualizar la disponibilidad del producto');
+    toastNotification.value?.useToast().error('Error al actualizar la disponibilidad del producto');
   }
 };
 
@@ -1191,7 +1198,7 @@ const handleFileChange = async (event: Event) => {
   // Validar imagen
   const validation = ImageService.validateImage(file, 5 * 1024 * 1024); // 5MB máximo
   if (!validation.valid) {
-    alert('Archivo no válido:\n' + validation.errors.join('\n'));
+    toastNotification.value?.useToast().error('Archivo no válido:\n' + validation.errors.join('\n'));
     event.target.value = '';
     return;
   }
@@ -1203,7 +1210,7 @@ const handleFileChange = async (event: Event) => {
     productForm.imageUrl = base64;
   } catch (error) {
     console.error('Error procesando imagen:', error);
-    alert('Error al procesar la imagen');
+    toastNotification.value?.useToast().error('Error al procesar la imagen');
     event.target.value = '';
   }
 };
@@ -1258,17 +1265,17 @@ const submitProductForm = async () => {
         });
       } catch (imageError) {
         console.error('Error subiendo imagen:', imageError);
-        alert('Producto guardado correctamente, pero hubo un error al subir la imagen. Puedes intentar subirla después editando el producto.');
+        toastNotification.value?.useToast().error('Producto guardado correctamente, pero hubo un error al subir la imagen. Puedes intentar subirla después editando el producto.');
       }
     }
 
     await loadProducts();
     closeModals();
-    alert(`Producto ${showEditModal.value ? 'actualizado' : 'creado'} correctamente.`);
+    toastNotification.value?.useToast().success(`Producto ${showEditModal.value ? 'actualizado' : 'creado'} correctamente.`);
 
   } catch (error) {
     console.error('Error guardando producto:', error);
-    alert(`Error al ${showEditModal.value ? 'actualizar' : 'crear'} el producto.`);
+    toastNotification.value?.useToast().error(`Error al ${showEditModal.value ? 'actualizar' : 'crear'} el producto.`);
   } finally {
     formSubmitting.value = false;
   }
@@ -1293,10 +1300,10 @@ const deleteProduct = async () => {
     await loadProducts();
     showDeleteModal.value = false;
     productToDelete.value = null;
-    alert('Producto eliminado correctamente.');
+    toastNotification.value?.useToast().success('Producto eliminado correctamente.');
   } catch (error) {
     console.error('Error eliminando producto:', error);
-    alert('Error al eliminar el producto.');
+    toastNotification.value?.useToast().error('Error al eliminar el producto.');
   } finally {
     deleteLoading.value = false;
   }
@@ -1416,11 +1423,11 @@ const saveRestaurantAssignments = async () => {
     // Recargar asignaciones
     await loadRestaurantAssignments();
     showRestaurantModal.value = false;
-    alert('Asignaciones guardadas correctamente.');
+    toastNotification.value?.useToast().success('Asignaciones guardadas correctamente.');
 
   } catch (error) {
     console.error('Error guardando asignaciones:', error);
-    alert('Error al guardar las asignaciones.');
+    toastNotification.value?.useToast().error('Error al guardar las asignaciones.');
   } finally {
     assignmentsLoading.value = false;
   }
@@ -1470,11 +1477,11 @@ const submitCategoryForm = async () => {
 
     await loadCategories();
     cancelCategoryForm();
-    alert(`Categoría ${showEditCategoryForm.value ? 'actualizada' : 'creada'} correctamente.`);
+    toastNotification.value?.useToast().success(`Categoría ${showEditCategoryForm.value ? 'actualizada' : 'creada'} correctamente.`);
 
   } catch (error) {
     console.error('Error al guardar categoría:', error);
-    alert(`Error al ${showEditCategoryForm.value ? 'actualizar' : 'crear'} la categoría.`);
+    toastNotification.value?.useToast().error(`Error al ${showEditCategoryForm.value ? 'actualizar' : 'crear'} la categoría.`);
   } finally {
     categoryFormSubmitting.value = false;
   }
@@ -1501,11 +1508,11 @@ const submitQuickCategory = async () => {
 
     showQuickCategoryModal.value = false;
     Object.assign(quickCategoryForm, { name: '', description: '' });
-    alert('Categoría creada correctamente.');
+    toastNotification.value?.useToast().success('Categoría creada correctamente.');
 
   } catch (error) {
     console.error('Error al crear categoría:', error);
-    alert('Error al crear la categoría.');
+    toastNotification.value?.useToast().error('Error al crear la categoría.');
   } finally {
     quickCategorySubmitting.value = false;
   }
