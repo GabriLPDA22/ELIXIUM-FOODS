@@ -1,7 +1,7 @@
 <!--src/components/reviews/ReviewForm.vue-->
 <template>
   <div class="review-form">
-    <form @submit.prevent="submitReview" class="review-form__form">
+    <form @submit.prevent="submitReview" class="review-form__form" style=" overflow-y: auto; max-height: 400px;">
       <!-- Rating Section -->
       <div class="review-form__section">
         <label class="review-form__label">
