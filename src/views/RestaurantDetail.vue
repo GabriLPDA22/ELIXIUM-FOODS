@@ -31,7 +31,8 @@
             </div>
             <div class="restaurant-hero__info">
               <div class="restaurant-hero__badge-container">
-                <span v-if="restaurantStatus.isCurrentlyOpen" class="restaurant-hero__status restaurant-hero__status--open">
+                <span v-if="restaurantStatus.isCurrentlyOpen"
+                  class="restaurant-hero__status restaurant-hero__status--open">
                   <span class="restaurant-hero__status-dot"></span>
                   {{ restaurantStatus.statusMessage }}
                 </span>
@@ -54,9 +55,11 @@
                   <div class="restaurant-hero__rating">
                     <div class="restaurant-hero__stars">
                       <svg v-for="i in 5" :key="i" width="16" height="16" viewBox="0 0 24 24"
-                           :class="i <= Math.floor(safeNumber(restaurant.averageRating, 0)) ? 'star--filled' : 'star--empty'"
-                           fill="currentColor" stroke="currentColor" stroke-width="0.5">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        :class="i <= Math.floor(safeNumber(restaurant.averageRating, 0)) ? 'star--filled' : 'star--empty'"
+                        fill="currentColor" stroke="currentColor" stroke-width="0.5">
+                        <polygon
+                          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
                       </svg>
                     </div>
                     <span class="restaurant-hero__rating-score">
@@ -67,17 +70,22 @@
                 <div class="restaurant-hero__delivery-stats">
                   <div class="restaurant-hero__stat">
                     <div class="restaurant-hero__stat-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                       </svg>
                     </div>
-                    <span>{{ safeNumber(restaurant.estimatedDeliveryTime, 30) }}-{{ safeNumber(restaurant.estimatedDeliveryTime, 30) + 15 }} min</span>
+                    <span>{{ safeNumber(restaurant.estimatedDeliveryTime, 30) }}-{{
+                      safeNumber(restaurant.estimatedDeliveryTime, 30) + 15 }} min</span>
                   </div>
                   <div class="restaurant-hero__stat">
                     <div class="restaurant-hero__stat-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 17H7A5 5 0 0 1 7 7h2m0 10v-5a3 3 0 0 1 3-3m0 0a3 3 0 0 1 3 3v5m0-10V7a5 5 0 0 1 5 5v5"></path>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path
+                          d="M9 17H7A5 5 0 0 1 7 7h2m0 10v-5a3 3 0 0 1 3-3m0 0a3 3 0 0 1 3 3v5m0-10V7a5 5 0 0 1 5 5v5">
+                        </path>
                       </svg>
                     </div>
                     <span v-if="safeNumber(restaurant.deliveryFee, 0) > 0">
@@ -98,17 +106,12 @@
       <section class="category-filters">
         <div class="container">
           <div class="category-filters__wrapper">
-            <button
-              class="category-filter"
-              :class="{ 'category-filter--active': selectedCategoryFilter === 'all' }"
+            <button class="category-filter" :class="{ 'category-filter--active': selectedCategoryFilter === 'all' }"
               @click="filterByCategory('all')">
               <span class="category-filter__text">Todos</span>
               <span class="category-filter__count">({{ menuItems.length }})</span>
             </button>
-            <button
-              v-for="category in menuCategories"
-              :key="category.id"
-              class="category-filter"
+            <button v-for="category in menuCategories" :key="category.id" class="category-filter"
               :class="{ 'category-filter--active': selectedCategoryFilter === category.id }"
               @click="filterByCategory(category.id)">
               <span class="category-filter__text">{{ category.name }}</span>
@@ -144,7 +147,7 @@
                 </div>
                 <div class="menu-items">
                   <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item"
-                       :class="{ 'menu-item--disabled': !restaurantStatus.isCurrentlyOpen }">
+                    :class="{ 'menu-item--disabled': !restaurantStatus.isCurrentlyOpen }">
                     <div class="menu-item__content">
                       <div class="menu-item__header">
                         <h3 class="menu-item__name">{{ item.name || 'Producto' }}</h3>
@@ -172,25 +175,25 @@
 
                       <!-- ✨ NUEVO: Botón para reseñar producto -->
                       <div v-if="authStore.isAuthenticated" class="menu-item__review-actions">
-                        <button
-                          @click="openProductReview(item)"
-                          class="menu-item__review-btn"
-                          title="Reseñar producto"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        <button @click="openProductReview(item)" class="menu-item__review-btn" title="Reseñar producto">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
                           Reseñar
                         </button>
                       </div>
 
                       <div class="menu-item__tags" v-if="item.isVegetarian || item.isSpicy || item.isNew">
-                        <span v-if="item.isVegetarian" class="menu-item__tag menu-item__tag--vegetarian">🌱 Vegetariano</span>
+                        <span v-if="item.isVegetarian" class="menu-item__tag menu-item__tag--vegetarian">🌱
+                          Vegetariano</span>
                         <span v-if="item.isSpicy" class="menu-item__tag menu-item__tag--spicy">🌶️ Picante</span>
                         <span v-if="item.isNew" class="menu-item__tag menu-item__tag--new">✨ Nuevo</span>
                       </div>
                       <div v-if="!restaurantStatus.isCurrentlyOpen" class="menu-item__unavailable">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
                           <circle cx="12" cy="12" r="10"></circle>
                           <line x1="15" y1="9" x2="9" y2="15"></line>
                           <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -202,22 +205,24 @@
                       <div class="menu-item__image">
                         <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name">
                         <div v-else class="menu-item__no-image">
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <circle cx="8.5" cy="8.5" r="1.5"></circle>
                             <polyline points="21 15 16 10 5 21"></polyline>
                           </svg>
                         </div>
                       </div>
-                      <button class="menu-item__add-btn"
-                              @click="addToCart(item)"
-                              :disabled="getProductPrice(item) <= 0 || !item.isAvailable || !restaurantStatus.isCurrentlyOpen"
-                              :title="!restaurantStatus.isCurrentlyOpen ? 'El restaurante está cerrado' : ''">
-                        <svg v-if="restaurantStatus.isCurrentlyOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <button class="menu-item__add-btn" @click="addToCart(item)"
+                        :disabled="getProductPrice(item) <= 0 || !item.isAvailable || !restaurantStatus.isCurrentlyOpen"
+                        :title="!restaurantStatus.isCurrentlyOpen ? 'El restaurante está cerrado' : ''">
+                        <svg v-if="restaurantStatus.isCurrentlyOpen" width="20" height="20" viewBox="0 0 24 24"
+                          fill="none" stroke="currentColor" stroke-width="2">
                           <line x1="12" y1="5" x2="12" y2="19"></line>
                           <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
                           <circle cx="12" cy="12" r="10"></circle>
                           <line x1="15" y1="9" x2="9" y2="15"></line>
                           <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -238,7 +243,8 @@
                       Tu pedido
                     </h2>
                     <button v-if="localCartItems.length > 0" class="cart__clear" @click="clearCart">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                       </svg>
@@ -248,7 +254,8 @@
                     <div class="cart__restaurant-logo">{{ restaurant.name[0] }}</div>
                     <div class="cart__restaurant-details">
                       <span class="cart__restaurant-name">{{ restaurant.name }}</span>
-                      <span class="cart__delivery-time">{{ safeNumber(restaurant.estimatedDeliveryTime, 30) }} min aprox.</span>
+                      <span class="cart__delivery-time">{{ safeNumber(restaurant.estimatedDeliveryTime, 30) }} min
+                        aprox.</span>
                     </div>
                   </div>
                 </div>
@@ -268,7 +275,8 @@
                   </p>
                 </div>
                 <div v-else class="cart__content">
-                  <div v-if="!restaurantStatus.isCurrentlyOpen && localCartItems.length > 0" class="cart__closed-warning">
+                  <div v-if="!restaurantStatus.isCurrentlyOpen && localCartItems.length > 0"
+                    class="cart__closed-warning">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -283,17 +291,17 @@
                     <div v-for="item in localCartItems" :key="item.id" class="cart-item">
                       <div class="cart-item__quantity-controls">
                         <button class="cart-item__quantity-btn cart-item__quantity-btn--minus"
-                                @click="decrementItem(item.id)"
-                                :disabled="!restaurantStatus.isCurrentlyOpen">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          @click="decrementItem(item.id)" :disabled="!restaurantStatus.isCurrentlyOpen">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
                         </button>
                         <span class="cart-item__quantity">{{ safeNumber(item.quantity, 0) }}</span>
                         <button class="cart-item__quantity-btn cart-item__quantity-btn--plus"
-                                @click="incrementItem(item.id)"
-                                :disabled="!restaurantStatus.isCurrentlyOpen">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          @click="incrementItem(item.id)" :disabled="!restaurantStatus.isCurrentlyOpen">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                           </svg>
@@ -303,9 +311,11 @@
                         <h4 class="cart-item__name">{{ item.name || 'Producto' }}</h4>
                         <div class="cart-item__actions">
                           <button class="cart-item__remove" @click="removeItem(item.id)">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                              stroke-width="2">
                               <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                              </path>
                             </svg>
                             Eliminar
                           </button>
@@ -317,7 +327,8 @@
                           <div class="cart-item__discounted-price">${{ item.price.toFixed(2) }}</div>
                         </div>
                         <div v-else class="cart-item__unit-price">${{ safeNumber(item.price, 0).toFixed(2) }}</div>
-                        <div class="cart-item__total-price">${{ (safeNumber(item.price, 0) * safeNumber(item.quantity, 0)).toFixed(2) }}</div>
+                        <div class="cart-item__total-price">${{ (safeNumber(item.price, 0) * safeNumber(item.quantity,
+                          0)).toFixed(2) }}</div>
                       </div>
                     </div>
                   </div>
@@ -342,9 +353,8 @@
                       <span>${{ cartTotals.total.toFixed(2) }}</span>
                     </div>
                   </div>
-                  <button class="cart__checkout-btn"
-                          @click="proceedToCheckout"
-                          :disabled="localCartItems.length === 0 || !restaurantStatus.isCurrentlyOpen">
+                  <button class="cart__checkout-btn" @click="proceedToCheckout"
+                    :disabled="localCartItems.length === 0 || !restaurantStatus.isCurrentlyOpen">
                     <span class="cart__checkout-icon">🚀</span>
                     <span v-if="restaurantStatus.isCurrentlyOpen">
                       {{ localCartItems.length > 0 ? 'Realizar pedido' : 'Agrega productos' }}
@@ -361,11 +371,7 @@
       <!-- ✨ SECCIÓN DE RESEÑAS CON KEY PARA REFRESCAR -->
       <section class="restaurant-reviews">
         <div class="container">
-          <ReviewsSection
-            :key="`reviews-${reviewsKey}`"
-            :restaurant-id="restaurantId || 0"
-            title="del restaurante"
-          />
+          <ReviewsSection :key="`reviews-${reviewsKey}`" :restaurant-id="restaurantId || 0" title="del restaurante" />
         </div>
       </section>
     </template>
@@ -384,30 +390,18 @@
     </div>
 
     <!-- ✨ FLOATING REVIEW BUTTON -->
-    <FloatingReviewButton
-      v-if="restaurant && authStore.isAuthenticated"
-      :restaurant-id="restaurantId || 0"
-      :restaurant-name="restaurant.name"
-      @review-created="onReviewCreated"
-    />
+    <FloatingReviewButton v-if="restaurant && authStore.isAuthenticated" :restaurant-id="restaurantId || 0"
+      :restaurant-name="restaurant.name" @review-created="onReviewCreated" />
 
     <!-- ✨ NUEVO: CONTADOR FLOTANTE MÓVIL -->
-    <MobileCartCounter
-      v-if="localCartItems.length > 0"
-      :count="localCartItems.reduce((sum, item) => sum + item.quantity, 0)"
-      :is-visible="showMobileCounter"
-      @click="scrollToCart"
-    />
+    <MobileCartCounter v-if="localCartItems.length > 0"
+      :count="localCartItems.reduce((sum, item) => sum + item.quantity, 0)" :is-visible="showMobileCounter"
+      @click="scrollToCart" />
 
     <!-- ✨ MODAL PARA RESEÑAR PRODUCTOS -->
-    <ReviewModal
-      v-if="showProductReviewModal && selectedProduct"
-      :restaurant-id="restaurantId || 0"
-      :product-id="selectedProduct.id"
-      :title="`Reseñar ${selectedProduct.name}`"
-      @success="onProductReviewSuccess"
-      @cancel="closeProductReviewModal"
-    />
+    <ReviewModal v-if="showProductReviewModal && selectedProduct" :restaurant-id="restaurantId || 0"
+      :product-id="selectedProduct.id" :title="`Reseñar ${selectedProduct.name}`" @success="onProductReviewSuccess"
+      @cancel="closeProductReviewModal" />
   </div>
 </template>
 
@@ -1040,10 +1034,9 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 .restaurant-reviews {
   padding: 5rem 0;
   background: linear-gradient(135deg,
-    rgba(248, 250, 252, 0.8) 0%,
-    rgba(255, 255, 255, 0.9) 50%,
-    rgba(248, 250, 252, 0.8) 100%
-  );
+      rgba(248, 250, 252, 0.8) 0%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(248, 250, 252, 0.8) 100%);
   position: relative;
 
   &::before {
@@ -1127,7 +1120,9 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 
   @keyframes spinner {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 }
 
@@ -1145,13 +1140,11 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
   &__overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      135deg,
-      rgba(0, 0, 0, 0.7) 0%,
-      rgba(255, 65, 108, 0.3) 30%,
-      rgba(255, 75, 43, 0.4) 70%,
-      rgba(0, 0, 0, 0.8) 100%
-    );
+    background: linear-gradient(135deg,
+        rgba(0, 0, 0, 0.7) 0%,
+        rgba(255, 65, 108, 0.3) 30%,
+        rgba(255, 75, 43, 0.4) 70%,
+        rgba(0, 0, 0, 0.8) 100%);
     z-index: 1;
   }
 
@@ -1655,8 +1648,15 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     animation: pulse 2s infinite;
 
     @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
     }
   }
 
@@ -2265,9 +2265,12 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 
 // Animaciones para estado cerrado
 @keyframes pulse-warning {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
   }
+
   50% {
     box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
   }
@@ -2317,10 +2320,18 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     }
   }
 
+  .category-filter {
+    min-width: fit-content;
+  }
+
   .category-filters__wrapper {
     justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  .container {
     overflow-x: auto;
-    padding: 0 1rem;
+    max-width: 300px;
   }
 
   .restaurant-reviews {
