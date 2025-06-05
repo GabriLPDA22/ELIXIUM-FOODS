@@ -101,7 +101,6 @@ export function useAuth() {
   const login = async (credentials: { email: string; password: string }): Promise<boolean> => {
     const success = await authStore.login(credentials)
     if (success) {
-      debugAuth()
     } else {
       console.log('❌ Login fallido:', authStore.error)
     }
@@ -112,7 +111,6 @@ export function useAuth() {
   const loginWithGoogle = async (googleToken: string): Promise<boolean> => {
     const success = await authStore.loginWithGoogle(googleToken)
     if (success) {
-      debugAuth()
     } else {
       console.log('❌ Login con Google fallido:', authStore.error)
     }
@@ -123,7 +121,6 @@ export function useAuth() {
   const register = async (data: any): Promise<boolean> => {
     const success = await authStore.register(data)
     if (success) {
-      debugAuth()
     } else {
       console.log('❌ Registro fallido:', authStore.error)
     }
@@ -141,8 +138,6 @@ export function useAuth() {
     } else {
       console.log('❌ Autenticación inválida')
     }
-
-    debugAuth()
     return isValid
   }
 
@@ -246,11 +241,7 @@ export function useAuth() {
     canAccess,
     getAvatarUrl,
     getDisplayName,
-
-    // Debug
-    debugAuth,
     forceRefreshAuth,
-
     // Store directo (por si necesitas acceso completo)
     authStore,
   }
