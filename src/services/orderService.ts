@@ -61,9 +61,7 @@ class OrderService {
 
   async createOrder(orderData: CreateOrderRequest): Promise<Order> {
     try {
-      console.log('🚀 Creando pedido:', orderData)
       const response = await api.post(`${this.baseUrl}/orders`, orderData)
-      console.log('✅ Pedido creado exitosamente:', response.data)
       return response.data
     } catch (error: any) {
       console.error('❌ Error creando pedido:', error)
@@ -81,9 +79,7 @@ class OrderService {
 
   async getUserOrders(): Promise<OrderResponse[]> {
     try {
-      console.log('🔍 Obteniendo pedidos del usuario...')
       const response = await api.get(`${this.baseUrl}/orders`)
-      console.log('✅ Pedidos obtenidos:', response.data?.length || 0)
       return response.data || []
     } catch (error: any) {
       console.error('❌ Error con /api/orders, intentando método alternativo:', error)
@@ -91,14 +87,12 @@ class OrderService {
         const userResponse = await api.get(`${this.baseUrl}/auth/me`)
         const userId = userResponse.data?.id || userResponse.data?.userId
         if (userId) {
-          console.log('🔍 Obteniendo pedidos para userId:', userId)
           const ordersResponse = await api.get(`${this.baseUrl}/orders/user/${userId}`)
           return ordersResponse.data || []
         }
         throw new Error('No se pudo obtener el ID del usuario')
       } catch (secondError: any) {
         console.error('❌ Error obteniendo pedidos del usuario:', secondError)
-        console.log('📦 Retornando lista vacía como fallback')
         return []
       }
     }

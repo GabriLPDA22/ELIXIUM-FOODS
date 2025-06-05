@@ -85,16 +85,7 @@ const handleApiError = (error: any, context: string) => {
 export const userService = {
   async getCurrentUser(): Promise<UserProfile> {
     try {
-      console.log('📡 Obteniendo datos del usuario actual...');
-
       const response = await api.get<AuthApiResponse<UserProfile>>('/api/Auth/me');
-
-      console.log('✅ Respuesta del servidor:', {
-        status: response.status,
-        success: response.data?.success,
-        hasData: !!response.data?.data
-      });
-
       if (response.data && response.data.success) {
         return response.data.data;
       } else {
@@ -107,8 +98,6 @@ export const userService = {
 
   async updateUserProfile(userData: Partial<UserProfile>): Promise<UserProfile> {
     try {
-      console.log('📡 Actualizando perfil de usuario...');
-
       const response = await api.put<AuthApiResponse<UserProfile>>('/api/Auth/me', userData);
 
       if (response.data && response.data.success) {
@@ -123,8 +112,6 @@ export const userService = {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordApiResponse> {
     try {
-      console.log('📡 Cambiando contraseña...');
-
       const response = await api.post<ChangePasswordApiResponse>('/api/Auth/change-password', {
         currentPassword,
         newPassword,
@@ -137,8 +124,6 @@ export const userService = {
 
   async getUserAddresses(): Promise<Address[]> {
     try {
-      console.log('📡 Obteniendo direcciones del usuario...');
-
       const response = await api.get<{ success: boolean; data: Address[] }>('/api/Addresses');
 
       // Manejar diferentes formatos de respuesta
@@ -158,8 +143,6 @@ export const userService = {
 
   async addAddress(address: AddressRequest): Promise<Address> {
     try {
-      console.log('📡 Agregando nueva dirección...');
-
       const response = await api.post<{ success: boolean; data: Address } | Address>('/api/Addresses', address);
 
       // Manejar diferentes formatos de respuesta
@@ -179,8 +162,6 @@ export const userService = {
 
   async updateAddress(id: number, address: AddressRequest): Promise<Address> {
     try {
-      console.log('📡 Actualizando dirección...');
-
       const response = await api.put<{ success: boolean; data: Address } | Address>(`/api/Addresses/${id}`, address);
 
       // Manejar diferentes formatos de respuesta
@@ -200,8 +181,6 @@ export const userService = {
 
   async deleteAddress(id: number): Promise<boolean> {
     try {
-      console.log('📡 Eliminando dirección...');
-
       const response = await api.delete(`/api/Addresses/${id}`);
       return response.status === 200 || response.status === 204;
     } catch (error: any) {
@@ -212,8 +191,6 @@ export const userService = {
 
   async setAddressAsDefault(id: number): Promise<boolean> {
     try {
-      console.log('📡 Estableciendo dirección como predeterminada...');
-
       const response = await api.put(`/api/Addresses/${id}/default`, {});
       return response.status === 200 || response.status === 204;
     } catch (error: any) {
@@ -224,8 +201,6 @@ export const userService = {
 
   async getUserPaymentMethods(): Promise<PaymentMethod[]> {
     try {
-      console.log('📡 Obteniendo métodos de pago...');
-
       const response = await api.get<{ success: boolean; data: PaymentMethod[] } | PaymentMethod[]>('/api/PaymentMethods');
 
       // Manejar diferentes formatos de respuesta
@@ -245,8 +220,6 @@ export const userService = {
 
   async addPaymentMethod(paymentMethodData: PaymentMethodRequest): Promise<PaymentMethod> {
     try {
-      console.log('📡 Agregando método de pago...');
-
       const response = await api.post<{ success: boolean; data: PaymentMethod } | PaymentMethod>('/api/PaymentMethods', paymentMethodData);
 
       // Manejar diferentes formatos de respuesta
@@ -266,8 +239,6 @@ export const userService = {
 
   async deletePaymentMethod(id: number): Promise<boolean> {
     try {
-      console.log('📡 Eliminando método de pago...');
-
       const response = await api.delete(`/api/PaymentMethods/${id}`);
       return response.status === 200 || response.status === 204;
     } catch (error: any) {
@@ -278,8 +249,6 @@ export const userService = {
 
   async setPaymentMethodAsDefault(id: number): Promise<boolean> {
     try {
-      console.log('📡 Estableciendo método de pago como predeterminado...');
-
       const response = await api.put(`/api/PaymentMethods/${id}/default`, {});
       return response.status === 200 || response.status === 204;
     } catch (error: any) {

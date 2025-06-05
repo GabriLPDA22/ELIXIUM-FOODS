@@ -266,12 +266,6 @@ const submitApplication = () => {
     return;
   }
   console.log('Solicitud enviada:', {
-    jobId: selectedJob.value?.id,
-    jobTitle: selectedJob.value?.title,
-    name: applicantName.value,
-    email: applicantEmail.value,
-    coverLetter: applicantCoverLetter.value,
-    cv: applicantCVFile.value?.name
   });
 
   applicationSubmittedMessage.value = `Tu solicitud para "${selectedJob.value?.title}" ha sido enviada con éxito. Nos pondremos en contacto contigo pronto.`;

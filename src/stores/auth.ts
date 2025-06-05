@@ -85,8 +85,6 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     // =================== FUNCIÓN PARA GUARDAR DATOS COMPLETOS ===================
     saveAuthData(authData: AuthResponse) {
-      console.log('💾 Guardando datos de autenticación:', authData)
-
       // Guardar tokens
       this.token = authData.token!
       this.refreshToken = authData.refreshToken || null
@@ -114,7 +112,6 @@ export const useAuthStore = defineStore('auth', {
         existingUser.photoURL &&
         (!newUserData.photoURL || newUserData.photoURL === '')
       ) {
-        console.log('🔄 Preservando foto de perfil existente:', existingUser.photoURL)
         newUserData.photoURL = existingUser.photoURL
       }
 
@@ -134,9 +131,6 @@ export const useAuthStore = defineStore('auth', {
 
       // Configurar axios
       this.setupAxiosDefaults()
-
-      console.log('✅ Usuario guardado:', this.user)
-      console.log('✅ Es Admin:', this.isAdmin)
     },
 
     // =================== FUNCIÓN PARA INICIALIZAR DESDE LOCALSTORAGE ===================
@@ -152,9 +146,6 @@ export const useAuthStore = defineStore('auth', {
           this.user = JSON.parse(savedUser)
           this.isAuthenticated = true
           this.setupAxiosDefaults()
-
-          console.log('🔄 Estado restaurado desde localStorage:', this.user)
-          console.log('🔄 Es Admin:', this.isAdmin)
         } catch (error) {
           console.error('❌ Error parseando usuario desde localStorage:', error)
           this.clearAuthData()
@@ -175,8 +166,6 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('refreshToken')
 
       delete axios.defaults.headers.common['Authorization']
-
-      console.log('🧹 Datos de autenticación limpiados')
     },
 
     async register(registerData: RegisterData): Promise<boolean> {
@@ -261,21 +250,12 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       try {
-        console.log('🚀 Enviando token de Google al backend...')
-
         const response = await axios.post<AuthResponse>('/auth/google-login', {
           idToken: googleToken,
         })
-
-        console.log('📥 Respuesta del backend:', response.data)
-
         if (response.data.success && response.data.token) {
           // ✅ USAR LA FUNCIÓN DE GUARDAR DATOS
           this.saveAuthData(response.data)
-
-          console.log('✅ Login con Google exitoso!')
-          console.log('✅ Usuario logueado:', this.user)
-          console.log('✅ Es Admin:', this.isAdmin)
           return true
         } else {
           this.error = response.data.message || 'Error en login con Google'
@@ -320,7 +300,6 @@ export const useAuthStore = defineStore('auth', {
             }
 
             localStorage.setItem('user', JSON.stringify(this.user))
-            console.log('✅ Perfil completo cargado con foto:', this.user.photoURL)
           }
         }
       } catch (error) {
@@ -365,8 +344,6 @@ export const useAuthStore = defineStore('auth', {
           this.token = token
           this.isAuthenticated = true
           this.setupAxiosDefaults()
-
-          console.log('✅ Auth verificada:', this.user)
           return true
         }
       } catch (error) {
@@ -391,7 +368,6 @@ export const useAuthStore = defineStore('auth', {
       if (this.user) {
         // PROTECCIÓN: No permitir sobrescribir foto de usuario de Google con datos vacíos
         if (this.isGoogleUser && updates.photoURL === '' && this.user.photoURL) {
-          console.log('🛡️ Protegiendo foto de Google de sobrescritura')
           const { photoURL, ...safeUpdates } = updates // Remover photoURL para evitar sobrescritura
           this.user = { ...this.user, ...safeUpdates }
         } else {
@@ -399,7 +375,6 @@ export const useAuthStore = defineStore('auth', {
         }
 
         localStorage.setItem('user', JSON.stringify(this.user))
-        console.log('👤 Perfil de usuario actualizado')
       }
     },
 
@@ -415,14 +390,11 @@ export const useAuthStore = defineStore('auth', {
 
       this.user.photoURL = photoURL || ''
       localStorage.setItem('user', JSON.stringify(this.user))
-      console.log('📸 Foto de perfil actualizada:', photoURL)
     },
 
     // Añadir este método para sincronizar fotos de Google
     syncGooglePhoto(googlePhotoURL: string) {
       if (!this.user || !this.isGoogleUser) return
-
-      console.log('🔄 Sincronizando foto de Google:', googlePhotoURL)
       this.user.photoURL = googlePhotoURL
       localStorage.setItem('user', JSON.stringify(this.user))
     },

@@ -15,13 +15,8 @@ export const authService = {
         console.warn("⚠️ El token almacenado no tiene formato JWT válido")
         return false
       }
-
-      console.log('Verificando token JWT:', token.substring(0, 20) + '...')
-
       // Hacer una solicitud a un endpoint protegido
       const response = await api.get('/api/Users/me')
-      console.log('Respuesta de verificación de token:', response.data)
-
       return response.status === 200
     } catch (error) {
       console.error('Error al verificar el token:', error)
@@ -34,9 +29,6 @@ export const authService = {
     try {
       const refreshToken = localStorage.getItem('refreshToken')
       if (!refreshToken) return false
-
-      console.log('Intentando refrescar token usando refreshToken')
-
       const response = await api.post('/api/Auth/refresh-token', { refreshToken })
 
       if (response.data?.success && response.data?.token) {
@@ -48,11 +40,9 @@ export const authService = {
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken)
         }
-
         console.log('Token refrescado exitosamente')
         return true
       }
-
       return false
     } catch (error) {
       console.error('Error al refrescar el token:', error)
@@ -63,8 +53,6 @@ export const authService = {
   // Solicitar restablecimiento de contraseña
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('Solicitando restablecimiento de contraseña para:', email)
-
       const response = await api.post('/api/Auth/forgot-password', {
         email: email.trim()
       })
@@ -106,9 +94,6 @@ export const authService = {
   // Restablecer contraseña con token - CORREGIDO con email
   async resetPassword(token: string, email: string, newPassword: string, confirmPassword?: string): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('Restableciendo contraseña con token:', token.substring(0, 10) + '...')
-      console.log('Email:', email)
-
       // Validación básica del frontend
       if (!token || !email || !newPassword) {
         return {
@@ -176,8 +161,6 @@ export const authService = {
       const urlToCheck = url || window.location.href
       const urlObj = new URL(urlToCheck)
       const email = urlObj.searchParams.get('email')
-
-      console.log('Email extraído de URL:', email)
       return email
     } catch (error) {
       console.error('Error extrayendo email de URL:', error)
@@ -191,8 +174,6 @@ export const authService = {
       const urlToCheck = url || window.location.href
       const urlObj = new URL(urlToCheck)
       const token = urlObj.searchParams.get('token')
-
-      console.log('Token extraído de URL:', token?.substring(0, 10) + '...')
       return token
     } catch (error) {
       console.error('Error extrayendo token de URL:', error)
@@ -249,15 +230,9 @@ export const authService = {
 
   // Depurar headers actuales de axios
   debugHeaders(): void {
-    console.log('Headers de API configurados:', api.defaults.headers)
-    console.log('Token en localStorage:', localStorage.getItem('token'))
-
     const token = localStorage.getItem('token')
     if (token) {
-      console.log('¿El token tiene formato JWT?', token.split('.').length === 3)
     }
-
-    console.log('RefreshToken en localStorage:', localStorage.getItem('refreshToken'))
   },
 
   // Obtener cabecera de autorización para solicitudes
@@ -271,7 +246,6 @@ export const authService = {
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
     delete api.defaults.headers.common['Authorization']
-    console.log('Datos de autenticación limpiados')
   },
 
   // Verificar si hay datos de autenticación

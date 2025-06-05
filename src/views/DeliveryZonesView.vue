@@ -9,19 +9,15 @@
             Zonas de <span class="delivery-hero__title-highlight">Entrega</span>
           </h1>
           <p class="delivery-hero__subtitle">
-            Llevamos la mejor comida de Zaragoza directamente a tu puerta. Descubre si entregamos en tu zona y los tiempos estimados.
+            Llevamos la mejor comida de Zaragoza directamente a tu puerta. Descubre si entregamos en tu zona y los
+            tiempos estimados.
           </p>
 
           <!-- Buscador de código postal -->
           <div class="delivery-hero__search">
             <div class="postal-search">
-              <input
-                v-model="searchPostalCode"
-                type="text"
-                placeholder="Introduce tu código postal (ej: 50001)"
-                class="postal-search__input"
-                @input="searchZone"
-              />
+              <input v-model="searchPostalCode" type="text" placeholder="Introduce tu código postal (ej: 50001)"
+                class="postal-search__input" @input="searchZone" />
               <button class="postal-search__btn" @click="searchZone">
                 <span class="postal-search__icon">🔍</span>
                 Buscar
@@ -35,8 +31,10 @@
                 <div class="search-result__content">
                   <h3>¡Entregamos en {{ searchResult.zone?.name }}!</h3>
                   <p>
-                    Tiempo estimado: {{ searchResult.zone?.estimatedTime.min }}-{{ searchResult.zone?.estimatedTime.max }} min
-                    | Gastos de envío: {{ searchResult.zone?.deliveryFee === 0 ? 'GRATIS' : `${searchResult.zone?.deliveryFee}€` }}
+                    Tiempo estimado: {{ searchResult.zone?.estimatedTime.min }}-{{ searchResult.zone?.estimatedTime.max
+                    }} min
+                    | Gastos de envío: {{ searchResult.zone?.deliveryFee === 0 ? 'GRATIS' :
+                      `${searchResult.zone?.deliveryFee}€` }}
                   </p>
                   <p v-if="searchResult.zone?.freeDeliveryMinimum">
                     Envío gratis a partir de {{ searchResult.zone?.freeDeliveryMinimum }}€
@@ -78,12 +76,8 @@
         </h2>
 
         <div class="cities-grid">
-          <div
-            v-for="city in sortedCities"
-            :key="city.id"
-            :class="['city-card', `city-card--${city.status}`]"
-            @click="city.status === 'active' ? selectCity(city.id) : null"
-          >
+          <div v-for="city in sortedCities" :key="city.id" :class="['city-card', `city-card--${city.status}`]"
+            @click="city.status === 'active' ? selectCity(city.id) : null">
             <div class="city-card__image-container">
               <img :src="city.imageUrl" :alt="city.name" class="city-card__image" />
               <div :class="['city-card__status', `city-card__status--${city.status}`]">
@@ -134,23 +128,16 @@
         </h2>
 
         <div class="zones-filters">
-          <button
-            v-for="coverage in coverageTypes"
-            :key="coverage.id"
+          <button v-for="coverage in coverageTypes" :key="coverage.id"
             :class="['coverage-filter', { 'coverage-filter--active': activeCoverage === coverage.id }]"
-            @click="setActiveCoverage(coverage.id)"
-          >
+            @click="setActiveCoverage(coverage.id)">
             <span class="coverage-filter__icon">{{ coverage.icon }}</span>
             <span class="coverage-filter__text">{{ coverage.name }}</span>
           </button>
         </div>
 
         <div class="zones-grid">
-          <div
-            v-for="zone in filteredZones"
-            :key="zone.id"
-            :class="['zone-card', `zone-card--${zone.coverage}`]"
-          >
+          <div v-for="zone in filteredZones" :key="zone.id" :class="['zone-card', `zone-card--${zone.coverage}`]">
             <div class="zone-card__header">
               <h3 class="zone-card__name">{{ zone.name }}</h3>
               <div :class="['zone-card__coverage', `zone-card__coverage--${zone.coverage}`]">
@@ -187,11 +174,7 @@
             <div class="zone-card__postal-codes">
               <h4 class="zone-card__postal-title">Códigos Postales:</h4>
               <div class="postal-codes-list">
-                <span
-                  v-for="code in zone.postalCodes"
-                  :key="code"
-                  class="postal-code"
-                >
+                <span v-for="code in zone.postalCodes" :key="code" class="postal-code">
                   {{ code }}
                 </span>
               </div>
@@ -200,11 +183,7 @@
             <div class="zone-card__landmarks">
               <h4 class="zone-card__landmarks-title">Lugares de Referencia:</h4>
               <div class="landmarks-list">
-                <span
-                  v-for="landmark in zone.landmarks.slice(0, 3)"
-                  :key="landmark"
-                  class="landmark"
-                >
+                <span v-for="landmark in zone.landmarks.slice(0, 3)" :key="landmark" class="landmark">
                   📍 {{ landmark }}
                 </span>
               </div>
@@ -220,11 +199,7 @@
             <div class="zone-card__cuisines">
               <h4 class="zone-card__cuisines-title">Cocinas Populares:</h4>
               <div class="cuisines-list">
-                <span
-                  v-for="cuisine in zone.popularCuisines.slice(0, 4)"
-                  :key="cuisine"
-                  class="cuisine-tag"
-                >
+                <span v-for="cuisine in zone.popularCuisines.slice(0, 4)" :key="cuisine" class="cuisine-tag">
                   {{ cuisine }}
                 </span>
               </div>
@@ -239,35 +214,22 @@
       <div class="delivery-cta__container">
         <h2 class="delivery-cta__title">¿No llega la comida a tu zona?</h2>
         <p class="delivery-cta__subtitle">
-          Estamos creciendo rápidamente por toda Aragón. Déjanos tu información y te avisaremos en cuanto lleguemos a tu área.
+          Estamos creciendo rápidamente por toda Aragón. Déjanos tu información y te avisaremos en cuanto lleguemos a tu
+          área.
         </p>
-        <button
-          @click="openNotifyModal"
-          class="delivery-cta__button"
-        >
+        <button @click="openNotifyModal" class="delivery-cta__button">
           🔔 Notificarme Cuando Lleguen
         </button>
       </div>
     </section>
 
     <!-- MODAL DE NOTIFICACIÓN -->
-    <div
-      v-if="showNotifyModal"
-      class="notify-modal-overlay"
-      @click="closeNotifyModal"
-    >
-      <div
-        class="notify-modal"
-        @click.stop
-      >
+    <div v-if="showNotifyModal" class="notify-modal-overlay" @click="closeNotifyModal">
+      <div class="notify-modal" @click.stop>
         <!-- Header del Modal -->
         <div class="notify-modal__header">
           <h3 class="notify-modal__title">🔔 Te avisaremos cuando lleguemos</h3>
-          <button
-            @click="closeNotifyModal"
-            class="notify-modal__close"
-            aria-label="Cerrar modal"
-          >
+          <button @click="closeNotifyModal" class="notify-modal__close" aria-label="Cerrar modal">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -284,61 +246,34 @@
           <form @submit.prevent="submitNotification" class="notify-modal__form">
             <div class="notify-modal__form-group">
               <label class="notify-modal__label">Email *</label>
-              <input
-                v-model="notificationForm.email"
-                type="email"
-                required
-                class="notify-modal__input"
-                placeholder="tu@email.com"
-              />
+              <input v-model="notificationForm.email" type="email" required class="notify-modal__input"
+                placeholder="tu@email.com" />
             </div>
 
             <div class="notify-modal__form-group">
               <label class="notify-modal__label">Código Postal *</label>
-              <input
-                v-model="notificationForm.postalCode"
-                type="text"
-                required
-                class="notify-modal__input"
-                placeholder="50001"
-                maxlength="5"
-              />
+              <input v-model="notificationForm.postalCode" type="text" required class="notify-modal__input"
+                placeholder="50001" maxlength="5" />
             </div>
 
             <div class="notify-modal__form-group">
               <label class="notify-modal__label">Ciudad</label>
-              <input
-                v-model="notificationForm.city"
-                type="text"
-                class="notify-modal__input"
-                placeholder="Tu ciudad"
-              />
+              <input v-model="notificationForm.city" type="text" class="notify-modal__input" placeholder="Tu ciudad" />
             </div>
 
             <div class="notify-modal__form-group">
               <label class="notify-modal__label">
-                <input
-                  v-model="notificationForm.acceptMarketing"
-                  type="checkbox"
-                  class="notify-modal__checkbox"
-                />
+                <input v-model="notificationForm.acceptMarketing" type="checkbox" class="notify-modal__checkbox" />
                 Quiero recibir ofertas y promociones especiales
               </label>
             </div>
 
             <div class="notify-modal__actions">
-              <button
-                type="button"
-                @click="closeNotifyModal"
-                class="notify-modal__btn notify-modal__btn--secondary"
-              >
+              <button type="button" @click="closeNotifyModal" class="notify-modal__btn notify-modal__btn--secondary">
                 Cancelar
               </button>
-              <button
-                type="submit"
-                :disabled="isSubmittingNotification"
-                class="notify-modal__btn notify-modal__btn--primary"
-              >
+              <button type="submit" :disabled="isSubmittingNotification"
+                class="notify-modal__btn notify-modal__btn--primary">
                 <span v-if="!isSubmittingNotification">📧 Notificarme</span>
                 <span v-else>Enviando...</span>
               </button>
@@ -369,13 +304,10 @@
 
     <!-- TOAST NOTIFICATION -->
     <Transition name="toast">
-      <div
-        v-if="showToast"
-        :class="[
-          'toast-notification',
-          `toast-notification--${toastType}`
-        ]"
-      >
+      <div v-if="showToast" :class="[
+        'toast-notification',
+        `toast-notification--${toastType}`
+      ]">
         <div class="toast-notification__content">
           <div class="toast-notification__icon">
             <span v-if="toastType === 'success'">🎉</span>
@@ -385,11 +317,7 @@
           <div class="toast-notification__message">
             {{ toastMessage }}
           </div>
-          <button
-            @click="closeToast"
-            class="toast-notification__close"
-            aria-label="Cerrar notificación"
-          >
+          <button @click="closeToast" class="toast-notification__close" aria-label="Cerrar notificación">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -522,16 +450,11 @@ const submitNotification = async () => {
   isSubmittingNotification.value = true
 
   try {
-    // Aquí enviarías los datos al backend
-    console.log('Enviando notificación:', notificationForm.value)
-
     // Simular envío
     await new Promise(resolve => setTimeout(resolve, 1500))
-
     // Mostrar éxito con toast personalizado
     showToastMessage('¡Perfecto! Te notificaremos cuando lleguemos a tu zona 🎉', 'success')
     closeNotifyModal()
-
   } catch (error) {
     console.error('Error al enviar notificación:', error)
     showToastMessage('Error al enviar. Por favor, inténtalo de nuevo.', 'error')
@@ -843,7 +766,8 @@ onUnmounted(() => {
   }
 }
 
-.cities-section, .zones-section {
+.cities-section,
+.zones-section {
   padding: 4rem 2rem;
   background: #f8f9fa;
 
@@ -1031,7 +955,8 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.3s ease;
 
-  &:hover, &--active {
+  &:hover,
+  &--active {
     background: #4facfe;
     border-color: #4facfe;
     color: white;
@@ -1442,8 +1367,13 @@ onUnmounted(() => {
 }
 
 @keyframes modal-overlay-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modal-enter {
@@ -1451,6 +1381,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: scale(0.9) translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1458,14 +1389,29 @@ onUnmounted(() => {
 }
 
 @keyframes bike-bounce {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(2deg); }
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
 }
 
 @keyframes path-progress {
-  0% { width: 0%; }
-  50% { width: 60%; }
-  100% { width: 30%;   }
+  0% {
+    width: 0%;
+  }
+
+  50% {
+    width: 60%;
+  }
+
+  100% {
+    width: 30%;
+  }
 }
 
 // ESTILOS DEL TOAST
@@ -1560,8 +1506,13 @@ onUnmounted(() => {
 }
 
 @keyframes toast-progress {
-  from { width: 100%; }
-  to { width: 0%; }
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
 }
 
 @media (max-width: 768px) {

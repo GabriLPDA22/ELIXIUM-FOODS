@@ -30,38 +30,13 @@ class PaymentService {
 
   async getUserPaymentMethods(): Promise<PaymentMethodInfo[]> {
     try {
-      console.log('🔄 Fetching payment methods...')
       const response = await api.get(this.basePath)
-
-      console.log('📦 GET Response status:', response.status)
-      console.log('📦 GET Response data (raw):', response.data)
-      console.log('📦 GET Response data (JSON):', JSON.stringify(response.data, null, 2))
-
       // 🔍 VERIFICAR TODAS LAS POSIBLES ESTRUCTURAS DE RESPUESTA PARA GET
       const responseData = response.data;
-
-      console.log('🔍 Verificando estructura de respuesta GET...');
-      console.log('📦 Response keys:', responseData ? Object.keys(responseData) : 'No keys');
-      console.log('📦 Success property:', responseData?.Success, typeof responseData?.Success);
-      console.log('📦 success property (lowercase):', responseData?.success, typeof responseData?.success);
-      console.log('📦 Data property:', responseData?.Data, typeof responseData?.Data);
-      console.log('📦 data property (lowercase):', responseData?.data, typeof responseData?.data);
-
       // 🔍 VERIFICAR MÚLTIPLES FORMATOS DE RESPUESTA POSIBLES PARA GET
       const isSuccess = responseData?.Success === true || responseData?.success === true;
       const methodsData = responseData?.Data || responseData?.data || [];
-
-      console.log('🔍 GET Analysis:', {
-        isSuccess,
-        hasMethodsData: !!methodsData,
-        methodsDataType: typeof methodsData,
-        methodsDataLength: Array.isArray(methodsData) ? methodsData.length : 'Not array',
-        methodsDataIsArray: Array.isArray(methodsData)
-      });
-
       if (isSuccess && Array.isArray(methodsData)) {
-        console.log('✅ Payment methods loaded successfully:', methodsData.length)
-        console.log('📋 Methods data:', methodsData)
         return methodsData
       } else if (isSuccess && !Array.isArray(methodsData)) {
         console.warn('⚠️ Success is true but Data is not an array:', {
@@ -90,40 +65,14 @@ class PaymentService {
 
   async addPaymentMethod(data: CreatePaymentMethodRequest): Promise<PaymentMethodInfo> {
     try {
-      console.log('=== INICIO DEBUG FRONTEND ===')
-      console.log('🔄 Adding payment method:', data)
-
       // 🔍 VALIDACIONES CONDICIONALES SEGÚN TIPO DE PAGO
       this.validatePaymentMethodData(data);
 
       // ✅ PREPARAR PAYLOAD CONDICIONAL SEGÚN TIPO
       const payload = this.buildPayloadForType(data);
-
-      console.log('📤 Payload final que se envía al backend:', payload)
-      console.log('📤 Payload as JSON:', JSON.stringify(payload, null, 2))
-
-      console.log('🌐 Enviando POST a:', this.basePath)
-
       const response = await api.post(this.basePath, payload)
-
-      console.log('📦 Response status:', response.status)
-      console.log('📦 Response data (raw):', response.data)
-      console.log('📦 Response data (JSON):', JSON.stringify(response.data, null, 2))
-
       // 🔍 VERIFICAR TODAS LAS POSIBLES ESTRUCTURAS DE RESPUESTA
       const responseData = response.data;
-
-      console.log('🔍 Verificando estructura de respuesta...');
-      console.log('📦 Response keys:', responseData ? Object.keys(responseData) : 'No keys');
-      console.log('📦 Success property:', responseData?.Success, typeof responseData?.Success);
-      console.log('📦 success property (lowercase):', responseData?.success, typeof responseData?.success);
-      console.log('📦 Data property:', responseData?.Data, typeof responseData?.Data);
-      console.log('📦 data property (lowercase):', responseData?.data, typeof responseData?.data);
-      console.log('📦 Message property:', responseData?.Message, typeof responseData?.Message);
-      console.log('📦 message property (lowercase):', responseData?.message, typeof responseData?.message);
-
-      console.log('=== FIN DEBUG FRONTEND ===')
-
       // 🔍 VERIFICAR MÚLTIPLES FORMATOS DE RESPUESTA POSIBLES
       const isSuccess = responseData?.Success === true || responseData?.success === true;
       const paymentMethodData = responseData?.Data || responseData?.data;
@@ -145,9 +94,7 @@ class PaymentService {
       }
 
     } catch (error: any) {
-      console.log('=== ERROR DEBUG FRONTEND ===')
       console.error('❌ Error completo:', error)
-
       if (error.response) {
         console.error('❌ Response status:', error.response.status);
         console.error('❌ Response data:', error.response.data);

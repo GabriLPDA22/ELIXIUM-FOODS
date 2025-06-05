@@ -473,13 +473,6 @@ const paginatedUsers = computed(() => {
 // Métodos simplificados
 const searchUsers = async () => {
   currentPage.value = 1;
-  console.log('🔍 Iniciando búsqueda de usuarios...');
-  console.log('📊 Filtros aplicados:', {
-    búsqueda: userSearch.value,
-    rol: userFilter.value,
-    estado: statusFilter.value
-  });
-
   emit('refresh');
 };
 
@@ -535,10 +528,7 @@ const saveUser = async () => {
         role: editingUser.role,
         isActive: editingUser.isActive
       };
-
-      console.log(`🔄 Actualizando usuario ${editingUser.id}...`, userData);
       const response = await api.put(`/api/User/${editingUser.id}`, userData);
-
       // Actualizar en la lista local
       const index = props.users.findIndex(u => u.id === editingUser.id);
       if (index !== -1) {
@@ -559,10 +549,7 @@ const saveUser = async () => {
         role: editingUser.role,
         isActive: editingUser.isActive
       };
-
-      console.log('📝 Creando nuevo usuario...', { ...newUserData, password: '[HIDDEN]' });
       const response = await api.post('/api/User', newUserData);
-
       // Manejar diferentes estructuras de respuesta
       let createdUser;
       if (response.data?.data) {
@@ -591,9 +578,9 @@ const saveUser = async () => {
     });
 
     const errorMessage = error.response?.data?.message ||
-                        error.response?.data?.errors?.join(', ') ||
-                        error.message ||
-                        'Error desconocido';
+      error.response?.data?.errors?.join(', ') ||
+      error.message ||
+      'Error desconocido';
 
     emit('add-alert', 'Error al guardar usuario: ' + errorMessage, 'error');
   } finally {
@@ -605,8 +592,6 @@ const saveUser = async () => {
 const toggleUserStatus = async (user) => {
   loading.value = true;
   try {
-    console.log(`🔄 Cambiando estado de usuario ${user.id} de ${user.isActive} a ${!user.isActive}...`);
-
     // Preparar datos para actualización
     const userData = {
       firstName: user.firstName,
@@ -633,8 +618,8 @@ const toggleUserStatus = async (user) => {
     console.error('❌ Error al cambiar estado del usuario:', error);
 
     const errorMessage = error.response?.data?.message ||
-                        error.message ||
-                        'Error desconocido al cambiar estado';
+      error.message ||
+      'Error desconocido al cambiar estado';
 
     emit('add-alert', 'Error al cambiar estado del usuario: ' + errorMessage, 'error');
   } finally {
@@ -716,10 +701,7 @@ const handleDelete = async () => {
 
   loading.value = true;
   try {
-    console.log(`🗑️ Eliminando usuario ${itemToDelete.value.id}...`);
-
     await api.delete(`/api/User/${itemToDelete.value.id}`);
-
     const index = props.users.findIndex(u => u.id === itemToDelete.value.id);
     if (index !== -1) {
       props.users.splice(index, 1);
@@ -736,8 +718,8 @@ const handleDelete = async () => {
     console.error('❌ Error al eliminar usuario:', error);
 
     const errorMessage = error.response?.data?.message ||
-                        error.message ||
-                        'Error desconocido al eliminar usuario';
+      error.message ||
+      'Error desconocido al eliminar usuario';
 
     emit('add-alert', 'Error al eliminar usuario: ' + errorMessage, 'error');
   } finally {
@@ -777,30 +759,12 @@ const getRoleBadgeColor = (role) => {
 
 // 🔧 FUNCIÓN DE DEBUGGING para AdminUsers
 const debugUserOperations = () => {
-  console.log('🔍 === DEBUG ADMIN USERS ===');
-  console.log('Total usuarios en props:', props.users.length);
-  console.log('Usuarios filtrados:', filteredUsers.value.length);
-  console.log('Usuarios paginados:', paginatedUsers.value.length);
-  console.log('Filtros actuales:', {
-    búsqueda: userSearch.value,
-    rol: userFilter.value,
-    estado: statusFilter.value,
-    ordenación: `${sortBy.value} ${sortDirection.value}`
-  });
-  console.log('Paginación:', {
-    página: currentPage.value,
-    totalPáginas: totalPages.value,
-    usuariosPorPágina: usersPerPage
-  });
-
   if (props.users.length > 0) {
     console.log('Muestra de usuario:', props.users[0]);
   }
 };
-
 // Exportar función de debug
 if (typeof window !== 'undefined') {
   window.debugAdminUsers = debugUserOperations;
-  console.log('🛠️ Debug function available at window.debugAdminUsers()');
 }
 </script>

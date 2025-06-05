@@ -232,13 +232,10 @@ const loadBusiness = async () => {
       business.value = null
       return false
     }
-
-    console.log(`🏢 Verificando business para usuario ${userId}...`)
     const response = await api.get(`/api/Business/user/${userId}`)
 
     if (response.data && response.data.id) {
       business.value = response.data
-      console.log('✅ Business cargado correctamente:', business.value.name)
       return true
     } else {
       console.warn('⚠️ Usuario no tiene business asignado')
@@ -251,7 +248,6 @@ const loadBusiness = async () => {
 
     // Si es un 404, significa que no tiene business
     if (error.response?.status === 404) {
-      console.log('📝 Usuario confirmado sin business (404)')
       return false
     }
 
@@ -278,13 +274,10 @@ const logout = async () => {
   router.push({ name: 'home' })
 }
 
-// MEJORADO: onMounted con verificaciones exhaustivas
+//  onMounted con verificaciones exhaustivas
 onMounted(async () => {
-  console.log('🚀 Iniciando BusinessDashboard...')
-
   // 1. Verificar autenticación básica
   if (!authStore.isAuthenticated) {
-    console.log('👤 Verificando autenticación...')
     const isAuth = await authStore.checkAuth()
     if (!isAuth) {
       console.error('❌ Usuario no autenticado')
@@ -300,22 +293,16 @@ onMounted(async () => {
     router.push('/unauthorized')
     return
   }
-
-  console.log(`✅ Usuario autenticado con rol: ${userRole}`)
-
   // 3. Cargar y verificar business
   const hasBusiness = await loadBusiness()
 
   if (!hasBusiness) {
     console.log('⚠️ Usuario sin business - permaneciendo en dashboard para mostrar mensaje')
-    // No redirigir aquí, dejar que el template muestre el mensaje
-    // El router guard ya debería haber manejado esto, pero por si acaso
   }
 })
 </script>
 
 <style lang="scss" scoped>
-/* Variables base */
 .business-dashboard {
   display: flex;
   width: 100%;

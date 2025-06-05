@@ -478,16 +478,11 @@ const handleSubmit = async () => {
   submitting.value = true;
 
   try {
-    // Aquí iría la lógica para enviar el formulario al backend
-    console.log('Enviando formulario:', formData);
-
     // Simular envío
     await new Promise(resolve => setTimeout(resolve, 2000));
-
     // Mostrar mensaje de éxito y redirigir
     alert('¡Solicitud enviada correctamente! Te contactaremos pronto.');
     router.push('/chefs');
-
   } catch (error) {
     console.error('Error al enviar formulario:', error);
     alert('Error al enviar la solicitud. Por favor, inténtalo de nuevo.');

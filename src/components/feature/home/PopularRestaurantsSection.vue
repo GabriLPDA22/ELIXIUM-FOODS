@@ -37,11 +37,7 @@
 
       <!-- AQUÍ SÍ USO EL COMPONENTE RestaurantCard -->
       <div v-else class="restaurant-grid">
-        <RestaurantCard
-          v-for="restaurant in restaurants"
-          :key="restaurant.id"
-          :restaurant="restaurant"
-        />
+        <RestaurantCard v-for="restaurant in restaurants" :key="restaurant.id" :restaurant="restaurant" />
       </div>
 
       <div v-if="!loading && restaurants.length > 0" class="popular-restaurants__cta">
@@ -121,7 +117,6 @@ const fetchPopularRestaurants = async () => {
   error.value = null
 
   try {
-    console.log('🔥 Cargando restaurantes populares limitados...')
 
     // Llamar al endpoint específico de populares con límite
     const response = await api.get('/api/Restaurants/popular', {
@@ -134,19 +129,9 @@ const fetchPopularRestaurants = async () => {
     if (response.data && Array.isArray(response.data)) {
       // Procesar cada restaurante con simulación de estado
       restaurants.value = response.data.map(restaurant => simulateRestaurantStatus(restaurant))
-
-      console.log('✅ Restaurantes populares cargados:', restaurants.value.length)
-      console.log('📊 Muestra de estados:', restaurants.value.slice(0, 3).map(r => ({
-        name: r.name,
-        isOpen: r.isCurrentlyOpen,
-        status: r.statusMessage,
-        featured: r.featured,
-        isNew: r.isNew
-      })))
     } else {
       throw new Error('Respuesta inválida del servidor')
     }
-
   } catch (err: any) {
     console.error('❌ Error al cargar restaurantes populares:', err)
     error.value = err.response?.data?.message || err.message || 'Error al cargar restaurantes'
@@ -487,8 +472,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 768px) {

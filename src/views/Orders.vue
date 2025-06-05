@@ -172,19 +172,6 @@ const formatDate = (dateString: string): string => {
 };
 
 // ✅ VERIFICACIÓN: Console log para debug de fechas problemas de veranitos utc +2 momento comedia
-console.log('🕒 DEBUG FECHAS:');
-console.log('Fecha desde DB (ejemplo):', '2025-06-02T15:37:25.912Z');
-console.log('Convertida a Date:', new Date('2025-06-02T15:37:25.912Z'));
-console.log('Formateada con Europe/Madrid:', new Date('2025-06-02T15:37:25.912Z').toLocaleString('es-ES', {
-  year: 'numeric',
-  month: 'numeric',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Madrid'
-}));
-console.log('Zona horaria actual de Madrid:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-
 const summarizeOrderItems = (items: any[]): string => {
   if (!items || items.length === 0) return 'Sin productos';
 

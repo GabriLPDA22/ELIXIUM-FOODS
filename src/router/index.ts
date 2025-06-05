@@ -33,8 +33,6 @@ router.beforeEach(async (to, from, next) => {
       authStore.initializeAuth();
       await new Promise(resolve => setTimeout(resolve, 50));
     } catch (error) {
-      // En un entorno de producción, podrías querer registrar este error
-      // en lugar de solo mostrarlo en la consola si se eliminan los console.log.
     }
   }
 

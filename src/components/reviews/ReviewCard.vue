@@ -127,8 +127,6 @@ const formatDate = (dateString: string): string => {
 }
 
 const markHelpful = () => {
-  // Emit helpful event or call API
-  console.log('Mark as helpful:', props.review.id)
 }
 
 const openImage = () => {

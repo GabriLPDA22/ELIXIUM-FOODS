@@ -396,8 +396,6 @@ const savePaymentMethod = async () => {
   formError.value = '';
 
   try {
-    console.log('💾 Guardando método de pago:', paymentForm.value);
-
     // 🔍 VALIDACIÓN CONDICIONAL ANTES DE ENVIAR
     const paymentType = paymentForm.value.type.toLowerCase();
 
@@ -507,10 +505,8 @@ const fetchPaymentMethods = async () => {
   error.value = '';
 
   try {
-    console.log('🔄 Iniciando carga de métodos de pago...');
     const methods = await paymentService.getUserPaymentMethods();
     paymentMethods.value = methods;
-    console.log('✅ Métodos de pago cargados:', methods.length);
   } catch (err: any) {
     console.error("❌ Error al cargar métodos de pago:", err);
     error.value = err.message || 'No pudimos cargar tus métodos de pago';
@@ -522,7 +518,6 @@ const fetchPaymentMethods = async () => {
 
 // Inicialización
 onMounted(() => {
-  console.log('🚀 PaymentMethodsList mounted');
   fetchPaymentMethods();
 });
 </script>
