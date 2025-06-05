@@ -378,7 +378,6 @@ const loadUserData = () => {
 
 const loadUserOrders = async () => {
   if (!authStore.isAuthenticated) {
-    console.log("Usuario no autenticado, no se cargarán los pedidos.");
     return;
   }
 
@@ -410,7 +409,6 @@ const loadUserReviewsCount = async () => {
 
 // Métodos de gestión de métodos de pago
 const handlePaymentMethodsUpdate = () => {
-  console.log('Lista de métodos de pago actualizada');
 };
 
 // Métodos de gestión de pedidos
@@ -482,7 +480,6 @@ const formatOrderDate = (dateString?: string): string => {
 // Métodos de gestión de perfil
 const openEditProfileModal = () => {
   changeTab('info');
-  console.log("Intentando abrir modal de edición de perfil (lógica en UserInfo.vue)");
 };
 
 const handleUserInfoUpdate = (updatedInfo: UserProfile) => {

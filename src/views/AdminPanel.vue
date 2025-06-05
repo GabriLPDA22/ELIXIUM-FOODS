@@ -146,18 +146,14 @@
           <!-- Tab: Dashboard principal -->
           <div v-if="activeTab === 'dashboard'" class="space-y-6">
             <!-- Gráficas del Dashboard -->
-            <DashboardCharts
-              :totalUsers="users.length"
-              :orders="orders"
-              :restaurants="restaurants"
-              :users="users"
-              :businesses="businesses"
-            />
+            <DashboardCharts :totalUsers="users.length" :orders="orders" :restaurants="restaurants" :users="users"
+              :businesses="businesses" />
           </div>
 
           <!-- Tabs de componentes -->
           <AdminUsers v-if="activeTab === 'users'" :users="users" @refresh="refreshAllData" @update="updateStats"
-            @add-alert="addAlert" @view-user-secret="handleViewUserSecret" @go-to-security-manager="handleGoToSecurityManager" />
+            @add-alert="addAlert" @view-user-secret="handleViewUserSecret"
+            @go-to-security-manager="handleGoToSecurityManager" />
 
           <AdminBusinesses v-if="activeTab === 'businesses'" :businesses="businesses" @refresh="refreshAllData"
             @update="updateStats" @add-alert="addAlert" @view-restaurants="handleViewBusinessRestaurants"
@@ -175,7 +171,8 @@
           <AdminProducts v-if="activeTab === 'products'" :products="products" :categories="categories"
             :businesses="businesses" :filterByCategoryId="activeFilterCategoryId"
             :filterByBusinessId="activeFilterBusinessId" @refresh="refreshAllData" @update="updateStats"
-            @add-alert="addAlert" @clear-filters="handleClearProductFilters" @view-restaurants="handleViewProductRestaurants" />
+            @add-alert="addAlert" @clear-filters="handleClearProductFilters"
+            @view-restaurants="handleViewProductRestaurants" />
 
           <AdminOrders v-if="activeTab === 'orders'" :orders="orders" :deliveryPersons="deliveryPersons"
             @refresh="refreshOrders" @update="updateStats" @add-alert="addAlert" />
@@ -310,9 +307,6 @@ const checkAuthorization = async () => {
         return;
       }
     }
-
-    console.log('✅ Autorización de admin verificada exitosamente');
-    console.log('Usuario admin:', authStore.user?.firstName, authStore.user?.lastName);
   } catch (error) {
     console.error('Error verificando autorización:', error);
     router.push('/unauthorized');
@@ -322,43 +316,17 @@ const checkAuthorization = async () => {
 // Métodos de carga de datos CORREGIDOS
 const refreshAllData = async () => {
   refreshing.value = true;
-  console.log('🔄 Iniciando carga completa de datos del admin...');
 
   try {
     // Cargar datos secuencialmente para mejor debugging
-    console.log('📝 Cargando usuarios...');
     await fetchUsers();
-
-    console.log('🏢 Cargando negocios...');
     await fetchBusinesses();
-
-    console.log('🍽️ Cargando restaurantes...');
     await fetchRestaurants();
-
-    console.log('📂 Cargando categorías...');
     await fetchCategories();
-
-    console.log('🛒 Cargando productos...');
     await fetchProducts();
-
-    console.log('📦 Cargando pedidos...');
     await fetchOrders();
-
-    console.log('📊 Cargando logs...');
     await fetchLogs();
-
     updateStats();
-
-    console.log('✅ Todos los datos cargados exitosamente');
-    console.log('📊 Resumen de datos:', {
-      usuarios: users.value.length,
-      negocios: businesses.value.length,
-      restaurantes: restaurants.value.length,
-      categorias: categories.value.length,
-      productos: products.value.length,
-      pedidos: orders.value.length
-    });
-
     addAlert('Datos actualizados correctamente', 'success');
   } catch (error) {
     console.error('❌ Error refrescando datos:', error);
@@ -371,7 +339,6 @@ const refreshAllData = async () => {
 // ✅ CORREGIDO: Cambiar de /api/Users a /api/User
 const fetchUsers = async () => {
   try {
-    console.log('🔍 Fetching users from /api/User...');
     const response = await api.get('/api/User');
 
     // Manejar diferentes estructuras de respuesta
@@ -391,13 +358,6 @@ const fetchUsers = async () => {
     deliveryPersons.value = users.value.filter(user =>
       user.role === 'DeliveryPerson'
     );
-
-    console.log('✅ Usuarios cargados exitosamente:', {
-      total: users.value.length,
-      restaurantOwners: restaurantOwners.value.length,
-      deliveryPersons: deliveryPersons.value.length
-    });
-
   } catch (error) {
     console.error('❌ Error fetchUsers:', error);
     console.error('Details:', {
@@ -416,9 +376,7 @@ const fetchUsers = async () => {
 
 const fetchBusinesses = async () => {
   try {
-    console.log('🔍 Fetching businesses from /api/Business...');
     const response = await api.get('/api/Business');
-
     if (response.data?.data) {
       businesses.value = response.data.data || [];
     } else if (Array.isArray(response.data)) {
@@ -426,8 +384,6 @@ const fetchBusinesses = async () => {
     } else {
       businesses.value = response.data || [];
     }
-
-    console.log('✅ Negocios cargados:', businesses.value.length);
   } catch (error) {
     console.error('❌ Error fetchBusinesses:', error);
     addAlert('Error al obtener negocios: ' + (error.response?.data?.message || error.message), 'error');
@@ -437,9 +393,7 @@ const fetchBusinesses = async () => {
 
 const fetchRestaurants = async () => {
   try {
-    console.log('🔍 Fetching restaurants from /api/Restaurants...');
     const response = await api.get('/api/Restaurants');
-
     if (response.data?.data) {
       restaurants.value = response.data.data || [];
     } else if (Array.isArray(response.data)) {
@@ -447,8 +401,6 @@ const fetchRestaurants = async () => {
     } else {
       restaurants.value = response.data || [];
     }
-
-    console.log('✅ Restaurantes cargados:', restaurants.value.length);
   } catch (error) {
     console.error('❌ Error fetchRestaurants:', error);
     addAlert('Error al obtener restaurantes: ' + (error.response?.data?.message || error.message), 'error');
@@ -458,7 +410,6 @@ const fetchRestaurants = async () => {
 
 const fetchCategories = async () => {
   try {
-    console.log('🔍 Fetching categories from /api/Categories...');
     const response = await api.get('/api/Categories');
 
     if (response.data?.data) {
@@ -468,8 +419,6 @@ const fetchCategories = async () => {
     } else {
       categories.value = response.data || [];
     }
-
-    console.log('✅ Categorías cargadas:', categories.value.length);
   } catch (error) {
     console.error('❌ Error fetchCategories:', error);
     addAlert('Error al obtener categorías: ' + (error.response?.data?.message || error.message), 'error');
@@ -479,9 +428,7 @@ const fetchCategories = async () => {
 
 const fetchProducts = async () => {
   try {
-    console.log('🔍 Fetching products from /api/Products...');
     const response = await api.get('/api/Products');
-
     if (response.data?.data) {
       products.value = response.data.data || [];
     } else if (Array.isArray(response.data)) {
@@ -489,8 +436,6 @@ const fetchProducts = async () => {
     } else {
       products.value = response.data || [];
     }
-
-    console.log('✅ Productos cargados:', products.value.length);
   } catch (error) {
     console.error('❌ Error fetchProducts:', error);
     addAlert('Error al obtener productos: ' + (error.response?.data?.message || error.message), 'error');
@@ -500,7 +445,6 @@ const fetchProducts = async () => {
 
 const fetchOrders = async () => {
   try {
-    console.log('🔍 Fetching orders from /api/Orders...');
     const response = await api.get('/api/Orders');
 
     if (response.data?.data) {
@@ -548,8 +492,6 @@ const fetchLogs = async () => {
         message: 'Error en la conexión con la base de datos'
       }
     ];
-
-    console.log('✅ Logs simulados cargados:', logs.value.length);
   } catch (error) {
     console.error('❌ Error fetchLogs:', error);
     logs.value = [];
@@ -631,17 +573,10 @@ const handleViewProductRestaurants = (data) => {
 
   // Mostrar alerta informativa
   addAlert(`Funcionalidad: Ver restaurantes que ofrecen "${data.productName}" - En desarrollo`, 'info');
-
-  // TODO: Aquí podrías implementar un filtro específico para mostrar
-  // solo los restaurantes que tienen este producto
-  // Por ejemplo: activeFilterByProductId.value = data.productId;
 };
 
 // Manejadores para Control de Seguridad (antes JWT Debug)
 const handleViewUserSecret = (user) => {
-  // Este manejador maneja cuando se hace clic en el ícono de clave secreta
-  // pero se mantiene en el popup, no cambia de pestaña
-  console.log('Ver clave secreta de:', user);
 };
 
 const handleClearProductFilters = () => {
@@ -695,10 +630,7 @@ const exportUserData = async () => {
   }
 };
 
-// 🔧 FUNCIONES DE DEBUGGING AÑADIDAS
 const debugEndpoints = async () => {
-  console.log('🔍 === INICIANDO DEBUG DE ENDPOINTS ===');
-
   const endpoints = [
     { name: 'Users (singular)', url: '/api/User', method: 'GET' },
     { name: 'Users (plural)', url: '/api/Users', method: 'GET' },
@@ -713,8 +645,6 @@ const debugEndpoints = async () => {
 
   for (const endpoint of endpoints) {
     try {
-      console.log(`🧪 Testing ${endpoint.name}: ${endpoint.method} ${endpoint.url}`);
-
       const response = await api.get(endpoint.url);
 
       results[endpoint.name] = {
@@ -727,9 +657,6 @@ const debugEndpoints = async () => {
           Object.keys(response.data[0]).slice(0, 5) :
           (response.data ? Object.keys(response.data).slice(0, 5) : [])
       };
-
-      console.log(`✅ ${endpoint.name}: OK (${results[endpoint.name].dataLength} items)`);
-
     } catch (error) {
       results[endpoint.name] = {
         status: '❌ FAILED',
@@ -743,33 +670,17 @@ const debugEndpoints = async () => {
       console.error(`❌ ${endpoint.name}: ${error.response?.status || 'ERROR'}`);
     }
   }
-
-  console.log('📊 === RESUMEN DE RESULTADOS ===');
   console.table(results);
-
   return results;
 };
-
 const debugAuth = () => {
-  console.log('🔐 === DEBUG DE AUTENTICACIÓN ===');
-
   const token = localStorage.getItem('token');
   const refreshToken = localStorage.getItem('refreshToken');
-
-  console.log('Token presente:', !!token);
-  console.log('Refresh token presente:', !!refreshToken);
-  console.log('Usuario autenticado:', authStore.isAuthenticated);
-  console.log('Es admin:', authStore.isAdmin);
-  console.log('Usuario actual:', authStore.user);
-
   if (token) {
     try {
       const tokenParts = token.split('.');
       if (tokenParts.length === 3) {
         const payload = JSON.parse(atob(tokenParts[1]));
-        console.log('Payload del token:', payload);
-        console.log('Token expira:', new Date(payload.exp * 1000));
-        console.log('Token expirado:', Date.now() > payload.exp * 1000);
       }
     } catch (error) {
       console.error('Error decodificando token:', error);
@@ -778,34 +689,14 @@ const debugAuth = () => {
 };
 
 const debugDataState = () => {
-  console.log('📊 === ESTADO DE LOS DATOS ===');
-  console.log('Usuarios cargados:', users.value.length);
-  console.log('Negocios cargados:', businesses.value.length);
-  console.log('Restaurantes cargados:', restaurants.value.length);
-  console.log('Categorías cargadas:', categories.value.length);
-  console.log('Productos cargados:', products.value.length);
-  console.log('Pedidos cargados:', orders.value.length);
-
-  if (users.value.length > 0) {
-    console.log('Muestra de usuario:', users.value[0]);
-  }
-  if (orders.value.length > 0) {
-    console.log('Muestra de pedido:', orders.value[0]);
-  }
 };
 
 const runFullDebug = async () => {
   console.clear();
-  console.log('🚀 === INICIANDO DEBUG COMPLETO DEL ADMIN PANEL ===');
-
   debugAuth();
   await debugEndpoints();
   debugDataState();
-
-  console.log('🔄 Probando carga de datos...');
   await refreshAllData();
-
-  console.log('✅ Debug completo terminado');
 };
 
 // Exportar funciones de debug para uso en consola
@@ -816,7 +707,6 @@ if (typeof window !== 'undefined') {
     data: debugDataState,
     full: runFullDebug
   };
-  console.log('🛠️ Debug functions available at window.adminDebug');
 }
 
 // Utilidades

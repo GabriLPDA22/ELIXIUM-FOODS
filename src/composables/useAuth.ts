@@ -27,22 +27,10 @@ export function useAuth() {
   const isDeliveryPerson = computed(() => authStore.isDeliveryPerson)
   const isGoogleUser = computed(() => authStore.isGoogleUser)
 
-  // =================== FUNCIONES DE DEPURACIÓN ===================
-  const debugAuth = () => {
-    console.log('🔍 DEBUG AUTH STATE:')
-    console.log('├── user:', authStore.user)
-    console.log('├── token:', authStore.token ? 'Present' : 'Missing')
-    console.log('├── isAuthenticated:', authStore.isAuthenticated)
-    console.log('├── isAdmin:', authStore.isAdmin)
-    console.log('├── userRole:', authStore.userRole)
-    console.log('├── localStorage token:', localStorage.getItem('authToken'))
-    console.log('└── localStorage user:', localStorage.getItem('user'))
-  }
+
 
   const forceRefreshAuth = () => {
-    console.log('🔄 Forzando actualización de auth...')
     authStore.initializeAuth()
-    debugAuth()
   }
 
   // =================== FUNCIONES DE NAVEGACIÓN SEGURA ===================
@@ -78,8 +66,6 @@ export function useAuth() {
       })
       return false
     }
-
-    console.log('✅ Usuario es admin, acceso permitido')
     return true
   }
 
@@ -113,11 +99,8 @@ export function useAuth() {
 
   // =================== FUNCIONES DE AUTENTICACIÓN ===================
   const login = async (credentials: { email: string; password: string }): Promise<boolean> => {
-    console.log('🔑 Intentando login...')
     const success = await authStore.login(credentials)
-
     if (success) {
-      console.log('✅ Login exitoso')
       debugAuth()
     } else {
       console.log('❌ Login fallido:', authStore.error)
@@ -127,11 +110,8 @@ export function useAuth() {
   }
 
   const loginWithGoogle = async (googleToken: string): Promise<boolean> => {
-    console.log('🔑 Intentando login con Google...')
     const success = await authStore.loginWithGoogle(googleToken)
-
     if (success) {
-      console.log('✅ Login con Google exitoso')
       debugAuth()
     } else {
       console.log('❌ Login con Google fallido:', authStore.error)
@@ -141,11 +121,8 @@ export function useAuth() {
   }
 
   const register = async (data: any): Promise<boolean> => {
-    console.log('📝 Intentando registro...')
     const success = await authStore.register(data)
-
     if (success) {
-      console.log('✅ Registro exitoso')
       debugAuth()
     } else {
       console.log('❌ Registro fallido:', authStore.error)
@@ -153,20 +130,14 @@ export function useAuth() {
 
     return success
   }
-
   const logout = async (): Promise<void> => {
-    console.log('🚪 Cerrando sesión...')
     await authStore.logout()
-    console.log('✅ Sesión cerrada')
     await router.push('/login')
   }
 
   const checkAuth = async (): Promise<boolean> => {
-    console.log('🔍 Verificando autenticación...')
     const isValid = await authStore.checkAuth()
-
     if (isValid) {
-      console.log('✅ Autenticación válida')
     } else {
       console.log('❌ Autenticación inválida')
     }
@@ -230,7 +201,6 @@ export function useAuth() {
   // =================== AUTO-INICIALIZACIÓN ===================
   // Asegurar que el store esté inicializado
   if (!authStore.isAuthenticated && authStore.token) {
-    console.log('🔄 Auto-inicializando auth store...')
     authStore.initializeAuth()
   }
 

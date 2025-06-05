@@ -297,23 +297,20 @@ const processedCartItems = computed<ProcessedCartItem[]>(() => {
     // 3. Detectar automáticamente si hay descuento aplicado
     const hasDiscount = originalPrice > finalPrice && (originalPrice - finalPrice) > 0.01;
     const detectedOffer = hasDiscount ? { isAutoDetected: true } : null;
-
     // Debug para verificar precios
-    console.log(`🛒 ${item.name}: Original=${originalPrice}, Final=${finalPrice}, HasDiscount=${hasDiscount}`);
     if (hasDiscount) {
       const percentage = Math.round(((originalPrice - finalPrice) / originalPrice) * 100);
-      console.log(`  💰 Descuento detectado: ${percentage}% OFF (ahorras ${(originalPrice - finalPrice).toFixed(2)})`);
     }
 
     return {
-      id:            item.id,
-      productId:     item.id,
-      name:          item.name || 'Producto',
-      imageUrl:      item.imageUrl,
+      id: item.id,
+      productId: item.id,
+      name: item.name || 'Producto',
+      imageUrl: item.imageUrl,
       originalPrice,
       finalPrice,
-      quantity:      item.quantity || 1,
-      appliedOffer:  item.appliedOffer || detectedOffer
+      quantity: item.quantity || 1,
+      appliedOffer: item.appliedOffer || detectedOffer
     };
   });
 });
@@ -458,8 +455,8 @@ const fetchRestaurantData = async () => {
     loadingRestaurantData.value = true;
     const res = await restaurantService.getRestaurantById(restaurantId.value);
     restaurantData.value = {
-      id:          res.id,
-      name:        res.name,
+      id: res.id,
+      name: res.name,
       deliveryFee: res.deliveryFee
     };
     deliveryFee.value = res.deliveryFee;
@@ -1005,10 +1002,13 @@ onMounted(async () => {
 
 // Animación para el badge de descuento
 @keyframes discount-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 2px 8px rgba(5, 175, 90, 0.4);
   }
+
   50% {
     transform: scale(1.02);
     box-shadow: 0 3px 12px rgba(5, 175, 90, 0.6);

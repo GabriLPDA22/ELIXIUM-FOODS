@@ -142,8 +142,6 @@ const handleSubmit = async () => {
   }
 
   isSubmitting.value = true;
-
-  console.log('Datos del formulario enviados (simulación):', JSON.parse(JSON.stringify(formData)));
   await new Promise(resolve => setTimeout(resolve, 1500));
 
   isSubmitting.value = false;

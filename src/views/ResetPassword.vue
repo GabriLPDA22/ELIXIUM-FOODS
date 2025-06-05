@@ -266,11 +266,6 @@ const handleResetPassword = async () => {
       return;
     }
 
-    console.log('=== DEBUG RESET PASSWORD ===');
-    console.log('Token:', resetToken.value?.substring(0, 10) + '...');
-    console.log('Email:', resetEmail.value);
-    console.log('Nueva contraseña length:', newPassword.value.length);
-
     // ✅ LLAMAR AL SERVICIO CON LOS 3 PARÁMETROS REQUERIDOS
     const result = await authService.resetPassword(resetToken.value, resetEmail.value, newPassword.value, confirmPassword.value);
 
@@ -300,27 +295,17 @@ const handleResetPassword = async () => {
 
 // ✅ VERIFICAR TOKEN Y EMAIL AL MONTAR EL COMPONENTE
 onMounted(() => {
-  console.log('=== DEBUG MOUNT ===');
-  console.log('URL completa:', window.location.href);
-  console.log('Query params:', route.query);
-
   const token = route.query.token as string;
   const email = route.query.email as string;
-
-  console.log('Token extraído:', token?.substring(0, 10) + '...');
-  console.log('Email extraído:', email);
-
   // Validar que tengamos ambos parámetros
   if (!token) {
     tokenError.value = 'No se proporcionó un token de restablecimiento válido en la URL.';
     return;
   }
-
   if (!email) {
     tokenError.value = 'No se proporcionó un email válido en la URL de restablecimiento.';
     return;
   }
-
   // Validar formato básico del email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
@@ -371,20 +356,74 @@ $reset-card-bg: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(15px);
     animation: float 8s ease-in-out infinite;
 
-    &--1 { width: 350px; height: 350px; top: -175px; left: -125px; animation-delay: 0s; }
-    &--2 { width: 280px; height: 280px; top: -80px; right: -100px; animation-delay: 1.5s; }
-    &--3 { width: 220px; height: 220px; bottom: -80px; left: 8%; animation-delay: 3s; }
-    &--4 { width: 180px; height: 180px; bottom: -60px; right: 12%; animation-delay: 4.5s; }
-    &--5 { width: 140px; height: 140px; top: 25%; left: -70px; animation-delay: 2s; }
-    &--6 { width: 160px; height: 160px; top: 65%; right: -80px; animation-delay: 5.5s; }
+    &--1 {
+      width: 350px;
+      height: 350px;
+      top: -175px;
+      left: -125px;
+      animation-delay: 0s;
+    }
+
+    &--2 {
+      width: 280px;
+      height: 280px;
+      top: -80px;
+      right: -100px;
+      animation-delay: 1.5s;
+    }
+
+    &--3 {
+      width: 220px;
+      height: 220px;
+      bottom: -80px;
+      left: 8%;
+      animation-delay: 3s;
+    }
+
+    &--4 {
+      width: 180px;
+      height: 180px;
+      bottom: -60px;
+      right: 12%;
+      animation-delay: 4.5s;
+    }
+
+    &--5 {
+      width: 140px;
+      height: 140px;
+      top: 25%;
+      left: -70px;
+      animation-delay: 2s;
+    }
+
+    &--6 {
+      width: 160px;
+      height: 160px;
+      top: 65%;
+      right: -80px;
+      animation-delay: 5.5s;
+    }
   }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-  25% { transform: translateY(-12px) rotate(30deg) scale(1.02); }
-  50% { transform: translateY(-25px) rotate(60deg) scale(1); }
-  75% { transform: translateY(-12px) rotate(90deg) scale(0.98); }
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+
+  25% {
+    transform: translateY(-12px) rotate(30deg) scale(1.02);
+  }
+
+  50% {
+    transform: translateY(-25px) rotate(60deg) scale(1);
+  }
+
+  75% {
+    transform: translateY(-12px) rotate(90deg) scale(0.98);
+  }
 }
 
 .reset-password-content {
@@ -427,7 +466,7 @@ $reset-card-bg: rgba(30, 41, 59, 0.95);
     border: 2px solid rgba(255, 200, 55, 0.3);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(255, 200, 55, 0.15);
-    
+
     svg {
       color: $reset-accent;
       filter: drop-shadow(0 2px 4px rgba(255, 128, 8, 0.3));

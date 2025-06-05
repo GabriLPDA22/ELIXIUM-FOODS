@@ -183,7 +183,7 @@
           <div class="business-products__card-category">{{ getCategoryName(product.categoryId) }}</div>
           <h3 class="business-products__card-title">{{ product.name }}</h3>
           <p class="business-products__card-description">{{ truncateText(product.description, 80) }}</p>
-          
+
           <!-- Información de restaurantes -->
           <div class="business-products__restaurants-info">
             <div class="business-products__restaurants-count">
@@ -339,10 +339,10 @@
             <div class="business-products__form-row">
               <div class="business-products__form-group">
                 <label for="productCategory" class="business-products__form-label">
-                  Categoría * 
-                  <button 
-                    type="button" 
-                    @click="showQuickCategoryModal = true" 
+                  Categoría *
+                  <button
+                    type="button"
+                    @click="showQuickCategoryModal = true"
                     class="business-products__inline-btn"
                   >
                     + Nueva
@@ -660,8 +660,8 @@
                     </svg>
                     Editar
                   </button>
-                  <button 
-                    @click="confirmDeleteCategory(category)" 
+                  <button
+                    @click="confirmDeleteCategory(category)"
                     class="business-products__category-btn business-products__category-btn--delete"
                     :disabled="getProductCountByCategory(category.id) > 0"
                   >
@@ -990,7 +990,6 @@ const loadBusiness = async () => {
 
     const response = await api.get(`/api/Business/user/${userId}`);
     business.value = response.data || null;
-    console.log('Business cargado:', business.value);
   } catch (error) {
     console.error('Error cargando business:', error);
     business.value = null;
@@ -1038,8 +1037,6 @@ const loadProducts = async () => {
     // Cargar productos del business
     const response = await api.get(`/api/Products/Business/${business.value.id}`);
     products.value = response.data || [];
-    console.log('Productos cargados:', products.value);
-
     // Cargar asignaciones de restaurantes para cada producto
     await loadRestaurantAssignments();
   } catch (error) {
@@ -1103,7 +1100,7 @@ const getAssignedRestaurantsCount = (productId: number) => {
 const getPriceRange = (productId: number) => {
   const prices = [];
   const baseProduct = products.value.find(p => p.id === productId);
-  
+
   if (!baseProduct) return '';
 
   for (const restaurantId in restaurantProducts.value) {
@@ -1115,7 +1112,7 @@ const getPriceRange = (productId: number) => {
   }
 
   if (prices.length === 0) return '';
-  
+
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
 
@@ -1249,19 +1246,16 @@ const submitProductForm = async () => {
     if (productForm.imageUrl && productForm.imageUrl.startsWith('data:')) {
       try {
         const imageResult = await ImageService.uploadBase64(
-          productForm.imageUrl, 
-          `product-${productId}`, 
+          productForm.imageUrl,
+          `product-${productId}`,
           'products'
         );
-        
+
         // Actualizar el producto con la URL de la imagen de S3
         await api.put(`/api/Products/${productId}`, {
           ...productData,
           imageUrl: imageResult.imageUrl
         });
-        
-        console.log('Imagen subida exitosamente a S3:', imageResult.imageUrl);
-        
       } catch (imageError) {
         console.error('Error subiendo imagen:', imageError);
         alert('Producto guardado correctamente, pero hubo un error al subir la imagen. Puedes intentar subirla después editando el producto.');
@@ -1311,11 +1305,11 @@ const deleteProduct = async () => {
 // Funciones de gestión de restaurantes
 const manageRestaurantAssignments = async (product: Product) => {
   selectedProduct.value = product;
-  
+
   // Inicializar asignaciones
   restaurantAssignments.value = restaurants.value.map(restaurant => {
     const existingAssignment = restaurantProducts.value[restaurant.id]?.find(rp => rp.productId === product.id);
-    
+
     return {
       restaurantId: restaurant.id,
       isAssigned: !!existingAssignment,
@@ -1337,7 +1331,7 @@ const toggleRestaurantAssignment = (restaurantId: number) => {
   const assignment = restaurantAssignments.value.find(a => a.restaurantId === restaurantId);
   if (assignment) {
     assignment.isAssigned = !assignment.isAssigned;
-    
+
     // Si se desasigna, resetear valores
     if (!assignment.isAssigned) {
       assignment.price = selectedProduct.value?.basePrice;
@@ -1497,9 +1491,9 @@ const submitQuickCategory = async () => {
     };
 
     const response = await api.post('/api/categories', categoryData);
-    
+
     await loadCategories();
-    
+
     // Seleccionar automáticamente la nueva categoría en el formulario de producto
     if (response.data?.id) {
       productForm.categoryId = response.data.id;
@@ -1577,7 +1571,7 @@ onMounted(async () => {
   // =================================
   // LAYOUT PRINCIPAL
   // =================================
-  
+
   &__header {
     display: flex;
     justify-content: space-between;

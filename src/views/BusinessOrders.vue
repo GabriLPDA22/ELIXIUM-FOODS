@@ -715,8 +715,6 @@ const viewOrder = (order: any) => {
     console.error('No se puede ver el pedido: datos no válidos')
     return
   }
-
-  console.log('Viendo pedido:', order)
   selectedOrder.value = order
 }
 
@@ -746,8 +744,6 @@ const updateStatus = async (order: any, newStatus: string) => {
       if (selectedOrder.value && selectedOrder.value.id === order.id) {
         selectedOrder.value = { ...selectedOrder.value, status: newStatus }
       }
-
-      console.log(`Pedido #${order.id} actualizado a estado: ${newStatus}`)
     }
   } catch (error) {
     console.error('Error actualizando estado del pedido:', error)

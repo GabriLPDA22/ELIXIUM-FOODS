@@ -35,7 +35,6 @@ export const useOrderStore = defineStore('order', () => {
     try {
       loading.value = true
       error.value = null
-      console.log('🚀 Creando pedido desde store:', orderData)
       const order = await orderService.createOrder(orderData)
       currentOrder.value = order
       lastOrderId.value = order.id
@@ -45,7 +44,6 @@ export const useOrderStore = defineStore('order', () => {
       } else {
         orderHistory.value[existingIndex] = order as OrderResponse
       }
-      console.log('✅ Pedido creado exitosamente:', order)
       return order
     } catch (err: any) {
       error.value = err.message
@@ -64,7 +62,6 @@ export const useOrderStore = defineStore('order', () => {
       orderHistory.value = orders.sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
-      console.log('✅ Pedidos cargados:', orders.length)
     } catch (err: any) {
       error.value = err.message
       console.error('❌ Error cargando pedidos:', err)
@@ -110,7 +107,6 @@ export const useOrderStore = defineStore('order', () => {
       if (currentOrder.value?.id === orderId) {
         currentOrder.value = updatedOrder as Order
       }
-      console.log('✅ Estado del pedido actualizado:', { orderId, status })
       return updatedOrder
     } catch (err: any) {
       error.value = err.message
@@ -133,7 +129,6 @@ export const useOrderStore = defineStore('order', () => {
       if (currentOrder.value?.id === orderId) {
         currentOrder.value = cancelledOrder as Order
       }
-      console.log('✅ Pedido cancelado:', orderId)
       return cancelledOrder
     } catch (err: any) {
       error.value = err.message
@@ -151,7 +146,6 @@ export const useOrderStore = defineStore('order', () => {
   }> {
     try {
       const trackingInfo = await orderService.trackOrder(orderId)
-      console.log('✅ Información de rastreo obtenida:', trackingInfo)
       return trackingInfo
     } catch (err: any) {
       console.error('❌ Error rastreando pedido:', err)
@@ -166,7 +160,6 @@ export const useOrderStore = defineStore('order', () => {
   ): Promise<{ valid: boolean; discount: number; message?: string }> {
     try {
       const result = await orderService.validatePromoCode(code, restaurantId, subtotal)
-      console.log('✅ Código promocional validado:', result)
       return result
     } catch (err: any) {
       console.error('❌ Error validando código promocional:', err)

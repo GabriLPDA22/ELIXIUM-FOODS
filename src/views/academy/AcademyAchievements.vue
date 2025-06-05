@@ -345,14 +345,10 @@ const formatDate = (dateString: string) => {
 };
 
 const downloadCertificate = (certificate: any) => {
-  // Simulate certificate download
-  console.log(`Downloading certificate for "${certificate.courseName}"`);
-
   if (window.useToast) {
     window.useToast().success(`Your "${certificate.courseName}" certificate is downloading! 📜`, "Certificate Downloaded!");
   }
 };
-
 const shareCertificate = (certificate: any) => {
   // Simulate sharing
   if (navigator.share) {

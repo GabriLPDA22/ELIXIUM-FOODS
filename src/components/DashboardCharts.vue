@@ -408,7 +408,7 @@ const getChartOptions = (title, type = 'default') => {
         y: {
           beginAtZero: true,
           ticks: {
-            callback: function(value) {
+            callback: function (value) {
               return '€' + value.toFixed(2);
             }
           }
@@ -436,7 +436,7 @@ const initCharts = async () => {
 
   // Verificar que los elementos existen
   if (!usersChart.value || !ordersStatusChart.value ||
-      !restaurantStatusChart.value || !revenueChart.value) {
+    !restaurantStatusChart.value || !revenueChart.value) {
     console.warn('Elementos de canvas no disponibles');
     return;
   }
@@ -469,8 +469,6 @@ const initCharts = async () => {
       data: getRevenueData(),
       options: getChartOptions('Evolución de ingresos', 'currency')
     });
-
-    console.log('✅ Gráficas inicializadas correctamente');
   } catch (error) {
     console.error('❌ Error inicializando gráficas:', error);
   }
@@ -504,19 +502,11 @@ watch([
   () => props.users,
   () => props.businesses
 ], async () => {
-  console.log('🔄 Datos cambiaron, actualizando gráficas...');
   await initCharts();
 }, { deep: true });
 
 // Inicializar las gráficas al montar el componente
 onMounted(async () => {
-  console.log('📊 Montando DashboardCharts con datos:', {
-    users: props.users.length,
-    orders: props.orders.length,
-    restaurants: props.restaurants.length
-  });
-
-  // Esperar a que Vue renderice los elementos
   await nextTick();
   await initCharts();
 });

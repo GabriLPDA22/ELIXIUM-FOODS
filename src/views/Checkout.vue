@@ -1176,9 +1176,6 @@ const placeOrder = async () => {
     totalOfferSavings: cartTotals.value.totalOfferSavings,
     total: finalTotal.value
   };
-
-  console.log('💰 Totales capturados:', currentTotals);
-
   placingOrder.value = true;
   try {
     // Guardar en la variable temporal
@@ -1206,15 +1203,9 @@ const placeOrder = async () => {
         unitPrice: item.finalPrice // ✅ ARREGLO: Enviar UnitPrice como requiere el DTO
       }))
     };
-
-    console.log('🚀 PAYLOAD FINAL ENVIADO AL BACKEND:', JSON.stringify(orderRequest, null, 2));
-
     await orderStore.createOrder(orderRequest);
-
     // ✅ Vaciar el carrito después de confirmar el pedido exitosamente
     cartStore.clearCart();
-    console.log('✅ Carrito vaciado después de confirmar pedido');
-
     step.value = 4;
   } catch (err: any) {
     console.error('❌ Error al crear pedido:', err);
@@ -1271,7 +1262,6 @@ const clearTempOrderData = () => {
 watch(step, (newStep) => {
   if (newStep < 4 && tempOrderTotals.value) {
     clearTempOrderData();
-    console.log('🧹 Limpiando datos temporales del pedido');
   }
 });
 </script>

@@ -170,8 +170,6 @@ const initializeGoogleAuth = () => {
         text: 'signin_with'
       }
     );
-
-    console.log('✅ Google Sign-In inicializado correctamente');
   }
 };
 
@@ -180,8 +178,6 @@ const handleGoogleCallback = async (response: any) => {
   try {
     loading.value = true;
     error.value = '';
-    console.log('📨 Token de Google recibido');
-
     const loginSuccess = await authStore.loginWithGoogle(response.credential);
 
     if (loginSuccess) {
@@ -209,8 +205,6 @@ const handleLogin = async () => {
   try {
     loading.value = true;
     error.value = '';
-    console.log('🔐 Iniciando login normal');
-
     const success = await authStore.login({
       email: loginForm.email,
       password: loginForm.password
@@ -218,8 +212,6 @@ const handleLogin = async () => {
 
     if (success) {
       successMessage.value = '¡Login exitoso!';
-      console.log('✅ Login normal exitoso');
-
       setTimeout(() => {
         const returnUrl = route.query.returnUrl?.toString() || '/';
         router.replace(returnUrl); // Redirigir a home
@@ -238,11 +230,8 @@ const handleLogin = async () => {
 
 // Inicializar - MEJORADO
 onMounted(async () => {
-  console.log('🔄 Inicializando Login...');
-
   // Verificar si ya está autenticado
   if (authStore.isAuthenticated) {
-    console.log('👤 Usuario ya autenticado, redirigiendo...');
     const returnUrl = route.query.returnUrl?.toString() || '/';
     router.replace(returnUrl);
     return;
@@ -250,9 +239,7 @@ onMounted(async () => {
 
   try {
     // Cargar Google OAuth
-    console.log('📦 Cargando Google Sign-In...');
     await loadGoogleScript();
-
     // Dar tiempo para que se cargue
     setTimeout(() => {
       initializeGoogleAuth();
@@ -584,7 +571,7 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
       backdrop-filter: blur(20px) !important;
       border: 1px solid rgba(255, 255, 255, 0.15) !important;
-      box-shadow: 
+      box-shadow:
         0 4px 15px rgba(255, 200, 55, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
       transition: all 0.3s ease !important;
@@ -597,7 +584,7 @@ $login-card-bg: rgba(30, 41, 59, 0.95);
         transform: translateY(-2px) !important;
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)) !important;
         border-color: rgba(255, 200, 55, 0.3) !important;
-        box-shadow: 
+        box-shadow:
           0 8px 25px rgba(255, 200, 55, 0.2),
           0 4px 15px rgba(255, 128, 8, 0.15),
           inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;

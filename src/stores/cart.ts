@@ -99,13 +99,6 @@ export const useCartStore = defineStore('cart', () => {
       // Recalcular precios con ofertas
       await recalculateCartPrices()
 
-      console.log('✅ Producto agregado al carrito:', {
-        product: product.name,
-        quantity,
-        originalPrice,
-        totalItems: itemCount.value
-      })
-
     } catch (err: any) {
       error.value = err.message
       console.error('❌ Error agregando al carrito:', err)
@@ -129,12 +122,6 @@ export const useCartStore = defineStore('cart', () => {
       if (itemIndex !== -1) {
         items.value[itemIndex].quantity = newQuantity
         await recalculateCartPrices()
-
-        console.log('✅ Cantidad actualizada:', {
-          productId,
-          newQuantity,
-          totalItems: itemCount.value
-        })
       }
     } catch (err: any) {
       error.value = err.message
@@ -179,8 +166,6 @@ export const useCartStore = defineStore('cart', () => {
         } else {
           await recalculateCartPrices()
         }
-
-        console.log('✅ Producto eliminado del carrito:', removedItem.name)
       }
     } catch (err: any) {
       error.value = err.message
@@ -195,7 +180,6 @@ export const useCartStore = defineStore('cart', () => {
   function clearCart(): void {
     items.value = []
     clearRestaurantInfo()
-    console.log('✅ Carrito vaciado')
   }
 
   /**
@@ -204,7 +188,6 @@ export const useCartStore = defineStore('cart', () => {
   async function loadActiveOffers(restaurantIdParam: number): Promise<void> {
     try {
       activeOffers.value = await offerService.getActiveOffersByRestaurant(restaurantIdParam)
-      console.log('✅ Ofertas cargadas:', activeOffers.value.length)
     } catch (err: any) {
       console.error('❌ Error cargando ofertas:', err)
       activeOffers.value = []
@@ -245,13 +228,6 @@ export const useCartStore = defineStore('cart', () => {
           item.appliedOffer = undefined
         }
       }
-
-      console.log('✅ Precios recalculados:', {
-        original: originalSubtotal.value,
-        withOffers: subtotalWithOffers.value,
-        savings: totalSavings.value
-      })
-
     } catch (err: any) {
       console.error('❌ Error recalculando precios:', err)
       // En caso de error, usar precios originales

@@ -492,10 +492,7 @@ const cancelOrder = async (): Promise<void> => {
 
   try {
     cancelling.value = true;
-    console.log(`🔄 Iniciando cancelación del pedido ${order.value.id}...`);
-
     const success = await orderStore.cancelOrder(order.value.id);
-
     if (success) {
       // Actualizar el pedido localmente
       order.value.status = OrderStatus.CANCELLED;
