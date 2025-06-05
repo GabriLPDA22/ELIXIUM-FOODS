@@ -62,7 +62,6 @@
                     <span class="restaurant-hero__rating-score">
                       {{ safeNumber(restaurant.averageRating, 0).toFixed(1) }}
                     </span>
-                    <span class="restaurant-hero__rating-count">({{ safeNumber(restaurant.reviewCount, 0) }} opiniones)</span>
                   </div>
                 </div>
                 <div class="restaurant-hero__delivery-stats">
@@ -170,6 +169,21 @@
                         </div>
                       </div>
                       <p v-if="item.description" class="menu-item__description">{{ item.description }}</p>
+
+                      <!-- ✨ NUEVO: Botón para reseñar producto -->
+                      <div v-if="authStore.isAuthenticated" class="menu-item__review-actions">
+                        <button
+                          @click="openProductReview(item)"
+                          class="menu-item__review-btn"
+                          title="Reseñar producto"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Reseñar
+                        </button>
+                      </div>
+
                       <div class="menu-item__tags" v-if="item.isVegetarian || item.isSpicy || item.isNew">
                         <span v-if="item.isVegetarian" class="menu-item__tag menu-item__tag--vegetarian">🌱 Vegetariano</span>
                         <span v-if="item.isSpicy" class="menu-item__tag menu-item__tag--spicy">🌶️ Picante</span>
@@ -343,6 +357,17 @@
           </div>
         </div>
       </section>
+
+      <!-- ✨ SECCIÓN DE RESEÑAS CON KEY PARA REFRESCAR -->
+      <section class="restaurant-reviews">
+        <div class="container">
+          <ReviewsSection
+            :key="`reviews-${reviewsKey}`"
+            :restaurant-id="restaurantId || 0"
+            title="del restaurante"
+          />
+        </div>
+      </section>
     </template>
 
     <div v-else-if="!loading && !restaurant && !error" class="not-found">
@@ -357,6 +382,24 @@
       <p class="not-found__text">El restaurante que buscas no existe o ya no está disponible</p>
       <router-link to="/" class="not-found__button">Volver a la página principal</router-link>
     </div>
+
+    <!-- ✨ FLOATING REVIEW BUTTON -->
+    <FloatingReviewButton
+      v-if="restaurant && authStore.isAuthenticated"
+      :restaurant-id="restaurantId || 0"
+      :restaurant-name="restaurant.name"
+      @review-created="onReviewCreated"
+    />
+
+    <!-- ✨ MODAL PARA RESEÑAR PRODUCTOS -->
+    <ReviewModal
+      v-if="showProductReviewModal && selectedProduct"
+      :restaurant-id="restaurantId || 0"
+      :product-id="selectedProduct.id"
+      :title="`Reseñar ${selectedProduct.name}`"
+      @success="onProductReviewSuccess"
+      @cancel="closeProductReviewModal"
+    />
   </div>
 </template>
 
@@ -367,6 +410,10 @@ import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuI
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import ReviewsSection from '@/components/reviews/ReviewsSection.vue'
+import ReviewsSummary from '@/components/reviews/ReviewsSummary.vue'
+import FloatingReviewButton from '@/components/reviews/FloatingReviewButton.vue'
+import ReviewModal from '@/components/reviews/ReviewModal.vue'
 
 interface ProductOffer {
   id: number
@@ -442,6 +489,11 @@ const selectedCategoryFilter = ref<string | number>('all')
 const activeOffers = ref<ProductOffer[]>([])
 const localCartItems = ref<LocalCartItem[]>([])
 
+// ✨ NUEVAS VARIABLES PARA RESEÑAS DE PRODUCTOS
+const showProductReviewModal = ref(false)
+const selectedProduct = ref<MenuItem | null>(null)
+const reviewsKey = ref(0) // Para forzar refresh de reseñas
+
 const safeNumber = (value: any, defaultValue: number = 0): number => {
   if (value === null || value === undefined || value === '') {
     return defaultValue
@@ -509,20 +561,20 @@ const cartTotals = computed(() => {
     (sum, item) => sum + item.originalPrice * item.quantity,
     0
   )
-  
+
   // 🔄 Redondear ahorros hacia ARRIBA para beneficiar al cliente
   const rawSavings = originalSubtotal - subtotal
   const totalSavings = rawSavings > 0 ? Math.ceil(rawSavings * 100) / 100 : 0
-  
+
   const deliveryFeeValue = restaurant.value ? safeNumber(restaurant.value.deliveryFee) : 0
   const total = subtotal + deliveryFeeValue
-  
-  return { 
-    subtotal, 
-    originalSubtotal, 
-    totalSavings, 
-    deliveryFee: deliveryFeeValue, 
-    total 
+
+  return {
+    subtotal,
+    originalSubtotal,
+    totalSavings,
+    deliveryFee: deliveryFeeValue,
+    total
   }
 })
 
@@ -533,6 +585,28 @@ const getSelectedCategoryName = () => {
 
 const filterByCategory = (categoryId: string | number) => {
   selectedCategoryFilter.value = categoryId
+}
+
+// ✨ NUEVAS FUNCIONES PARA RESEÑAS DE PRODUCTOS
+const openProductReview = (product: MenuItem) => {
+  selectedProduct.value = product
+  showProductReviewModal.value = true
+}
+
+const closeProductReviewModal = () => {
+  showProductReviewModal.value = false
+  selectedProduct.value = null
+}
+
+const onProductReviewSuccess = () => {
+  closeProductReviewModal()
+  // Incrementar reviewsKey para refrescar la sección de reseñas
+  reviewsKey.value++
+}
+
+const onReviewCreated = () => {
+  // Incrementar reviewsKey para refrescar la sección de reseñas
+  reviewsKey.value++
 }
 
 const fetchActiveOffers = async (): Promise<void> => {
@@ -664,20 +738,20 @@ const recalculateCartPrices = (): void => {
 }
 
 const addToCart = async (item: MenuItem): Promise<void> => {
+  const toast = window.useToast()
+
   if (!item || !item.id) return
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert(
-      `No puedes agregar productos al carrito porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`
-    )
+    toast.error(`No puedes agregar productos al carrito porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`)
     return
   }
   const realPrice = getProductPrice(item)
   if (realPrice <= 0) {
-    alert('Este producto no tiene un precio válido o no está disponible.')
+    toast.error('Este producto no tiene un precio válido o no está disponible.')
     return
   }
   if (item.isAvailable === false) {
-    alert('Este producto no está disponible en este momento.')
+    toast.error('Este producto no está disponible en este momento.')
     return
   }
   if (cartStore.restaurantId && cartStore.restaurantId !== restaurantId.value) {
@@ -745,8 +819,10 @@ const syncToStore = (): void => {
 }
 
 const incrementItem = (itemId: number): void => {
+  const toast = window.useToast()
+
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert('No puedes modificar el carrito mientras el restaurante está cerrado.')
+    toast.error('No puedes modificar el carrito mientras el restaurante está cerrado.')
     return
   }
   const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
@@ -758,8 +834,10 @@ const incrementItem = (itemId: number): void => {
 }
 
 const decrementItem = (itemId: number): void => {
+  const toast = window.useToast()
+
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert('No puedes modificar el carrito mientras el restaurante está cerrado.')
+    toast.error('No puedes modificar el carrito mientras el restaurante está cerrado.')
     return
   }
   const itemIndex = localCartItems.value.findIndex(item => item.id === itemId)
@@ -784,24 +862,30 @@ const removeItem = (itemId: number): void => {
 }
 
 const clearCart = (): void => {
-  if (confirm('¿Estás seguro de que deseas vaciar tu carrito?')) {
-    localCartItems.value = []
-    cartStore.clearCart()
-  }
+  const toast = window.useToast()
+
+  // Eliminamos la confirmación de confirm(...) y vaciamos el carrito directamente:
+  localCartItems.value = []
+  cartStore.clearCart()
+
+  // Mostramos un toast de éxito:
+  toast.success('Carrito vaciado correctamente')
 }
 
 const proceedToCheckout = (): void => {
+  const toast = window.useToast()
+
   if (!authStore.isAuthenticated) {
-    alert('Por favor, inicia sesión para continuar con tu pedido.')
+    toast.error('Por favor, inicia sesión para continuar con tu pedido.')
     router.push('/login')
     return
   }
   if (localCartItems.value.length === 0) {
-    alert('Tu carrito está vacío. Agrega productos antes de continuar.')
+    toast.warning('Tu carrito está vacío. Agrega productos antes de continuar.')
     return
   }
   if (!restaurantStatus.value.isCurrentlyOpen) {
-    alert(
+    toast.error(
       `No puedes continuar con el pedido porque el restaurante está cerrado. ${restaurantStatus.value.statusMessage}`
     )
     return
@@ -831,8 +915,8 @@ watch(
 onMounted(async () => {
   await fetchRestaurantData()
 })
-</script>
 
+</script>
 
 <style lang="scss" scoped>
 // Variables elegantes
@@ -870,6 +954,67 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
 .restaurant-detail-page {
   background: linear-gradient(to bottom, $white, $light-gray);
   min-height: 100vh;
+}
+
+// ✨ NUEVA SECCIÓN DE RESEÑAS ✨
+.restaurant-reviews {
+  padding: 5rem 0;
+  background: linear-gradient(135deg,
+    rgba(248, 250, 252, 0.8) 0%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: $primary-gradient;
+  }
+
+  @media (max-width: 768px) {
+    padding: 3rem 0;
+  }
+}
+
+// ✨ NUEVOS ESTILOS PARA BOTONES DE RESEÑA DE PRODUCTOS
+.menu-item {
+  &__review-actions {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba($medium-gray, 0.5);
+  }
+
+  &__review-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: 1px solid $medium-gray;
+    color: $text-secondary;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: $transition;
+
+    &:hover {
+      background: $primary-gradient;
+      color: $white;
+      border-color: transparent;
+      transform: translateY(-1px);
+      box-shadow: $shadow-soft;
+    }
+
+    svg {
+      transition: $transition;
+    }
+  }
 }
 
 // Loading container elegante
@@ -2090,6 +2235,10 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
     justify-content: flex-start;
     overflow-x: auto;
     padding: 0 1rem;
+  }
+
+  .restaurant-reviews {
+    padding: 3rem 0;
   }
 }
 </style>

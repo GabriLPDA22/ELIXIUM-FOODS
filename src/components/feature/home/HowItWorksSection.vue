@@ -65,7 +65,7 @@ const steps = [
 
 <style lang="scss" scoped>
 .how-it-works {
-  padding: 7rem 0;
+  padding: 4rem 0;
   background: linear-gradient(to bottom, #ffffff, #f1f5f9);
   position: relative;
   overflow: hidden;

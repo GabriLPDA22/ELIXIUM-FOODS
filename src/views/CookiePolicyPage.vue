@@ -155,7 +155,7 @@
     text-decoration: underline;
     &:hover {
       text-decoration: none;
-      color: var(--primary-dark, darken(#FF416C, 10%));
+      color: #FF416C;
     }
   }
 

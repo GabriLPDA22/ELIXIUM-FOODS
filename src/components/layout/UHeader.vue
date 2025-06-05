@@ -223,7 +223,7 @@
                                     {{ userInitials }}
                                 </div>
                             </div>
-                            <div class="u-header__dropdown-info">
+                            <div class="u-header__dropdown-info" style="display: flex; flex-direction: column;">
                                 <span class="u-header__user-dropdown-greeting">Hola, {{ userFirstName }}</span>
                                 <span class="u-header__user-dropdown-email">{{ userEmail }}</span>
                                 <span v-if="isGoogleUser" class="u-header__user-dropdown-badge">
@@ -724,16 +724,26 @@ onUnmounted(() => {
             left: -320px;
             width: 300px;
             height: 100vh;
+            height: 100dvh; // Mejor soporte para dispositivos móviles
             background-color: white;
             flex-direction: column;
             align-items: flex-start;
-            gap: 1rem;
+            gap: 0;
             padding: 1.5rem;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem); // Safe area para móviles
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
             z-index: 1010;
             transition: left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
             margin: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch; // Scroll suave en iOS
+
+            // Asegurar que el contenido ocupe toda la altura
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-height: 100dvh;
+
             &--active {
                 left: 0;
             }
@@ -756,6 +766,7 @@ onUnmounted(() => {
             cursor: pointer;
             color: #64748b;
             transition: all 0.2s ease;
+            z-index: 1011;
             &:hover {
                 background-color: #e2e8f0;
                 color: #1e293b;
@@ -785,6 +796,7 @@ onUnmounted(() => {
             align-items: flex-start;
             width: 100%;
             gap: 0;
+            flex: 0 0 auto; // No crecer
         }
     }
 
@@ -831,9 +843,13 @@ onUnmounted(() => {
             display: flex;
             flex-direction: column;
             width: 100%;
-            margin-top: auto;
+            margin-top: auto; // Empujar al final
             padding-top: 1.5rem;
             border-top: 1px solid #f1f5f9;
+            flex-shrink: 0; // No encogerse
+            min-height: auto;
+            position: relative;
+            background: white; // Asegurar fondo
         }
     }
 
@@ -852,6 +868,7 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
+        width: 100%;
     }
 
     &__nav-button {
@@ -868,6 +885,11 @@ onUnmounted(() => {
         font-family: inherit;
         text-decoration: none;
         text-align: center;
+        display: block; // Asegurar que se muestre
+        box-sizing: border-box;
+        min-height: 48px; // Altura mínima para móviles
+        line-height: 1.2;
+
         &:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(#FF416C, 0.3);
@@ -879,6 +901,13 @@ onUnmounted(() => {
             &:hover {
                 background-color: rgba(#FF416C, 0.05);
             }
+        }
+
+        @media (max-width: 992px) {
+            // Asegurar visibilidad en móviles
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
         }
     }
 
@@ -1450,6 +1479,41 @@ onUnmounted(() => {
             svg {
                 stroke: #ef4444;
                 flex-shrink: 0;
+            }
+        }
+    }
+
+    // Fix específico para dispositivos Huawei y otros Android modernos
+    @media (max-width: 992px) and (min-height: 700px) {
+        &__navigation {
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+    }
+
+    // Mejor manejo del safe area para diferentes dispositivos
+    @supports (padding: max(0px)) {
+        &__navigation {
+            @media (max-width: 992px) {
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+                height: 100vh;
+                height: 100dvh;
+            }
+        }
+    }
+
+    // Fix de emergencia para Huawei y dispositivos problemáticos
+    @media (max-width: 992px) {
+        &__nav-footer {
+            // Asegurar que siempre sea visible
+            position: sticky !important;
+            bottom: 0 !important;
+            background: white !important;
+            z-index: 1011 !important;
+
+            // Para dispositivos Huawei específicamente
+            @supports (-webkit-touch-callout: none) {
+                position: -webkit-sticky !important;
             }
         }
     }

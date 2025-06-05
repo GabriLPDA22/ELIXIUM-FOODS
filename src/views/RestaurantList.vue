@@ -37,14 +37,6 @@
       <div class="container">
         <!-- Solo mostrar flechas en desktop -->
         <div class="categories-scroll">
-          <button v-if="showLeftScroll && !isMobile" @click="scrollCategories('left')"
-            class="categories-scroll__arrow categories-scroll__arrow--left" aria-label="Ver categorías anteriores">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-
           <div class="categories-scroll__container" ref="categoriesContainer">
             <div v-for="category in categories" :key="category.id" class="category-item"
               :class="{ 'category-item--active': selectedCategory === category.id }"
@@ -61,14 +53,6 @@
               <span class="category-item__name">{{ category.name }}</span>
             </div>
           </div>
-
-          <button v-if="showRightScroll && !isMobile" @click="scrollCategories('right')"
-            class="categories-scroll__arrow categories-scroll__arrow--right" aria-label="Ver más categorías">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
         </div>
       </div>
     </section>
@@ -86,8 +70,8 @@
                 <option value="delivery">Tiempo de Entrega</option>
                 <option value="price">Precio: Bajo a Alto</option>
               </select>
-              <svg class="filter-select__arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg class="filter-select__arrow" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
@@ -103,12 +87,8 @@
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
               </div>
-              <input
-                type="text"
-                v-model="searchQuery"
-                placeholder="Buscar restaurantes..."
-                class="filter-search__input"
-              >
+              <input type="text" v-model="searchQuery" placeholder="Buscar restaurantes..."
+                class="filter-search__input">
               <button v-if="searchQuery" @click="searchQuery = ''" class="filter-search__clear">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -157,8 +137,8 @@
             <div class="restaurant-grid">
               <!-- Restaurant card actualizada con estado -->
               <div v-for="restaurant in paginatedRestaurants" :key="restaurant.id" class="restaurant-card"
-                   :class="{ 'restaurant-card--closed': !restaurant.isCurrentlyOpen }"
-                   @click="goToRestaurant(restaurant.id)">
+                :class="{ 'restaurant-card--closed': !restaurant.isCurrentlyOpen }"
+                @click="goToRestaurant(restaurant.id)">
 
                 <!-- Imagen del restaurante con overlay si está cerrado -->
                 <div class="restaurant-card__image-wrapper">
@@ -167,7 +147,8 @@
                   <!-- Overlay para restaurantes cerrados -->
                   <div v-if="!restaurant.isCurrentlyOpen" class="restaurant-card__closed-overlay">
                     <div class="restaurant-card__closed-badge">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="15" y1="9" x2="9" y2="15"></line>
                         <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -182,13 +163,15 @@
                   <div class="restaurant-card__badges">
                     <!-- Status badge prominente -->
                     <span v-if="restaurant.isCurrentlyOpen" class="restaurant-card__badge restaurant-card__badge--open">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                       Abierto
                     </span>
                     <span v-else class="restaurant-card__badge restaurant-card__badge--closed">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="15" y1="9" x2="9" y2="15"></line>
                         <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -202,7 +185,8 @@
                       Nuevo
                     </span>
                     <span v-if="isFastDelivery(restaurant)" class="restaurant-card__badge restaurant-card__badge--fast">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                       </svg>
                       Rápido
@@ -222,12 +206,16 @@
                 <!-- Content del restaurante -->
                 <div class="restaurant-card__content">
                   <div class="restaurant-card__header">
-                    <h3 class="restaurant-card__name" :class="{ 'restaurant-card__name--closed': !restaurant.isCurrentlyOpen }">
+                    <h3 class="restaurant-card__name"
+                      :class="{ 'restaurant-card__name--closed': !restaurant.isCurrentlyOpen }">
                       {{ restaurant.name }}
                     </h3>
                     <div class="restaurant-card__rating">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFCC00" stroke="#FFCC00" stroke-width="0.5">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFCC00" stroke="#FFCC00"
+                        stroke-width="0.5">
+                        <polygon
+                          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
                       </svg>
                       <span>{{ restaurant.averageRating }}</span>
                       <span class="restaurant-card__reviews">({{ restaurant.reviewCount || 0 }})</span>
@@ -236,7 +224,8 @@
 
                   <!-- Status message -->
                   <div class="restaurant-card__status">
-                    <span v-if="restaurant.isCurrentlyOpen" class="restaurant-card__status-text restaurant-card__status-text--open">
+                    <span v-if="restaurant.isCurrentlyOpen"
+                      class="restaurant-card__status-text restaurant-card__status-text--open">
                       {{ restaurant.statusMessage }}
                     </span>
                     <span v-else class="restaurant-card__status-text restaurant-card__status-text--closed">
@@ -254,7 +243,8 @@
                   <!-- Delivery info existente -->
                   <div class="restaurant-card__delivery-info">
                     <div v-if="restaurant.deliveryFee === 0" class="restaurant-card__free-delivery">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                       Envío gratis
@@ -270,11 +260,8 @@
 
           <!-- Paginación -->
           <div v-if="totalPages > 1" class="pagination">
-            <button
-              @click="previousPage"
-              :disabled="currentPage === 1"
-              class="pagination__button pagination__button--prev"
-            >
+            <button @click="previousPage" :disabled="currentPage === 1"
+              class="pagination__button pagination__button--prev">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
@@ -284,22 +271,16 @@
 
             <div class="pagination__pages">
               <template v-for="page in getVisiblePages()" :key="page">
-                <button
-                  v-if="page !== '...'"
-                  @click="goToPage(page)"
-                  :class="['pagination__page', { 'pagination__page--active': page === currentPage }]"
-                >
+                <button v-if="page !== '...'" @click="goToPage(page)"
+                  :class="['pagination__page', { 'pagination__page--active': page === currentPage }]">
                   {{ page }}
                 </button>
                 <span v-else class="pagination__dots">...</span>
               </template>
             </div>
 
-            <button
-              @click="nextPage"
-              :disabled="currentPage === totalPages"
-              class="pagination__button pagination__button--next"
-            >
+            <button @click="nextPage" :disabled="currentPage === totalPages"
+              class="pagination__button pagination__button--next">
               Siguiente
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -457,7 +438,7 @@ const getVisiblePages = () => {
   const current = currentPage.value;
   const delta = 2;
 
-  if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
 
   const pages = [];
   pages.push(1);
@@ -615,12 +596,41 @@ watch(() => route.query.category, (newCategory) => {
     opacity: 0.15;
     animation: float 15s infinite ease-in-out;
 
-    &--1 { top: 10%; left: 5%; animation-delay: 0s; }
-    &--2 { top: 70%; left: 10%; animation-delay: 2s; }
-    &--3 { top: 20%; left: 85%; animation-delay: 4s; }
-    &--4 { top: 80%; left: 80%; animation-delay: 6s; }
-    &--5 { top: 30%; left: 50%; animation-delay: 8s; }
-    &--6 { top: 60%; left: 20%; animation-delay: 10s; }
+    &--1 {
+      top: 10%;
+      left: 5%;
+      animation-delay: 0s;
+    }
+
+    &--2 {
+      top: 70%;
+      left: 10%;
+      animation-delay: 2s;
+    }
+
+    &--3 {
+      top: 20%;
+      left: 85%;
+      animation-delay: 4s;
+    }
+
+    &--4 {
+      top: 80%;
+      left: 80%;
+      animation-delay: 6s;
+    }
+
+    &--5 {
+      top: 30%;
+      left: 50%;
+      animation-delay: 8s;
+    }
+
+    &--6 {
+      top: 60%;
+      left: 20%;
+      animation-delay: 10s;
+    }
 
     @media (max-width: 768px) {
       font-size: 1.2rem;
@@ -733,8 +743,15 @@ watch(() => route.query.category, (newCategory) => {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(3deg); }
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-15px) rotate(3deg);
+  }
 }
 
 // Categories section - SIN STICKY
@@ -1117,12 +1134,11 @@ watch(() => route.query.category, (newCategory) => {
     position: absolute;
     inset: -1px;
     background: linear-gradient(45deg,
-      transparent 30%,
-      rgba(255, 65, 108, 0.1) 40%,
-      rgba(255, 75, 43, 0.15) 50%,
-      rgba(255, 65, 108, 0.1) 60%,
-      transparent 70%
-    );
+        transparent 30%,
+        rgba(255, 65, 108, 0.1) 40%,
+        rgba(255, 75, 43, 0.15) 50%,
+        rgba(255, 65, 108, 0.1) 60%,
+        transparent 70%);
     border-radius: 16px;
     opacity: 0;
     transition: opacity 0.6s ease;
@@ -1136,10 +1152,9 @@ watch(() => route.query.category, (newCategory) => {
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      transparent 50%,
-      rgba(255, 65, 108, 0.05) 100%
-    );
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 50%,
+        rgba(255, 65, 108, 0.05) 100%);
     border-radius: 15px;
     opacity: 0;
     transition: opacity 0.4s ease;
@@ -1200,9 +1215,9 @@ watch(() => route.query.category, (newCategory) => {
     position: absolute;
     inset: 0;
     background: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0.1) 50%,
-      rgba(0, 0, 0, 0.2) 100%);
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.1) 50%,
+        rgba(0, 0, 0, 0.2) 100%);
     opacity: 0;
     transition: opacity 0.4s ease;
   }
@@ -1421,6 +1436,7 @@ watch(() => route.query.category, (newCategory) => {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -1428,9 +1444,12 @@ watch(() => route.query.category, (newCategory) => {
 
 // Animación para estados cerrados
 @keyframes pulse-closed {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
   }

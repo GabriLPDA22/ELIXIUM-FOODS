@@ -1,20 +1,20 @@
-<!--src/components/profile/UserReviewsTab.vue--> 
+<!--src/components/profile/UserReviewsTab.vue-->
 <template>
   <div class="user-reviews-tab">
     <!-- Header -->
-    <div class="user-reviews-tab__header flex items-center justify-between mb-6">
-      <div>
-        <h2 class="text-2xl font-bold text-gray-900">Mis Reseñas</h2>
-        <p class="text-gray-600 mt-1">
+    <div class="user-reviews-tab__header mb-6">
+      <div class="mb-4 lg:mb-0">
+        <h2 class="text-xl md:text-2xl font-bold text-gray-900">Mis Reseñas</h2>
+        <p class="text-sm md:text-base text-gray-600 mt-1">
           Has escrito {{ userReviews.length }} reseña{{ userReviews.length !== 1 ? 's' : '' }}
         </p>
       </div>
 
       <!-- Filtros -->
-      <div class="flex items-center gap-4">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <select
           v-model="filters.sortBy"
-          class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          class="w-full sm:w-auto px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         >
           <option value="newest">Más recientes</option>
           <option value="oldest">Más antiguas</option>
@@ -24,7 +24,7 @@
 
         <select
           v-model="filters.rating"
-          class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          class="w-full sm:w-auto px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         >
           <option value="">Todas las calificaciones</option>
           <option value="5">5 estrellas</option>
@@ -39,91 +39,91 @@
     <!-- Loading State -->
     <div v-if="loading" class="space-y-4">
       <div v-for="i in 3" :key="i" class="animate-pulse">
-        <div class="bg-gray-200 h-32 rounded-lg"></div>
+        <div class="bg-gray-200 h-24 md:h-32 rounded-lg"></div>
       </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center py-12">
-      <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div v-else-if="error" class="text-center py-8 md:py-12 px-4">
+      <svg class="w-10 h-10 md:w-12 md:h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-gray-600 mb-4">{{ error }}</p>
+      <p class="text-sm md:text-base text-gray-600 mb-4">{{ error }}</p>
       <button
         @click="loadUserReviews"
-        class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        class="px-4 py-2 text-sm md:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         Reintentar
       </button>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="filteredReviews.length === 0" class="text-center py-12">
-      <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div v-else-if="filteredReviews.length === 0" class="text-center py-8 md:py-12 px-4">
+      <svg class="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
       </svg>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">
+      <h3 class="text-base md:text-lg font-medium text-gray-900 mb-2">
         {{ userReviews.length === 0 ? 'Aún no has escrito reseñas' : 'No se encontraron reseñas' }}
       </h3>
-      <p class="text-gray-600 mb-6">
-        {{ userReviews.length === 0 
-          ? 'Comparte tu experiencia con otros usuarios escribiendo reseñas de restaurantes y productos que hayas probado.' 
+      <p class="text-sm md:text-base text-gray-600 mb-6 max-w-md mx-auto">
+        {{ userReviews.length === 0
+          ? 'Comparte tu experiencia con otros usuarios escribiendo reseñas de restaurantes y productos que hayas probado.'
           : 'Intenta cambiar los filtros para ver más reseñas.'
         }}
       </p>
       <router-link
         v-if="userReviews.length === 0"
         to="/restaurants"
-        class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        class="inline-flex items-center px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         Explorar restaurantes
       </router-link>
     </div>
 
     <!-- Reviews List -->
-    <div v-else class="space-y-6">
+    <div v-else class="space-y-4 md:space-y-6">
       <!-- Stats Summary -->
-      <div class="user-reviews-tab__stats grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-4 rounded-lg border border-gray-200">
-          <div class="text-2xl font-bold text-gray-900">{{ userReviews.length }}</div>
-          <div class="text-sm text-gray-600">Total reseñas</div>
+      <div class="user-reviews-tab__stats grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+        <div class="bg-white p-3 md:p-4 rounded-lg border border-gray-200">
+          <div class="text-xl md:text-2xl font-bold text-gray-900">{{ userReviews.length }}</div>
+          <div class="text-xs md:text-sm text-gray-600">Total reseñas</div>
         </div>
-        
-        <div class="bg-white p-4 rounded-lg border border-gray-200">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl font-bold text-gray-900">{{ averageUserRating.toFixed(1) }}</span>
+
+        <div class="bg-white p-3 md:p-4 rounded-lg border border-gray-200">
+          <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+            <span class="text-xl md:text-2xl font-bold text-gray-900">{{ averageUserRating.toFixed(1) }}</span>
             <RatingStars :rating="averageUserRating" size="small" />
           </div>
-          <div class="text-sm text-gray-600">Rating promedio</div>
+          <div class="text-xs md:text-sm text-gray-600">Rating promedio</div>
         </div>
-        
-        <div class="bg-white p-4 rounded-lg border border-gray-200">
-          <div class="text-2xl font-bold text-gray-900">{{ totalHelpfulVotes }}</div>
-          <div class="text-sm text-gray-600">Votos útiles</div>
+
+        <div class="bg-white p-3 md:p-4 rounded-lg border border-gray-200">
+          <div class="text-xl md:text-2xl font-bold text-gray-900">{{ totalHelpfulVotes }}</div>
+          <div class="text-xs md:text-sm text-gray-600">Votos útiles</div>
         </div>
-        
-        <div class="bg-white p-4 rounded-lg border border-gray-200">
-          <div class="text-2xl font-bold text-gray-900">{{ verifiedReviewsCount }}</div>
-          <div class="text-sm text-gray-600">Compras verificadas</div>
+
+        <div class="bg-white p-3 md:p-4 rounded-lg border border-gray-200">
+          <div class="text-xl md:text-2xl font-bold text-gray-900">{{ verifiedReviewsCount }}</div>
+          <div class="text-xs md:text-sm text-gray-600">Compras verificadas</div>
         </div>
       </div>
 
       <!-- Reviews -->
-      <div class="space-y-4">
+      <div class="space-y-3 md:space-y-4">
         <UserReviewCard
           v-for="review in filteredReviews"
           :key="review.id"
           :review="review"
           @edit="editReview"
-          @delete="deleteReview"
+          @delete="showDeleteDialog"
         />
       </div>
 
       <!-- Pagination -->
-      <div v-if="filteredReviews.length < userReviews.length" class="text-center mt-8">
+      <div v-if="filteredReviews.length < userReviews.length" class="text-center mt-6 md:mt-8">
         <button
           @click="showMore"
-          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 md:px-6 md:py-2 text-sm md:text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Ver más reseñas
         </button>
@@ -132,7 +132,7 @@
 
     <!-- Edit Review Modal -->
     <div v-if="showEditModal && editingReview" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <ReviewForm
           :restaurant-id="editingReview.restaurantId"
           :product-id="editingReview.productId"
@@ -145,22 +145,22 @@
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Eliminar reseña</h3>
-        <p class="text-gray-600 mb-6">
+      <div class="bg-white rounded-lg p-4 md:p-6 w-full max-w-md">
+        <h3 class="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Eliminar reseña</h3>
+        <p class="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
           ¿Estás seguro de que quieres eliminar esta reseña? Esta acción no se puede deshacer.
         </p>
-        <div class="flex justify-end gap-3">
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
           <button
             @click="showDeleteModal = false"
-            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            class="w-full sm:w-auto px-4 py-2 text-sm md:text-base text-gray-600 hover:text-gray-800 transition-colors border border-gray-300 rounded-lg sm:border-none"
           >
             Cancelar
           </button>
           <button
             @click="confirmDelete"
             :disabled="loading"
-            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+            class="w-full sm:w-auto px-4 py-2 text-sm md:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
             Eliminar
           </button>
@@ -185,7 +185,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { getUserReviews, deleteReview, loading, error } = useReviews()
+const { getUserReviews, deleteReview: deleteReviewFromAPI, loading, error } = useReviews()
 
 const userReviews = ref<Review[]>([])
 const editingReview = ref<Review | null>(null)
@@ -203,9 +203,9 @@ const filteredReviews = computed(() => {
   let filtered = reviewUtils.filterReviews(userReviews.value, {
     rating: filters.rating ? Number(filters.rating) : undefined
   })
-  
+
   filtered = reviewUtils.sortReviews(filtered, filters.sortBy || 'newest')
-  
+
   return filtered.slice(0, displayLimit.value)
 })
 
@@ -225,7 +225,7 @@ const verifiedReviewsCount = computed(() => {
 
 const loadUserReviews = async () => {
   if (!props.userId) return
-  
+
   try {
     const reviews = await getUserReviews(props.userId)
     userReviews.value = reviews
@@ -239,16 +239,16 @@ const editReview = (review: Review) => {
   showEditModal.value = true
 }
 
-const deleteReview = (review: Review) => {
+const showDeleteDialog = (review: Review) => {
   reviewToDelete.value = review
   showDeleteModal.value = true
 }
 
 const confirmDelete = async () => {
   if (!reviewToDelete.value) return
-  
+
   try {
-    await deleteReview(reviewToDelete.value.id)
+    await deleteReviewFromAPI(reviewToDelete.value.id)
     userReviews.value = userReviews.value.filter(r => r.id !== reviewToDelete.value!.id)
     showDeleteModal.value = false
     reviewToDelete.value = null
@@ -259,7 +259,7 @@ const confirmDelete = async () => {
 
 const onEditSuccess = () => {
   closeEditModal()
-  loadUserReviews() // Reload reviews
+  loadUserReviews()
 }
 
 const closeEditModal = () => {
@@ -271,7 +271,6 @@ const showMore = () => {
   displayLimit.value += 10
 }
 
-// Watch filters to reset display limit
 watch(filters, () => {
   displayLimit.value = 10
 }, { deep: true })

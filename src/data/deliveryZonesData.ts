@@ -47,8 +47,7 @@ export const cityInfo: CityInfo[] = [
     totalRestaurants: 280,
     featured: true,
     status: 'active',
-    // Basílica del Pilar de Zaragoza - imagen optimizada
-    imageUrl: 'https://images.unsplash.com/photo-1544636331-5de4b8f2aa91?w=1200&h=800&fit=crop&auto=format&q=80',
+    imageUrl: 'https://media.istockphoto.com/id/1270026219/de/foto/alfonso-i-stra%C3%9Fe-in-saragossa-spanien.jpg?b=1&s=612x612&w=0&k=20&c=G8PpPV0v3fuIyofENP65OU9GcqbgdcSXvTjwPJ6VbWs=',
     description: 'Capital maña con sabores únicos y tradición gastronómica milenaria'
   },
   {
@@ -60,8 +59,7 @@ export const cityInfo: CityInfo[] = [
     featured: false,
     status: 'coming_soon',
     launchDate: '2025-09-01',
-    // Catedral de Huesca - imagen optimizada
-    imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1200&h=800&fit=crop&auto=format&q=80',
+    imageUrl: 'https://media.istockphoto.com/id/462434593/es/foto/catedral-de-saint-mary-huesca-comunidad-aut%C3%B3noma-de-arag%C3%B3n.jpg?b=1&s=612x612&w=0&k=20&c=qQGDPkuk6A62yhiBOsqojCcXWuI1BtHtDM6hqOdysYQ=',
     description: 'Próximamente en la bella ciudad altoaragonesa'
   },
   {
@@ -73,8 +71,7 @@ export const cityInfo: CityInfo[] = [
     featured: false,
     status: 'coming_soon',
     launchDate: '2025-11-01',
-    // Torre mudéjar de Teruel - imagen optimizada
-    imageUrl: 'https://images.unsplash.com/photo-1566062529965-7eb8bb2e2ce0?w=1200&h=800&fit=crop&auto=format&q=80',
+    imageUrl: 'https://media.istockphoto.com/id/1007255148/es/foto/valderrobres-en-puesta-de-sol-reflejada-en-el-r%C3%ADo.jpg?b=1&s=612x612&w=0&k=20&c=BX6WlIoeqWGIdlkUXTw-njtzQloI7O_sIJLXHJxdziU=',
     description: 'Jamón, ternasco y tradición mudéjar próximamente'
   },
   {
@@ -86,7 +83,7 @@ export const cityInfo: CityInfo[] = [
     featured: false,
     status: 'planned',
     // Casco histórico de Pamplona - imagen optimizada
-    imageUrl: 'https://images.unsplash.com/photo-1590859808308-3d2d9d50b1e5?w=1200&h=800&fit=crop&auto=format&q=80',
+    imageUrl: 'https://media.istockphoto.com/id/1325961586/es/foto/calle-estafeta-en-pamplona-espa%C3%B1a.jpg?b=1&s=612x612&w=0&k=20&c=toaCtAWjAXfQCX9AzgyhxtRlatk95rdClWGy8Jxe64M=',
     description: 'Expansión planificada a la capital navarra'
   },
   {
@@ -98,7 +95,7 @@ export const cityInfo: CityInfo[] = [
     featured: false,
     status: 'planned',
     // Calle Laurel de Logroño (zona de pinchos) - imagen optimizada
-    imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&auto=format&q=80',
+    imageUrl: 'https://media.istockphoto.com/id/939317686/es/foto/calle-de-logro%C3%B1o-espa%C3%B1a.jpg?b=1&s=612x612&w=0&k=20&c=3re5yHQmKSTeBiBdUtzEfLSGYoZamidusufK7BRtmv0=',
     description: 'Capital del vino, próxima en nuestros planes'
   }
 ];

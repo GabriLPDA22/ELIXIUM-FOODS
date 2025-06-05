@@ -1,125 +1,94 @@
 <!--src/components/reviews/ReviewCard.vue-->
 <template>
-  <article class="review-card bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+  <div class="review-card">
     <!-- Header -->
-    <header class="review-card__header flex items-start justify-between mb-4">
-      <div class="review-card__user flex items-center gap-3">
-        <img 
-          :src="review.userAvatarUrl || '/default-avatar.png'" 
-          :alt="review.userName"
-          class="w-10 h-10 rounded-full object-cover"
-          @error="onImageError"
-        />
-        <div>
-          <h3 class="review-card__user-name font-semibold text-gray-900">
+    <div class="review-card__header">
+      <div class="review-card__user">
+        <div class="review-card__avatar">
+          <img
+            v-if="review.userAvatarUrl"
+            :src="review.userAvatarUrl"
+            :alt="review.userName"
+          >
+          <div v-else class="review-card__avatar-placeholder">
+            {{ getInitials(review.userName) }}
+          </div>
+        </div>
+        <div class="review-card__user-info">
+          <h3 class="review-card__user-name">
             {{ review.userName }}
+            <svg v-if="review.isVerifiedPurchase" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
           </h3>
-          <div class="flex items-center gap-2">
+          <div class="review-card__meta">
             <RatingStars :rating="review.rating" size="small" />
-            <span class="text-sm text-gray-500">{{ review.timeAgo }}</span>
-            <span 
-              v-if="review.isVerifiedPurchase" 
-              class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full"
-            >
-              ✓ Compra verificada
-            </span>
+            <span class="review-card__time">{{ review.timeAgo || formatDate(review.createdAt) }}</span>
+          </div>
+          <div v-if="review.isVerifiedPurchase" class="review-card__verified">
+            ✓ Compra verificada
           </div>
         </div>
       </div>
-      
-      <div class="review-card__actions flex items-center gap-2">
+
+      <div class="review-card__actions" v-if="canEdit || canDelete">
         <button
           v-if="canEdit"
           @click="$emit('edit', review)"
-          class="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
-          title="Editar reseña"
+          class="review-card__action review-card__action--edit"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
         </button>
-        
+
         <button
           v-if="canDelete"
           @click="$emit('delete', review)"
-          class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
-          title="Eliminar reseña"
+          class="review-card__action review-card__action--delete"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
           </svg>
         </button>
       </div>
-    </header>
+    </div>
 
-    <!-- Product info if applicable -->
-    <div v-if="review.productName" class="review-card__product mb-3 text-sm text-gray-600">
-      Producto: <span class="font-medium">{{ review.productName }}</span>
+    <!-- Product info -->
+    <div v-if="review.productName" class="review-card__product">
+      Producto: <strong>{{ review.productName }}</strong>
     </div>
 
     <!-- Content -->
     <div class="review-card__content">
-      <p class="review-card__comment text-gray-800 leading-relaxed mb-4">
-        {{ review.comment }}
-      </p>
+      <p class="review-card__comment">{{ review.comment }}</p>
 
-      <!-- Image if available -->
-      <div v-if="review.imageUrl" class="review-card__image mb-4">
-        <img 
-          :src="review.imageUrl" 
-          :alt="'Imagen de reseña de ' + review.userName"
-          class="max-w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-          @click="openImageModal"
-          @error="onReviewImageError"
-        />
+      <!-- Image -->
+      <div v-if="review.imageUrl" class="review-card__image">
+        <img :src="review.imageUrl" :alt="`Imagen de ${review.userName}`" @click="openImage">
       </div>
     </div>
 
     <!-- Footer -->
-    <footer class="review-card__footer flex items-center justify-between pt-4 border-t border-gray-100">
-      <button
-        @click="markAsHelpful"
-        :disabled="loading"
-        class="review-card__helpful flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 7m5 3v10-10z" />
-        </svg>
-        <span>Útil ({{ review.helpfulCount }})</span>
-      </button>
-
-      <time class="text-xs text-gray-400" :datetime="review.createdAt">
-        {{ new Date(review.createdAt).toLocaleDateString() }}
-      </time>
-    </footer>
+    <div class="review-card__footer">
+      <span class="review-card__date">{{ formatDate(review.createdAt) }}</span>
+    </div>
 
     <!-- Image Modal -->
-    <div 
-      v-if="showImageModal" 
-      class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-      @click="closeImageModal"
-    >
-      <img 
-        :src="review.imageUrl" 
-        :alt="'Imagen de reseña de ' + review.userName"
-        class="max-w-full max-h-full object-contain"
-        @click.stop
-      />
-      <button 
-        @click="closeImageModal"
-        class="absolute top-4 right-4 text-white hover:text-gray-300 text-2xl"
-      >
-        ✕
-      </button>
+    <div v-if="showImageModal" class="image-modal" @click="closeImage">
+      <img :src="review.imageUrl" :alt="`Imagen de ${review.userName}`">
+      <button @click="closeImage" class="image-modal__close">✕</button>
     </div>
-  </article>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Review } from '@/types/review'
 import RatingStars from '@/components/ui/RatingStars.vue'
-import { useReviews } from '@/composables/useReviews'
 
 interface Props {
   review: Review
@@ -137,51 +106,282 @@ const emit = defineEmits<{
   delete: [review: Review]
 }>()
 
-const { markAsHelpful: markReviewAsHelpful } = useReviews()
-
-const loading = ref(false)
 const showImageModal = ref(false)
 
-const markAsHelpful = async () => {
-  loading.value = true
-  try {
-    await markReviewAsHelpful(props.review.id)
-  } catch (error) {
-    console.error('Error marking review as helpful:', error)
-  } finally {
-    loading.value = false
-  }
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 }
 
-const openImageModal = () => {
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+const markHelpful = () => {
+  // Emit helpful event or call API
+  console.log('Mark as helpful:', props.review.id)
+}
+
+const openImage = () => {
   showImageModal.value = true
 }
 
-const closeImageModal = () => {
+const closeImage = () => {
   showImageModal.value = false
-}
-
-const onImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.src = '/default-avatar.png'
-}
-
-const onReviewImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.style.display = 'none'
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .review-card {
-  @apply transition-all duration-200;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  &__user {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #f1f5f9;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &-placeholder {
+      width: 100%;
+      height: 100%;
+      background: #FF416C;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+  }
+
+  &__user-info {
+    flex: 1;
+  }
+
+  &__user-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    svg {
+      color: #10b981;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__time {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  &__verified {
+    font-size: 0.75rem;
+    color: #10b981;
+    font-weight: 500;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__action {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+
+    &--edit {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+
+      &:hover {
+        background: rgba(59, 130, 246, 0.2);
+      }
+    }
+
+    &--delete {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+
+      &:hover {
+        background: rgba(239, 68, 68, 0.2);
+      }
+    }
+  }
+
+  &__product {
+    background: #f8fafc;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+  }
+
+  &__content {
+    margin-bottom: 1rem;
+  }
+
+  &__comment {
+    color: #374151;
+    line-height: 1.6;
+    margin: 0 0 1rem;
+  }
+
+  &__image {
+    img {
+      max-width: 200px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: scale(1.02);
+      }
+    }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  &__helpful {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+
+    &:hover {
+      border-color: #FF416C;
+      color: #FF416C;
+    }
+
+    &--active {
+      background: rgba(255, 65, 108, 0.1);
+      border-color: #FF416C;
+      color: #FF416C;
+    }
+  }
+
+  &__date {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
 }
 
-.review-card:hover {
-  @apply shadow-lg;
+.image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+
+  img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  &__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #374151;
+  }
 }
 
-.review-card__helpful:hover svg {
-  @apply text-blue-600;
+@media (max-width: 640px) {
+  .review-card {
+    &__header {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    &__actions {
+      align-self: flex-end;
+    }
+
+    &__footer {
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+  }
 }
 </style>

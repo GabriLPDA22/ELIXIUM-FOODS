@@ -2,16 +2,16 @@
 
 // src/services/reviewService.ts
 import axios from 'axios'
-import type { 
-  Review, 
-  CreateReviewDto, 
-  UpdateReviewDto, 
-  ReviewFilter, 
-  RestaurantReviewSummary, 
-  ProductReviewSummary 
+import type {
+  Review,
+  CreateReviewDto,
+  UpdateReviewDto,
+  ReviewFilter,
+  RestaurantReviewSummary,
+  ProductReviewSummary
 } from '@/types/review'
 
-const API_BASE = '/api/reviews'
+const API_BASE = '/reviews'
 
 export const reviewService = {
   // Obtener reseñas de restaurante

@@ -164,7 +164,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .popular-restaurants {
-  padding: 7rem 0;
+  padding: 5rem 0;
   background-color: #ffffff;
   position: relative;
   overflow: hidden;

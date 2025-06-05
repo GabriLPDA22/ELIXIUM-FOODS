@@ -343,7 +343,7 @@ const toggleFaq = (faqItem: FaqItem) => {
   border: none;
 
   &:hover {
-    background-color: var(--primary-dark, darken(#FF416C, 10%));
+    background-color: var(--primary-dark, #FF416C, 10%);
     transform: translateY(-2px);
   }
 }

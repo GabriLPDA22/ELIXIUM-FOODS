@@ -1,142 +1,112 @@
-// ===== COMPOSABLE MEJORADO =====
-
 // src/composables/useReviews.ts
 import { computed } from 'vue'
 import { useReviewStore } from '@/stores/reviewStore'
-import type { Review, CreateReviewDto, UpdateReviewDto, ReviewFilter } from '@/types/review'
+import type {
+  Review,
+  CreateReviewDto,
+  UpdateReviewDto,
+  ReviewFilter,
+  RestaurantReviewSummary,
+  ProductReviewSummary
+} from '@/types/review'
 
-export function useReviews() {
+export const useReviews = () => {
   const reviewStore = useReviewStore()
 
-  // Computed properties from store
-  const reviews = computed(() => reviewStore.reviews)
-  const userReviews = computed(() => reviewStore.userReviews)
+  // Computed properties
   const loading = computed(() => reviewStore.loading)
   const error = computed(() => reviewStore.error)
+  const reviews = computed(() => reviewStore.reviews)
+  const userReviews = computed(() => reviewStore.userReviews)
 
-  // Methods that use store actions
-  const getRestaurantReviews = async (restaurantId: number, filter?: ReviewFilter) => {
+  // Restaurant reviews
+  const getRestaurantReviews = async (restaurantId: number, filter?: ReviewFilter): Promise<Review[]> => {
     return await reviewStore.fetchRestaurantReviews(restaurantId, filter)
   }
 
-  const getProductReviews = async (productId: number, filter?: ReviewFilter) => {
-    return await reviewStore.fetchProductReviews(productId, filter)
-  }
-
-  const getRestaurantReviewSummary = async (restaurantId: number) => {
+  const getRestaurantReviewSummary = async (restaurantId: number): Promise<RestaurantReviewSummary> => {
     return await reviewStore.fetchRestaurantSummary(restaurantId)
   }
 
-  const getProductReviewSummary = async (productId: number) => {
+  // Product reviews
+  const getProductReviews = async (productId: number, filter?: ReviewFilter): Promise<Review[]> => {
+    return await reviewStore.fetchProductReviews(productId, filter)
+  }
+
+  const getProductReviewSummary = async (productId: number): Promise<ProductReviewSummary> => {
     return await reviewStore.fetchProductSummary(productId)
   }
 
-  const getUserReviews = async (userId: number, filter?: ReviewFilter) => {
+  // User reviews
+  const getUserReviews = async (userId: number, filter?: ReviewFilter): Promise<Review[]> => {
     return await reviewStore.fetchUserReviews(userId, filter)
   }
 
-  const createReview = async (reviewData: CreateReviewDto) => {
+  // Create, update, delete
+  const createReview = async (reviewData: CreateReviewDto): Promise<Review> => {
     return await reviewStore.createReview(reviewData)
   }
 
-  const updateReview = async (reviewId: number, reviewData: UpdateReviewDto) => {
+  const updateReview = async (reviewId: number, reviewData: UpdateReviewDto): Promise<Review> => {
     return await reviewStore.updateReview(reviewId, reviewData)
   }
 
-  const deleteReview = async (reviewId: number) => {
-    await reviewStore.deleteReview(reviewId)
+  const deleteReview = async (reviewId: number): Promise<void> => {
+    return await reviewStore.deleteReview(reviewId)
   }
 
-  const markAsHelpful = async (reviewId: number) => {
-    await reviewStore.markAsHelpful(reviewId)
+  // Helper functions
+  const markAsHelpful = async (reviewId: number): Promise<void> => {
+    return await reviewStore.markAsHelpful(reviewId)
   }
 
-  const canReviewRestaurant = async (restaurantId: number) => {
+  const canReviewRestaurant = async (restaurantId: number): Promise<boolean> => {
     return await reviewStore.canReviewRestaurant(restaurantId)
   }
 
-  const canReviewProduct = async (productId: number) => {
+  const canReviewProduct = async (productId: number): Promise<boolean> => {
     return await reviewStore.canReviewProduct(productId)
   }
 
-  // Computed getters
-  const getRestaurantSummary = (restaurantId: number) => {
-    return reviewStore.getRestaurantSummary(restaurantId)
+  // Utility functions
+  const clearError = () => {
+    reviewStore.clearError()
   }
 
-  const getProductSummary = (productId: number) => {
-    return reviewStore.getProductSummary(productId)
+  const clearReviews = () => {
+    reviewStore.clearReviews()
   }
-
-  const getReviewsByRestaurant = (restaurantId: number) => {
-    return reviewStore.getReviewsByRestaurant(restaurantId)
-  }
-
-  const getReviewsByProduct = (productId: number) => {
-    return reviewStore.getReviewsByProduct(productId)
-  }
-
-  const getUserReviewForRestaurant = (userId: number, restaurantId: number) => {
-    return reviewStore.getUserReviewForRestaurant(userId, restaurantId)
-  }
-
-  const getUserReviewForProduct = (userId: number, productId: number) => {
-    return reviewStore.getUserReviewForProduct(userId, productId)
-  }
-
-  // Statistics computed
-  const averageRating = computed(() => {
-    if (reviews.value.length === 0) return 0
-    const total = reviews.value.reduce((sum, review) => sum + review.rating, 0)
-    return total / reviews.value.length
-  })
-
-  const ratingDistribution = computed(() => {
-    const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-    reviews.value.forEach(review => {
-      distribution[review.rating]++
-    })
-    return distribution
-  })
-
-  const totalReviews = computed(() => reviews.value.length)
 
   return {
     // State
-    reviews,
-    userReviews,
     loading,
     error,
-    
-    // Actions
+    reviews,
+    userReviews,
+
+    // Restaurant methods
     getRestaurantReviews,
-    getProductReviews,
     getRestaurantReviewSummary,
+
+    // Product methods
+    getProductReviews,
     getProductReviewSummary,
+
+    // User methods
     getUserReviews,
+
+    // CRUD methods
     createReview,
     updateReview,
     deleteReview,
+
+    // Helper methods
     markAsHelpful,
     canReviewRestaurant,
     canReviewProduct,
-    
-    // Getters
-    getRestaurantSummary,
-    getProductSummary,
-    getReviewsByRestaurant,
-    getReviewsByProduct,
-    getUserReviewForRestaurant,
-    getUserReviewForProduct,
-    
-    // Statistics
-    averageRating,
-    ratingDistribution,
-    totalReviews,
-    
-    // Utilities
-    clearError: reviewStore.clearError,
-    clearReviews: reviewStore.clearReviews,
-    clearSummaries: reviewStore.clearSummaries
+
+    // Utility methods
+    clearError,
+    clearReviews
   }
 }

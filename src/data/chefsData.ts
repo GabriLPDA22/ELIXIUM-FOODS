@@ -71,7 +71,7 @@ export const chefsData: Chef[] = [
     location: 'Madrid, España',
     rating: 4.9,
     totalReviews: 324,
-    imageUrl: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://plus.unsplash.com/premium_photo-1661778091956-15dbe6e47442?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y2hlZnxlbnwwfHwwfHx8MA%3D%3D',
     bio: 'Chef María Delgado combina la tradición mediterránea con técnicas contemporáneas para crear experiencias culinarias únicas. Formada en Le Cordon Bleu París, ha trabajado en restaurantes con estrella Michelin en España y Francia.',
     signature_dishes: [
       'Paella de Mariscos Deconstruida',
@@ -137,7 +137,7 @@ export const chefsData: Chef[] = [
     location: 'Sevilla, España',
     rating: 4.9,
     totalReviews: 412,
-    imageUrl: 'https://images.unsplash.com/photo-1594736797933-d0c1d18b3308?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1595257841889-eca2678454e2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGNoZWZ8ZW58MHx8MHx8fDA%3D',
     bio: 'Maestra pastelera especializada en postres artesanales y técnicas francesas. Su enfoque creativo y su pasión por los ingredientes locales la han convertido en una referencia en el mundo de la repostería.',
     signature_dishes: [
       'Tarta de Chocolate y Café con Oro Comestible',
@@ -202,7 +202,7 @@ export const chefsData: Chef[] = [
     location: 'Bilbao, España',
     rating: 4.8,
     totalReviews: 156,
-    imageUrl: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1583394293214-28ded15ee548?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGNoZWZ8ZW58MHx8MHx8fDA%3D',
     bio: 'Experto en gastronomía molecular y técnicas culinarias vanguardistas. Roberto crea experiencias sensoriales únicas que desafían los límites de la cocina tradicional.',
     signature_dishes: [
       'Esferificación de Aceitunas con Anchoas',
@@ -234,7 +234,7 @@ export const chefsData: Chef[] = [
     location: 'Granada, España',
     rating: 4.9,
     totalReviews: 387,
-    imageUrl: 'https://images.unsplash.com/photo-1607631568010-a87245c0daf8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://plus.unsplash.com/premium_photo-1661299381229-1002c9d65f31?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTAyfHxjaGVmfGVufDB8fDB8fHww',
     bio: 'Guardiana de las tradiciones culinarias andaluzas, Carmen Vega ha dedicado su vida a preservar y reinventar los sabores más auténticos del sur de España.',
     signature_dishes: [
       'Gazpacho de la Abuela con Toque Moderno',

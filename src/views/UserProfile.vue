@@ -16,6 +16,7 @@
             :class="['profile-tab', { 'profile-tab--active': activeTab === tab.id }]">
             <span class="profile-tab__icon" v-html="tab.icon"></span>
             <span class="profile-tab__text">{{ tab.label }}</span>
+            <span v-if="tab.count !== undefined" class="profile-tab__count">{{ tab.count }}</span>
           </button>
         </div>
 
@@ -90,6 +91,11 @@
                 </router-link>
               </div>
             </div>
+          </div>
+
+          <!-- Mis Reseñas -->
+          <div v-if="activeTab === 'reviews'" class="profile-panel">
+            <UserReviewsTab :user-id="userInfo.id" />
           </div>
 
           <!-- Configuración (solo para usuarios no-Google) -->
@@ -204,10 +210,12 @@ import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useOrderStore } from '@/stores/orderStore';
+import { useReviews } from '@/composables/useReviews';
 import ProfileHeader from '@/components/feature/profile/ProfileHeader.vue';
 import UserInfo from '@/components/feature/profile/UserInfo.vue';
 import AddressList from '@/components/feature/profile/AddressList.vue';
 import PaymentMethodsList from '@/components/feature/profile/PaymentMethodsList.vue';
+import UserReviewsTab from '@/components/profile/UserReviewsTab.vue';
 import userService, { type UserProfile } from '@/services/userService';
 import { OrderStatus } from '@/services/orderService';
 import type { OrderResponse } from '@/services/orderService';
@@ -216,6 +224,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const orderStore = useOrderStore();
+const { getUserReviews } = useReviews();
 
 // Estado general
 const activeTab = ref('info');
@@ -228,6 +237,9 @@ const passwordSuccess = ref('');
 const userOrders = ref<OrderResponse[]>([]);
 const loadingOrders = ref(false);
 const ordersError = ref('');
+
+// Estado de reseñas
+const userReviewsCount = ref(0);
 
 // Formularios
 const passwordForm = reactive({
@@ -284,6 +296,12 @@ const tabs = [
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10 5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>'
   },
   {
+    id: 'reviews',
+    label: 'Mis Reseñas',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+    count: userReviewsCount.value
+  },
+  {
     id: 'settings',
     label: 'Configuración',
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>'
@@ -292,8 +310,11 @@ const tabs = [
 
 // Tabs disponibles según el tipo de usuario
 const availableTabs = computed(() => {
-  // Siempre mostrar la pestaña de configuración, pero el contenido cambia
-  return tabs;
+  // Siempre mostrar todas las pestañas, incluyendo reviews
+  return tabs.map(tab => ({
+    ...tab,
+    count: tab.id === 'reviews' ? userReviewsCount.value : tab.count
+  }));
 });
 
 // Información del usuario
@@ -321,6 +342,10 @@ const changeTab = async (tabId: string) => {
 
   if (tabId === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
     await loadUserOrders();
+  }
+
+  if (tabId === 'reviews' && userReviewsCount.value === 0) {
+    await loadUserReviewsCount();
   }
 };
 
@@ -367,6 +392,19 @@ const loadUserOrders = async () => {
     ordersError.value = error.response?.data?.message || error.message || 'No se pudieron cargar los pedidos.';
   } finally {
     loadingOrders.value = false;
+  }
+};
+
+// Cargar conteo de reseñas del usuario
+const loadUserReviewsCount = async () => {
+  if (!authStore.user?.id) return;
+
+  try {
+    const reviews = await getUserReviews(authStore.user.id);
+    userReviewsCount.value = reviews.length;
+  } catch (error) {
+    console.error('Error loading user reviews count:', error);
+    userReviewsCount.value = 0;
   }
 };
 
@@ -522,13 +560,20 @@ watch(() => route.query.tab, (newTab) => {
     if (newTab === 'orders' && userOrders.value.length === 0 && !loadingOrders.value) {
       loadUserOrders();
     }
+
+    if (newTab === 'reviews' && userReviewsCount.value === 0) {
+      loadUserReviewsCount();
+    }
   }
 }, { immediate: false });
 
 // Inicialización
-onMounted(() => {
+onMounted(async () => {
   initializeTabFromQuery();
   loadUserData();
+
+  // Cargar conteo de reseñas inmediatamente
+  await loadUserReviewsCount();
 
   if (activeTab.value === 'orders') {
     loadUserOrders();
@@ -631,12 +676,25 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   cursor: pointer;
   transition: $transition;
   white-space: nowrap;
+  position: relative;
 
   &__icon {
     display: flex;
     align-items: center;
     justify-content: center;
     color: $text-light;
+  }
+
+  &__count {
+    background: rgba($primary, 0.1);
+    color: $primary;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    margin-left: 0.25rem;
+    min-width: 1.2rem;
+    text-align: center;
   }
 
   &:hover {
@@ -655,6 +713,11 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 
     .profile-tab__icon {
       color: $primary;
+    }
+
+    .profile-tab__count {
+      background: $primary;
+      color: white;
     }
   }
 
