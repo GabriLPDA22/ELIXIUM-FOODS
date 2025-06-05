@@ -223,7 +223,7 @@
                                     {{ userInitials }}
                                 </div>
                             </div>
-                            <div class="u-header__dropdown-info">
+                            <div class="u-header__dropdown-info" style="display: flex; flex-direction: column;">
                                 <span class="u-header__user-dropdown-greeting">Hola, {{ userFirstName }}</span>
                                 <span class="u-header__user-dropdown-email">{{ userEmail }}</span>
                                 <span v-if="isGoogleUser" class="u-header__user-dropdown-badge">
