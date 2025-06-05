@@ -508,7 +508,7 @@ $gray-900: #111827;
       transition: all 0.2s ease;
 
       &:hover {
-        background: darken($danger, 10%);
+        background: $danger;
         transform: translateY(-1px);
       }
     }
@@ -895,7 +895,7 @@ $gray-900: #111827;
     transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
-      background: darken($danger, 10%);
+      background: $danger;
     }
 
     &:disabled {
