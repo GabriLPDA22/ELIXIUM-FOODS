@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elixium-foods-svc
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-east-1:542910905096:certificate/6d7c377b-6b87-4a59-85d1-6f52a4ec512c
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+spec:
+  selector:
+    app: elixium-foods
+    tier: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+    - name: https
+      port: 443
+      targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elixium-foods-deploy
+  labels:
+    app: elixium-foods
+spec:
+  selector:
+    matchLabels:
+      app: elixium-foods
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: elixium-foods
+        tier: frontend
+    spec:
+      containers:
+        - name: elixium-foods
+          image: franvilla/front4:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: TZ
+              value: "Europe/Madrid"
