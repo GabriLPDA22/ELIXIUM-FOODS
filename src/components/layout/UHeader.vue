@@ -224,6 +224,7 @@
                                 </div>
                             </div>
                             <div class="u-header__dropdown-info" style="display: flex; flex-direction: column;">
+                            <div class="u-header__dropdown-info" style="display: flex; flex-direction: column;">
                                 <span class="u-header__user-dropdown-greeting">Hola, {{ userFirstName }}</span>
                                 <span class="u-header__user-dropdown-email">{{ userEmail }}</span>
                                 <span v-if="isGoogleUser" class="u-header__user-dropdown-badge">
@@ -297,6 +298,7 @@
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="12" cy="12" r="3"></circle>
                                         <path
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                                             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                                         </path>
                                     </svg>
@@ -758,17 +760,28 @@ onUnmounted(() => {
             width: 300px;
             height: 100vh;
             height: 100dvh; // Mejor soporte para dispositivos móviles
+            height: 100dvh; // Mejor soporte para dispositivos móviles
             background-color: white;
             flex-direction: column;
             align-items: flex-start;
             gap: 0;
+            gap: 0;
             padding: 1.5rem;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem); // Safe area para móviles
             padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem); // Safe area para móviles
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
             z-index: 1010;
             transition: left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
             margin: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch; // Scroll suave en iOS
+
+            // Asegurar que el contenido ocupe toda la altura
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-height: 100dvh;
+
             -webkit-overflow-scrolling: touch; // Scroll suave en iOS
 
             // Asegurar que el contenido ocupe toda la altura
@@ -800,6 +813,7 @@ onUnmounted(() => {
             color: #64748b;
             transition: all 0.2s ease;
             z-index: 1011;
+            z-index: 1011;
             &:hover {
                 background-color: #e2e8f0;
                 color: #1e293b;
@@ -829,6 +843,7 @@ onUnmounted(() => {
             align-items: flex-start;
             width: 100%;
             gap: 0;
+            flex: 0 0 auto; // No crecer
             flex: 0 0 auto; // No crecer
         }
     }
@@ -877,8 +892,13 @@ onUnmounted(() => {
             flex-direction: column;
             width: 100%;
             margin-top: auto; // Empujar al final
+            margin-top: auto; // Empujar al final
             padding-top: 1.5rem;
             border-top: 1px solid #f1f5f9;
+            flex-shrink: 0; // No encogerse
+            min-height: auto;
+            position: relative;
+            background: white; // Asegurar fondo
             flex-shrink: 0; // No encogerse
             min-height: auto;
             position: relative;
@@ -902,6 +922,7 @@ onUnmounted(() => {
         flex-direction: column;
         gap: 0.75rem;
         width: 100%;
+        width: 100%;
     }
 
     &__nav-button {
@@ -923,6 +944,11 @@ onUnmounted(() => {
         min-height: 48px; // Altura mínima para móviles
         line-height: 1.2;
 
+        display: block; // Asegurar que se muestre
+        box-sizing: border-box;
+        min-height: 48px; // Altura mínima para móviles
+        line-height: 1.2;
+
         &:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(#FF416C, 0.3);
@@ -934,6 +960,13 @@ onUnmounted(() => {
             &:hover {
                 background-color: rgba(#FF416C, 0.05);
             }
+        }
+
+        @media (max-width: 992px) {
+            // Asegurar visibilidad en móviles
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
         }
 
         @media (max-width: 992px) {
@@ -1482,6 +1515,7 @@ onUnmounted(() => {
             width: 100%;
             text-align: left;
             position: relative;
+            position: relative;
             &:hover {
                 background-color: #f8fafc;
             }
@@ -1540,6 +1574,41 @@ onUnmounted(() => {
             svg {
                 stroke: #ef4444;
                 flex-shrink: 0;
+            }
+        }
+    }
+
+    // Fix específico para dispositivos Huawei y otros Android modernos
+    @media (max-width: 992px) and (min-height: 700px) {
+        &__navigation {
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+    }
+
+    // Mejor manejo del safe area para diferentes dispositivos
+    @supports (padding: max(0px)) {
+        &__navigation {
+            @media (max-width: 992px) {
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+                height: 100vh;
+                height: 100dvh;
+            }
+        }
+    }
+
+    // Fix de emergencia para Huawei y dispositivos problemáticos
+    @media (max-width: 992px) {
+        &__nav-footer {
+            // Asegurar que siempre sea visible
+            position: sticky !important;
+            bottom: 0 !important;
+            background: white !important;
+            z-index: 1011 !important;
+
+            // Para dispositivos Huawei específicamente
+            @supports (-webkit-touch-callout: none) {
+                position: -webkit-sticky !important;
             }
         }
     }

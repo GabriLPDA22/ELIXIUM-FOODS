@@ -54,8 +54,13 @@
             :class="{ 'review-form__textarea--error': errors.comment }"
             placeholder="Comparte tu experiencia... ¿Qué te gustó más? ¿Recomendarías este lugar?"
             maxlength="1000"
+            @focus="textareaFocused = true"
+            @blur="textareaFocused = false"
           ></textarea>
-          <div v-if="form.comment.length === 0" class="review-form__textarea-hint">
+          <div
+            v-if="textareaFocused && form.comment.length === 0"
+            class="review-form__textarea-hint"
+          >
             💡 Tip: Sé específico sobre sabor, servicio, presentación...
           </div>
         </div>
@@ -188,6 +193,7 @@ const emit = defineEmits<{
 const { createReview, updateReview } = useReviews()
 
 const loading = ref(false)
+const textareaFocused = ref(false)
 const errors = reactive({
   rating: '',
   comment: '',
@@ -313,6 +319,7 @@ const resetForm = () => {
   form.rating = 0
   form.comment = ''
   form.imageUrl = ''
+  textareaFocused.value = false
   Object.keys(errors).forEach(key => {
     errors[key as keyof typeof errors] = ''
   })
@@ -426,13 +433,19 @@ const isValidUrl = (url: string): boolean => {
 
   &__textarea-hint {
     position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
+    bottom: -1.75rem;
+    left: 0;
+    right: 0;
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: #6b7280;
+    background: #f9fafb;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
     pointer-events: none;
-    background: white;
-    padding: 0 0.25rem;
+    z-index: 10;
+    opacity: 0;
+    animation: fadeInUp 0.3s ease forwards;
   }
 
   &__comment-footer {
@@ -440,6 +453,7 @@ const isValidUrl = (url: string): boolean => {
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+    margin-top: 0.5rem;
   }
 
   &__comment-info {
@@ -628,12 +642,34 @@ const isValidUrl = (url: string): boolean => {
   to { transform: rotate(360deg); }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 640px) {
   .review-form {
     padding: 1rem;
 
     &__rating {
       padding: 1rem;
+    }
+
+    &__textarea-hint {
+      position: static;
+      margin-top: 0.5rem;
+      opacity: 1;
+      animation: none;
+    }
+
+    &__comment-footer {
+      margin-top: 1rem;
     }
 
     &__actions {

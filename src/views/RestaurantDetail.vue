@@ -229,7 +229,7 @@
               </div>
             </div>
 
-            <div class="cart-sidebar">
+            <div class="cart-sidebar" ref="cartSidebar">
               <div class="cart">
                 <div class="cart__header">
                   <div class="cart__header-content">
@@ -391,6 +391,14 @@
       @review-created="onReviewCreated"
     />
 
+    <!-- ✨ NUEVO: CONTADOR FLOTANTE MÓVIL -->
+    <MobileCartCounter
+      v-if="localCartItems.length > 0"
+      :count="localCartItems.reduce((sum, item) => sum + item.quantity, 0)"
+      :is-visible="showMobileCounter"
+      @click="scrollToCart"
+    />
+
     <!-- ✨ MODAL PARA RESEÑAR PRODUCTOS -->
     <ReviewModal
       v-if="showProductReviewModal && selectedProduct"
@@ -404,7 +412,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { restaurantService, type RestaurantDetail, type MenuCategory, type MenuItem } from '@/services/restaurantService'
 import { useCartStore } from '@/stores/cart'
@@ -493,6 +501,10 @@ const localCartItems = ref<LocalCartItem[]>([])
 const showProductReviewModal = ref(false)
 const selectedProduct = ref<MenuItem | null>(null)
 const reviewsKey = ref(0) // Para forzar refresh de reseñas
+
+// ✨ NUEVAS VARIABLES PARA CONTADOR MÓVIL
+const cartSidebar = ref<HTMLElement>()
+const showMobileCounter = ref(true)
 
 const safeNumber = (value: any, defaultValue: number = 0): number => {
   if (value === null || value === undefined || value === '') {
@@ -585,6 +597,22 @@ const getSelectedCategoryName = () => {
 
 const filterByCategory = (categoryId: string | number) => {
   selectedCategoryFilter.value = categoryId
+}
+
+// ✨ NUEVAS FUNCIONES PARA CONTADOR MÓVIL
+const scrollToCart = () => {
+  if (cartSidebar.value) {
+    // Hacer scroll suave al carrito
+    cartSidebar.value.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    })
+
+    // Después del scroll, verificar la visibilidad
+    setTimeout(() => {
+      handleScroll()
+    }, 1000)
+  }
 }
 
 // ✨ NUEVAS FUNCIONES PARA RESEÑAS DE PRODUCTOS
@@ -894,6 +922,50 @@ const proceedToCheckout = (): void => {
   router.push('/checkout')
 }
 
+// ✨ NUEVA FUNCIÓN PARA MANEJAR SCROLL Y MOSTRAR/OCULTAR CONTADOR
+const handleScroll = () => {
+  // Solo funciona en móvil
+  if (window.innerWidth > 768) {
+    showMobileCounter.value = false
+    return
+  }
+
+  // Si no hay productos en el carrito, no mostrar contador
+  if (localCartItems.value.length === 0) {
+    showMobileCounter.value = false
+    return
+  }
+
+  // Si no tenemos referencia al carrito, mostrar contador
+  if (!cartSidebar.value) {
+    showMobileCounter.value = true
+    return
+  }
+
+  // Obtener la posición del carrito relativa al viewport
+  const cartRect = cartSidebar.value.getBoundingClientRect()
+
+  // Si la parte superior del carrito está en la pantalla o arriba de ella
+  // significa que el usuario puede ver el carrito
+  const isCartInView = cartRect.top <= window.innerHeight * 0.8 // 80% de la pantalla
+
+  // Ocultar contador si el carrito está a la vista
+  showMobileCounter.value = !isCartInView
+}
+
+watch(
+  () => localCartItems.value.length,
+  (newLength) => {
+    // Si no hay productos, ocultar contador inmediatamente
+    if (newLength === 0) {
+      showMobileCounter.value = false
+    } else {
+      // Si hay productos, verificar visibilidad del carrito
+      setTimeout(() => handleScroll(), 100)
+    }
+  }
+)
+
 watch(
   activeOffers,
   () => {
@@ -914,6 +986,14 @@ watch(
 
 onMounted(async () => {
   await fetchRestaurantData()
+  // ✨ AGREGAR LISTENER DE SCROLL PARA CONTADOR MÓVIL
+  window.addEventListener('scroll', handleScroll)
+  handleScroll() // Verificar estado inicial
+})
+
+onUnmounted(() => {
+  // ✨ LIMPIAR LISTENER DE SCROLL
+  window.removeEventListener('scroll', handleScroll)
 })
 
 </script>
@@ -1716,6 +1796,12 @@ $shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.06);
         transform: none;
         box-shadow: none;
       }
+    }
+
+    // ✨ FIX 1: BOTÓN SIEMPRE VISIBLE EN MÓVIL
+    @media (max-width: 768px) {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 

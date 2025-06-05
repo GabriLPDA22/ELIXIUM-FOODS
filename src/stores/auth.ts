@@ -91,8 +91,11 @@ export const useAuthStore = defineStore('auth', {
       this.token = authData.token!
       this.refreshToken = authData.refreshToken || null
 
+      // Obtener usuario existente para preservar foto si es necesario
+      const existingUser = this.user
+
       // Crear objeto usuario completo
-      this.user = {
+      const newUserData = {
         id: authData.userId!,
         email: authData.email!,
         firstName: authData.firstName!,
@@ -102,6 +105,21 @@ export const useAuthStore = defineStore('auth', {
         photoURL: authData.photoURL,
         googleId: authData.googleId,
       }
+
+      // NUEVA LÓGICA: Preservar foto existente si el login no incluye una nueva foto
+      // Esto aplica tanto para usuarios Google como usuarios normales
+      if (
+        existingUser &&
+        existingUser.email === newUserData.email &&
+        existingUser.photoURL &&
+        (!newUserData.photoURL || newUserData.photoURL === '')
+      ) {
+        console.log('🔄 Preservando foto de perfil existente:', existingUser.photoURL)
+        newUserData.photoURL = existingUser.photoURL
+      }
+
+      // Crear objeto usuario completo
+      this.user = newUserData
 
       // ✅ GUARDAR TODO EN LOCALSTORAGE
       localStorage.setItem('authToken', this.token)
@@ -210,6 +228,15 @@ export const useAuthStore = defineStore('auth', {
 
         if (response.data.success && response.data.token) {
           this.saveAuthData(response.data)
+
+          // NUEVA LÓGICA: Después del login exitoso, cargar la información completa del perfil
+          // para asegurar que tenemos la foto de perfil actualizada
+          try {
+            await this.loadCompleteUserProfile()
+          } catch (profileError) {
+            console.warn('⚠️ No se pudo cargar el perfil completo, pero el login fue exitoso:', profileError)
+          }
+
           return true
         } else {
           this.error = response.data.message || 'Credenciales incorrectas'
@@ -271,6 +298,37 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    // NUEVO MÉTODO: Cargar información completa del perfil después del login
+    async loadCompleteUserProfile(): Promise<void> {
+      if (!this.token || !this.user) return
+
+      try {
+        const response = await axios.get('/auth/me', {
+          headers: { Authorization: `Bearer ${this.token}` },
+        })
+
+        if (response.data.success && response.data.data) {
+          const completeUserData = response.data.data
+
+          // Actualizar solo los campos que pueden haber cambiado, preservando lo que ya tenemos
+          if (this.user) {
+            this.user = {
+              ...this.user,
+              ...completeUserData,
+              // Preservar foto de Google si ya la tenemos y no viene una nueva
+              photoURL: completeUserData.photoURL || this.user.photoURL || null
+            }
+
+            localStorage.setItem('user', JSON.stringify(this.user))
+            console.log('✅ Perfil completo cargado con foto:', this.user.photoURL)
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error cargando perfil completo:', error)
+        // No lanzar el error, el login ya fue exitoso
+      }
+    },
+
     async logout() {
       try {
         if (this.token) {
@@ -329,68 +387,6 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
     },
 
-    updateUserProfile(updates: Partial<User>) {
-      if (this.user) {
-        this.user = { ...this.user, ...updates }
-        localStorage.setItem('user', JSON.stringify(this.user))
-        console.log('👤 Perfil de usuario actualizado')
-      }
-    },
-
-    saveAuthData(authData: AuthResponse) {
-      console.log('💾 Guardando datos de autenticación:', authData)
-
-      // Guardar tokens
-      this.token = authData.token!
-      this.refreshToken = authData.refreshToken || null
-
-      // LÓGICA MEJORADA: Preservar foto de Google si ya existe
-      const existingUser = this.user
-      const newUserData = {
-        id: authData.userId!,
-        email: authData.email!,
-        firstName: authData.firstName!,
-        lastName: authData.lastName!,
-        role: authData.role!,
-        businessId: authData.businessId,
-        photoURL: authData.photoURL,
-        googleId: authData.googleId,
-      }
-
-      // Si ya teníamos un usuario con Google ID y foto, y el nuevo login es del mismo usuario de Google
-      if (
-        existingUser?.googleId &&
-        newUserData.googleId &&
-        existingUser.googleId === newUserData.googleId &&
-        existingUser.photoURL &&
-        (!newUserData.photoURL || newUserData.photoURL === '')
-      ) {
-        console.log('🔄 Preservando foto de Google existente:', existingUser.photoURL)
-        newUserData.photoURL = existingUser.photoURL
-      }
-
-      // Crear objeto usuario completo
-      this.user = newUserData
-
-      // ✅ GUARDAR TODO EN LOCALSTORAGE
-      localStorage.setItem('authToken', this.token)
-      localStorage.setItem('user', JSON.stringify(this.user))
-
-      if (this.refreshToken) {
-        localStorage.setItem('refreshToken', this.refreshToken)
-      }
-
-      // Marcar como autenticado
-      this.isAuthenticated = true
-
-      // Configurar axios
-      this.setupAxiosDefaults()
-
-      console.log('✅ Usuario guardado:', this.user)
-      console.log('✅ Es Admin:', this.isAdmin)
-    },
-
-    // Añadir este nuevo método al final de los actions
     updateUserProfile(updates: Partial<User>) {
       if (this.user) {
         // PROTECCIÓN: No permitir sobrescribir foto de usuario de Google con datos vacíos
