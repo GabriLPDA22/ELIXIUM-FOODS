@@ -223,7 +223,7 @@
                                     {{ userInitials }}
                                 </div>
                             </div>
-                            <div class="u-header__dropdown-info">
+                            <div class="u-header__dropdown-info" style="display: flex; flex-direction: column;">
                                 <span class="u-header__user-dropdown-greeting">Hola, {{ userFirstName }}</span>
                                 <span class="u-header__user-dropdown-email">{{ userEmail }}</span>
                                 <span v-if="isGoogleUser" class="u-header__user-dropdown-badge">
@@ -248,6 +248,27 @@
                                     </svg>
                                     <span>Mi Perfil</span>
                                 </router-link>
+                            </li>
+                            <!-- ✅ NUEVO: Botón Dashboard solo para usuarios con business -->
+                            <li v-if="hasBusiness">
+                                <a href="https://elixiumfoods.com/business/dashboard/" 
+                                   class="u-header__user-dropdown-item u-header__user-dropdown-item--business" 
+                                   @click="closeUserMenu"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    </svg>
+                                    <span>Dashboard Business</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="external-link-icon">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
                             </li>
                             <li>
                                 <router-link to="/orders" class="u-header__user-dropdown-item" @click="closeUserMenu">
@@ -276,7 +297,7 @@
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="12" cy="12" r="3"></circle>
                                         <path
-                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                                         </path>
                                     </svg>
                                     <span>Configuración</span>
@@ -349,6 +370,18 @@ const cartItemCount = computed(() => cartStore?.itemCount || 0);
 const userProfileImage = computed(() => authStore.userProfileImage);
 const userInitials = computed(() => authStore.userInitials);
 const isGoogleUser = computed(() => authStore.isGoogleUser);
+
+// ✅ NUEVO: Detectar si el usuario tiene un business
+const hasBusiness = computed(() => {
+  if (!authStore.user) return false;
+  
+  // Verificar si el usuario tiene rol de Business o Admin, o si tiene un businessId
+  return (
+    authStore.user.role === 'Business' || 
+    authStore.user.role === 'Admin' || 
+    !!(authStore.user as any)?.businessId
+  );
+});
 
 const quickCategories = [
     { id: 1, name: 'Americano', icon: '🍔' },
@@ -724,16 +757,26 @@ onUnmounted(() => {
             left: -320px;
             width: 300px;
             height: 100vh;
+            height: 100dvh; // Mejor soporte para dispositivos móviles
             background-color: white;
             flex-direction: column;
             align-items: flex-start;
-            gap: 1rem;
+            gap: 0;
             padding: 1.5rem;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem); // Safe area para móviles
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
             z-index: 1010;
             transition: left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
             margin: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch; // Scroll suave en iOS
+
+            // Asegurar que el contenido ocupe toda la altura
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-height: 100dvh;
+
             &--active {
                 left: 0;
             }
@@ -756,6 +799,7 @@ onUnmounted(() => {
             cursor: pointer;
             color: #64748b;
             transition: all 0.2s ease;
+            z-index: 1011;
             &:hover {
                 background-color: #e2e8f0;
                 color: #1e293b;
@@ -785,6 +829,7 @@ onUnmounted(() => {
             align-items: flex-start;
             width: 100%;
             gap: 0;
+            flex: 0 0 auto; // No crecer
         }
     }
 
@@ -831,9 +876,13 @@ onUnmounted(() => {
             display: flex;
             flex-direction: column;
             width: 100%;
-            margin-top: auto;
+            margin-top: auto; // Empujar al final
             padding-top: 1.5rem;
             border-top: 1px solid #f1f5f9;
+            flex-shrink: 0; // No encogerse
+            min-height: auto;
+            position: relative;
+            background: white; // Asegurar fondo
         }
     }
 
@@ -852,6 +901,7 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
+        width: 100%;
     }
 
     &__nav-button {
@@ -868,6 +918,11 @@ onUnmounted(() => {
         font-family: inherit;
         text-decoration: none;
         text-align: center;
+        display: block; // Asegurar que se muestre
+        box-sizing: border-box;
+        min-height: 48px; // Altura mínima para móviles
+        line-height: 1.2;
+
         &:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(#FF416C, 0.3);
@@ -879,6 +934,13 @@ onUnmounted(() => {
             &:hover {
                 background-color: rgba(#FF416C, 0.05);
             }
+        }
+
+        @media (max-width: 992px) {
+            // Asegurar visibilidad en móviles
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
         }
     }
 
@@ -1419,12 +1481,40 @@ onUnmounted(() => {
             cursor: pointer;
             width: 100%;
             text-align: left;
+            position: relative;
             &:hover {
                 background-color: #f8fafc;
             }
             svg {
                 color: #64748b;
                 flex-shrink: 0;
+            }
+            
+            // ✅ NUEVO: Estilo especial para el botón de business
+            &--business {
+                background: linear-gradient(135deg, rgba(255, 65, 108, 0.05), rgba(255, 75, 43, 0.03));
+                border: 1px solid rgba(255, 65, 108, 0.1);
+                
+                &:hover {
+                    background: linear-gradient(135deg, rgba(255, 65, 108, 0.1), rgba(255, 75, 43, 0.05));
+                    border-color: rgba(255, 65, 108, 0.2);
+                }
+                
+                svg {
+                    color: #FF416C;
+                }
+                
+                span {
+                    color: #FF416C;
+                    font-weight: 600;
+                }
+                
+                .external-link-icon {
+                    margin-left: auto;
+                    opacity: 0.7;
+                    width: 12px;
+                    height: 12px;
+                }
             }
         }
         &-logout {
@@ -1450,6 +1540,41 @@ onUnmounted(() => {
             svg {
                 stroke: #ef4444;
                 flex-shrink: 0;
+            }
+        }
+    }
+
+    // Fix específico para dispositivos Huawei y otros Android modernos
+    @media (max-width: 992px) and (min-height: 700px) {
+        &__navigation {
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+    }
+
+    // Mejor manejo del safe area para diferentes dispositivos
+    @supports (padding: max(0px)) {
+        &__navigation {
+            @media (max-width: 992px) {
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+                height: 100vh;
+                height: 100dvh;
+            }
+        }
+    }
+
+    // Fix de emergencia para Huawei y dispositivos problemáticos
+    @media (max-width: 992px) {
+        &__nav-footer {
+            // Asegurar que siempre sea visible
+            position: sticky !important;
+            bottom: 0 !important;
+            background: white !important;
+            z-index: 1011 !important;
+
+            // Para dispositivos Huawei específicamente
+            @supports (-webkit-touch-callout: none) {
+                position: -webkit-sticky !important;
             }
         }
     }

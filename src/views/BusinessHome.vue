@@ -128,23 +128,23 @@
         </div>
       </div>
 
-      <div class="business-home__card business-home__card--products">
+      <div class="business-home__card business-home__card--restaurants">
         <div class="business-home__card-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
-            <path
-              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-            </path>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+            <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+            <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+            <rect x="7" y="7" width="10" height="10" rx="1"></rect>
           </svg>
         </div>
         <div class="business-home__card-content">
-          <h3 class="business-home__card-title">Total Productos</h3>
+          <h3 class="business-home__card-title">Restaurantes</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ currentStats.totalProducts }}</p>
+            <p class="business-home__card-value">{{ restaurants.length }}</p>
           </div>
-          <p class="business-home__card-period">{{ selectedRestaurantId === 'all' ? 'en todos tus restaurantes' : 'en este restaurante' }}</p>
+          <p class="business-home__card-period">{{ restaurants.length === 1 ? 'restaurante activo' : 'restaurantes activos' }}</p>
         </div>
       </div>
 
@@ -188,7 +188,7 @@
           @click="selectRestaurant(restaurant.id)"
         >
           <div class="business-home__restaurant-image">
-            <img :src="restaurant.logoUrl || '/Images/restaurant-placeholder.png'" :alt="restaurant.name">
+            <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name">
             <div v-if="!restaurant.isOpen" class="business-home__restaurant-status business-home__restaurant-status--closed">
               Cerrado
             </div>
@@ -203,11 +203,11 @@
               <div class="business-home__restaurant-stat">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
-                <span>{{ getRestaurantProductCount(restaurant.id) }} productos</span>
+                <span>{{ getTodayOrdersCount(restaurant.id) }} pedidos hoy</span>
               </div>
               <div class="business-home__restaurant-stat">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -222,7 +222,8 @@
       </div>
     </div>
 
-    <div class="business-home__sections">
+    <!-- Sección de pedidos pendientes centrada y más ancha -->
+    <div class="business-home__main-section">
       <div class="business-home__section business-home__section--pending">
         <div class="business-home__section-header">
           <h2 class="business-home__section-title">
@@ -242,7 +243,7 @@
           <p>Cargando pedidos...</p>
         </div>
         <div v-else-if="pendingOrders.length > 0" class="business-home__orders-list">
-          <div v-for="order in pendingOrders.slice(0, 3)" :key="order.id" class="business-home__order-item">
+          <div v-for="order in pendingOrders.slice(0, 6)" :key="order.id" class="business-home__order-item">
             <div class="business-home__order-info">
               <div class="business-home__order-header">
                 <h4 class="business-home__order-id">Pedido #{{ order.id }}</h4>
@@ -271,69 +272,6 @@
           </div>
           <h4>Todo al día</h4>
           <p>No tienes pedidos pendientes en este momento. ¡Buen trabajo!</p>
-        </div>
-      </div>
-
-      <div class="business-home__section business-home__section--products">
-        <div class="business-home__section-header">
-          <h2 class="business-home__section-title">Productos Populares</h2>
-          <router-link :to="{ name: 'business-products' }" class="business-home__section-link">
-            Ver todos
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </router-link>
-        </div>
-        <div v-if="popularProducts.length > 0" class="business-home__products-grid">
-          <div v-for="product in popularProducts.slice(0, 4)" :key="product.id" class="business-home__product-card">
-            <div class="business-home__product-image">
-              <img :src="product.image || '/Images/product-placeholder.png'" :alt="product.name">
-            </div>
-            <div class="business-home__product-info">
-              <h4 class="business-home__product-name">{{ product.name }}</h4>
-              <p class="business-home__product-price">{{ formatCurrency(product.price) }}</p>
-              <div class="business-home__product-stats">
-                <span class="business-home__product-orders">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="9" cy="21" r="1"></circle>
-                    <circle cx="20" cy="21" r="1"></circle>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                  </svg>
-                  {{ product.ordersCount }} pedidos
-                </span>
-                <span class="business-home__product-revenue">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                  {{ formatCurrency(product.revenue || 0) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="business-home__empty">
-          <div class="business-home__empty-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <path d="M16 10a4 4 0 0 1-8 0"></path>
-            </svg>
-          </div>
-          <h4>Sin productos populares aún</h4>
-          <p>A medida que recibas pedidos, tus productos más vendidos aparecerán aquí.</p>
-          <router-link :to="{ name: 'business-products' }" class="business-home__add-product-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Añadir Nuevo Producto</span>
-          </router-link>
         </div>
       </div>
     </div>
@@ -409,8 +347,6 @@ const business = ref(null)
 const restaurants = ref([])
 const selectedRestaurantId = ref('all')
 const isRefreshing = ref(false)
-const popularProducts = ref([])
-const allProducts = ref([])
 const allOrders = ref([])
 const loadingOrders = ref(false)
 
@@ -462,14 +398,6 @@ const currentStats = computed(() => {
   // Ingresos de hoy
   const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0)
 
-  // Calcular productos totales
-  let totalProducts = 0
-  if (selectedRestaurantId.value === 'all') {
-    totalProducts = allProducts.value.length
-  } else {
-    totalProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value).length
-  }
-
   // Rating promedio (hardcodeado por ahora)
   let averageRating = 4.5
   if (selectedRestaurantId.value !== 'all') {
@@ -482,8 +410,7 @@ const currentStats = computed(() => {
     todayRevenue: todayRevenue,
     orderChange: 12, // Hardcodeado por ahora
     revenueChange: 18, // Hardcodeado por ahora
-    averageRating: averageRating,
-    totalProducts: totalProducts
+    averageRating: averageRating
   }
 })
 
@@ -534,142 +461,14 @@ const getRestaurantAddress = (restaurant: any): string => {
   return `${restaurant.address.street}, ${restaurant.address.city}`
 }
 
-const getRestaurantProductCount = (restaurantId: number): number => {
-  return allProducts.value.filter(p => p.restaurantId === restaurantId).length
-}
+const getTodayOrdersCount = (restaurantId: number): number => {
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
-// MEJORADA: Función para calcular estadísticas reales con fallbacks
-const calculateRealProductStats = (products: any[], orders: any[]) => {
-  console.log('🔍 Debug: Calculando estadísticas de productos...')
-  console.log('📦 Productos disponibles:', products.length)
-  console.log('📋 Pedidos a procesar:', orders.length)
-
-  if (products.length === 0) {
-    console.log('❌ No hay productos para procesar')
-    return []
-  }
-
-  const productMap = new Map()
-
-  // Inicializar productos con 0 pedidos
-  products.forEach(product => {
-    productMap.set(product.id, {
-      ...product,
-      ordersCount: 0,
-      revenue: 0
-    })
-  })
-
-  console.log('🗂️ ProductMap inicializado con:', productMap.size, 'productos')
-
-  if (orders.length === 0) {
-    console.log('⚠️ No hay pedidos para procesar, devolviendo productos con 0 pedidos')
-    return Array.from(productMap.values())
-  }
-
-  // Debug: Ver estructura de un pedido
-  console.log('🔍 Estructura del primer pedido:', {
-    id: orders[0].id,
-    hasOrderItems: !!orders[0].orderItems,
-    orderItemsLength: orders[0].orderItems?.length || 0,
-    firstItem: orders[0].orderItems?.[0] || 'No items'
-  })
-
-  let totalItemsProcessed = 0
-  let itemsMatched = 0
-  const unmatchedProductIds = new Set()
-
-  // Contar pedidos reales de cada producto
-  orders.forEach((order, orderIndex) => {
-    if (order.orderItems && Array.isArray(order.orderItems)) {
-      order.orderItems.forEach((item: any, itemIndex: number) => {
-        totalItemsProcessed++
-
-        // Intentar diferentes formas de obtener el productId
-        let productId = null
-
-        // Múltiples opciones para encontrar el ID del producto
-        if (item.productId) {
-          productId = parseInt(item.productId) // Asegurar que sea número
-        } else if (item.product && item.product.id) {
-          productId = parseInt(item.product.id)
-        } else if (item.id && !item.productId && !item.product) {
-          productId = parseInt(item.id)
-        } else if (item.Product && item.Product.Id) { // PascalCase
-          productId = parseInt(item.Product.Id)
-        }
-
-        // Debug del primer item para ver la estructura
-        if (orderIndex === 0 && itemIndex === 0) {
-          console.log('🔍 Estructura del primer item:', {
-            item_keys: Object.keys(item),
-            productId_found: productId,
-            productId_prop: item.productId,
-            product_prop: item.product,
-            item_id: item.id,
-            quantity: item.quantity,
-            subtotal: item.subtotal
-          })
-        }
-
-        if (productId && productMap.has(productId)) {
-          const productStats = productMap.get(productId)
-          const quantity = parseInt(item.quantity) || 1
-          const subtotal = parseFloat(item.subtotal) || (parseFloat(item.unitPrice) * quantity) || (productStats.price * quantity) || 0
-
-          productStats.ordersCount += quantity
-          productStats.revenue += subtotal
-          productMap.set(productId, productStats)
-          itemsMatched++
-
-          // Debug para el primer match
-          if (itemsMatched === 1) {
-            console.log('✅ Primer match encontrado:', {
-              productId: productId,
-              productName: productStats.name,
-              quantity: quantity,
-              subtotal: subtotal,
-              newOrdersCount: productStats.ordersCount
-            })
-          }
-        } else {
-          if (productId) {
-            unmatchedProductIds.add(productId)
-          }
-
-          // Debug para items no encontrados (solo primeros 3)
-          if (totalItemsProcessed <= 3) {
-            console.log('❌ Item no encontrado:', {
-              productId: productId,
-              available_product_ids: Array.from(productMap.keys()).slice(0, 5),
-              item_keys: Object.keys(item)
-            })
-          }
-        }
-      })
-    }
-  })
-
-  console.log('📊 Resumen del procesamiento:', {
-    totalItemsProcessed,
-    itemsMatched,
-    matchRate: totalItemsProcessed > 0 ? `${((itemsMatched / totalItemsProcessed) * 100).toFixed(1)}%` : '0%',
-    unmatchedProductIds: Array.from(unmatchedProductIds).slice(0, 5)
-  })
-
-  const results = Array.from(productMap.values())
-  const productsWithOrders = results.filter(p => p.ordersCount > 0)
-
-  console.log('📈 Productos con pedidos encontrados:', productsWithOrders.length)
-  if (productsWithOrders.length > 0) {
-    console.log('🏆 Top 3 productos:', productsWithOrders
-      .sort((a, b) => b.ordersCount - a.ordersCount)
-      .slice(0, 3)
-      .map(p => ({ name: p.name, orders: p.ordersCount, revenue: p.revenue.toFixed(2) }))
-    )
-  }
-
-  return results
+  return allOrders.value.filter(order =>
+    order.restaurantId === restaurantId &&
+    new Date(order.createdAt) >= todayStart
+  ).length
 }
 
 // Cargar business REAL usando tu endpoint
@@ -738,91 +537,6 @@ const loadRestaurants = async () => {
   }
 }
 
-// ARREGLADO: Cargar productos REALES usando tus endpoints SIN DUPLICADOS
-const loadProducts = async () => {
-  try {
-    if (!business.value?.id) return
-
-    const allProductsData = []
-    const seenProductIds = new Set() // Para evitar duplicados
-
-    for (const restaurant of restaurants.value) {
-      try {
-        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
-        if (productsResponse.data) {
-          const restaurantProducts = productsResponse.data
-            .filter((product: any) => !seenProductIds.has(product.id)) // Evitar duplicados
-            .map((product: any) => {
-              seenProductIds.add(product.id) // Marcar como visto
-              return {
-                ...product,
-                restaurantId: restaurant.id,
-                restaurantName: restaurant.name,
-                image: product.imageUrl,
-                price: product.basePrice
-              }
-            })
-          allProductsData.push(...restaurantProducts)
-        }
-      } catch (error) {
-        console.error(`Error productos restaurante ${restaurant.id}:`, error)
-      }
-    }
-
-    allProducts.value = allProductsData
-    console.log('📦 Productos únicos cargados:', allProductsData.length)
-    console.log('🔍 IDs de productos:', allProductsData.map(p => p.id).slice(0, 10))
-
-    // MEJORADO: Calcular productos populares SIN DUPLICADOS
-    if (allProductsData.length > 0) {
-      const productStats = calculateRealProductStats(allProductsData, allOrders.value)
-
-      // Filtrar duplicados por ID antes de mostrar
-      const uniqueProductStats = productStats.filter((product, index, array) => {
-        return array.findIndex(p => p.id === product.id) === index
-      })
-
-      // Si no hay estadísticas reales, mostrar productos con datos simulados básicos
-      if (uniqueProductStats.every(p => p.ordersCount === 0)) {
-        console.log('⚠️ No se encontraron estadísticas reales, usando datos básicos')
-        popularProducts.value = uniqueProductStats
-          .slice(0, 8) // Tomar los primeros 8
-          .map((product, index) => ({
-            ...product,
-            ordersCount: Math.max(1, 10 - index), // Al menos 1 pedido, decreciente
-            revenue: (product.price || 10) * Math.max(1, 10 - index)
-          }))
-      } else {
-        // Usar estadísticas reales si las hay
-        const productsWithOrders = uniqueProductStats.filter(p => p.ordersCount > 0)
-        const productsWithoutOrders = uniqueProductStats.filter(p => p.ordersCount === 0)
-
-        if (productsWithOrders.length >= 4) {
-          // Si hay suficientes productos con pedidos reales
-          popularProducts.value = productsWithOrders
-            .sort((a, b) => b.ordersCount - a.ordersCount)
-            .slice(0, 8)
-        } else {
-          // Mezclar productos con pedidos reales + algunos sin pedidos
-          const topReal = productsWithOrders.sort((a, b) => b.ordersCount - a.ordersCount)
-          const remaining = productsWithoutOrders.slice(0, 8 - topReal.length)
-          popularProducts.value = [...topReal, ...remaining]
-        }
-      }
-    } else {
-      popularProducts.value = []
-    }
-
-    console.log('🏆 Productos populares finales (únicos):', popularProducts.value.length)
-    console.log('📊 IDs productos populares:', popularProducts.value.map(p => ({ id: p.id, name: p.name, orders: p.ordersCount })))
-
-  } catch (error) {
-    console.error('Error cargando productos:', error)
-    allProducts.value = []
-    popularProducts.value = []
-  }
-}
-
 // Cargar pedidos REALES desde la API
 const loadOrders = async () => {
   if (restaurants.value.length === 0) return
@@ -866,14 +580,13 @@ const onRestaurantChange = () => {
   console.log('Cambio de restaurante:', selectedRestaurantId.value)
 }
 
-// ARREGLADO: Función refreshData sin duplicación
+// ARREGLADO: Función refreshData
 const refreshData = async () => {
   isRefreshing.value = true
   try {
     await loadBusiness()
     await loadRestaurants() // Primero restaurantes
     await loadOrders()      // Luego pedidos
-    await loadProducts()    // Finalmente productos (usa pedidos para stats)
   } finally {
     isRefreshing.value = false
   }
@@ -903,9 +616,8 @@ onMounted(async () => {
 
   // Cargar todo en secuencia CORRECTA
   await loadBusiness()
-  await loadRestaurants() // Primero restaurantes con estado
-  await loadOrders()      // Luego pedidos
-  await loadProducts()    // Finalmente productos (necesita pedidos para stats)
+  await loadRestaurants()
+  await loadOrders()
 })
 </script>
 
@@ -936,7 +648,6 @@ onMounted(async () => {
   }
 }
 
-// El resto de estilos se mantienen igual...
 .business-home {
   &__restaurant-selector {
     display: flex;
@@ -1092,7 +803,10 @@ onMounted(async () => {
     }
   }
 
-  // Resto de estilos existentes...
+  // Nueva sección principal centrada
+  &__main-section {
+    margin: 0 auto;
+  }
   &__header {
     display: flex;
     justify-content: space-between;
@@ -1302,7 +1016,7 @@ onMounted(async () => {
       border-left-color: #10b981;
     }
 
-    &--products {
+    &--restaurants {
       border-left-color: #8b5cf6;
     }
 
@@ -1335,7 +1049,7 @@ onMounted(async () => {
       color: #10b981;
     }
 
-    .business-home__card--products & {
+    .business-home__card--restaurants & {
       background-color: rgba(139, 92, 246, 0.1);
       color: #8b5cf6;
     }
@@ -1421,13 +1135,6 @@ onMounted(async () => {
     }
   }
 
-  &__sections {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-  }
-
   &__section {
     background-color: white;
     border-radius: 12px;
@@ -1495,10 +1202,14 @@ onMounted(async () => {
   }
 
   &__orders-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
     flex-grow: 1;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   &__order-item {
@@ -1715,118 +1426,6 @@ onMounted(async () => {
       margin: 0 0 1.5rem;
       max-width: 300px;
       line-height: 1.5;
-    }
-  }
-
-  &__add-product-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.7rem 1.2rem;
-    background-color: #06a98d;
-    color: white;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.15s ease;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    &:hover {
-      background-color: #058a73;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  &__products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 1rem;
-    flex-grow: 1;
-  }
-
-  &__product-card {
-    background-color: white;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease-in-out;
-    display: flex;
-    flex-direction: column;
-
-    &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      border-color: #cbd5e0;
-    }
-  }
-
-  &__product-image {
-    height: 120px;
-    overflow: hidden;
-    background-color: #f8fafc;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-  }
-
-  &:hover &__product-image img {
-    transform: scale(1.05);
-  }
-
-  &__product-info {
-    padding: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-
-  &__product-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0 0 0.35rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-  }
-
-  &__product-price {
-    font-weight: 600;
-    color: #06a98d;
-    margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-  }
-
-  &__product-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    color: #64748b;
-    margin-top: auto;
-  }
-
-  &__product-orders,
-  &__product-revenue {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-
-    svg {
-      width: 12px;
-      height: 12px;
-      opacity: 0.8;
     }
   }
 
