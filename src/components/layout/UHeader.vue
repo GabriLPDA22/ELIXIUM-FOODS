@@ -249,6 +249,27 @@
                                     <span>Mi Perfil</span>
                                 </router-link>
                             </li>
+                            <!-- ✅ NUEVO: Botón Dashboard solo para usuarios con business -->
+                            <li v-if="hasBusiness">
+                                <a href="/business/dashboard/"
+                                   class="u-header__user-dropdown-item u-header__user-dropdown-item--business"
+                                   @click="closeUserMenu"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    </svg>
+                                    <span>Dashboard Business</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="external-link-icon">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                            </li>
                             <li>
                                 <router-link to="/orders" class="u-header__user-dropdown-item" @click="closeUserMenu">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -276,7 +297,7 @@
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="12" cy="12" r="3"></circle>
                                         <path
-                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                                         </path>
                                     </svg>
                                     <span>Configuración</span>
@@ -349,6 +370,18 @@ const cartItemCount = computed(() => cartStore?.itemCount || 0);
 const userProfileImage = computed(() => authStore.userProfileImage);
 const userInitials = computed(() => authStore.userInitials);
 const isGoogleUser = computed(() => authStore.isGoogleUser);
+
+// ✅ NUEVO: Detectar si el usuario tiene un business
+const hasBusiness = computed(() => {
+  if (!authStore.user) return false;
+
+  // Verificar si el usuario tiene rol de Business o Admin, o si tiene un businessId
+  return (
+    authStore.user.role === 'Business' ||
+    authStore.user.role === 'Admin' ||
+    !!(authStore.user as any)?.businessId
+  );
+});
 
 const quickCategories = [
     { id: 1, name: 'Americano', icon: '🍔' },
@@ -1448,12 +1481,40 @@ onUnmounted(() => {
             cursor: pointer;
             width: 100%;
             text-align: left;
+            position: relative;
             &:hover {
                 background-color: #f8fafc;
             }
             svg {
                 color: #64748b;
                 flex-shrink: 0;
+            }
+
+            // ✅ NUEVO: Estilo especial para el botón de business
+            &--business {
+                background: linear-gradient(135deg, rgba(255, 65, 108, 0.05), rgba(255, 75, 43, 0.03));
+                border: 1px solid rgba(255, 65, 108, 0.1);
+
+                &:hover {
+                    background: linear-gradient(135deg, rgba(255, 65, 108, 0.1), rgba(255, 75, 43, 0.05));
+                    border-color: rgba(255, 65, 108, 0.2);
+                }
+
+                svg {
+                    color: #FF416C;
+                }
+
+                span {
+                    color: #FF416C;
+                    font-weight: 600;
+                }
+
+                .external-link-icon {
+                    margin-left: auto;
+                    opacity: 0.7;
+                    width: 12px;
+                    height: 12px;
+                }
             }
         }
         &-logout {
