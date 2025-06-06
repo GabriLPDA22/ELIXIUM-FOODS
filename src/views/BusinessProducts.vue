@@ -144,7 +144,7 @@
     <div v-else-if="viewMode === 'grid'" class="business-products__grid">
       <div v-for="product in filteredProducts" :key="product.id" class="business-products__card">
         <div class="business-products__card-image">
-          <img :src="product.imageUrl || '/images/product-placeholder.png'" :alt="product.name" loading="lazy">
+          <img :src="product.imageUrl || '/Images/product-placeholder.png'" :alt="product.name" loading="lazy">
           <div class="business-products__card-overlay">
             <div class="business-products__card-actions">
               <button @click="manageRestaurantAssignments(product)" class="business-products__action-btn business-products__action-btn--assign">
@@ -183,7 +183,7 @@
           <div class="business-products__card-category">{{ getCategoryName(product.categoryId) }}</div>
           <h3 class="business-products__card-title">{{ product.name }}</h3>
           <p class="business-products__card-description">{{ truncateText(product.description, 80) }}</p>
-          
+
           <!-- Información de restaurantes -->
           <div class="business-products__restaurants-info">
             <div class="business-products__restaurants-count">
@@ -237,7 +237,7 @@
           <tr v-for="product in filteredProducts" :key="product.id" class="business-products__row">
             <td class="business-products__cell business-products__cell--image">
               <img
-                :src="product.imageUrl || '/images/product-placeholder.png'"
+                :src="product.imageUrl || '/Images/product-placeholder.png'"
                 :alt="product.name"
                 class="business-products__thumbnail"
                 loading="lazy"
@@ -339,10 +339,10 @@
             <div class="business-products__form-row">
               <div class="business-products__form-group">
                 <label for="productCategory" class="business-products__form-label">
-                  Categoría * 
-                  <button 
-                    type="button" 
-                    @click="showQuickCategoryModal = true" 
+                  Categoría *
+                  <button
+                    type="button"
+                    @click="showQuickCategoryModal = true"
                     class="business-products__inline-btn"
                   >
                     + Nueva
@@ -507,7 +507,7 @@
           <div class="business-products__restaurant-assignments">
             <div class="business-products__product-info">
               <div class="business-products__product-summary">
-                <img :src="selectedProduct?.imageUrl || '/images/product-placeholder.png'" :alt="selectedProduct?.name" class="business-products__product-thumb">
+                <img :src="selectedProduct?.imageUrl || '/Images/product-placeholder.png'" :alt="selectedProduct?.name" class="business-products__product-thumb">
                 <div>
                   <h4>{{ selectedProduct?.name }}</h4>
                   <p>Precio base: {{ formatPrice(selectedProduct?.basePrice) }}</p>
@@ -660,8 +660,8 @@
                     </svg>
                     Editar
                   </button>
-                  <button 
-                    @click="confirmDeleteCategory(category)" 
+                  <button
+                    @click="confirmDeleteCategory(category)"
                     class="business-products__category-btn business-products__category-btn--delete"
                     :disabled="getProductCountByCategory(category.id) > 0"
                   >
@@ -826,6 +826,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification ref="toastNotification" />
   </div>
 </template>
 
@@ -835,6 +838,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { api } from '@/services/api';
 import { ImageService } from '@/services/imageService';
+import ToastNotification from '@/components/ui/ToastNotification.vue';
 
 interface Product {
   id?: number;
@@ -867,6 +871,9 @@ interface RestaurantAssignment {
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+// Toast notification ref
+const toastNotification = ref();
 
 // Estados principales
 const business = ref(null);
@@ -990,7 +997,6 @@ const loadBusiness = async () => {
 
     const response = await api.get(`/api/Business/user/${userId}`);
     business.value = response.data || null;
-    console.log('Business cargado:', business.value);
   } catch (error) {
     console.error('Error cargando business:', error);
     business.value = null;
@@ -1038,8 +1044,6 @@ const loadProducts = async () => {
     // Cargar productos del business
     const response = await api.get(`/api/Products/Business/${business.value.id}`);
     products.value = response.data || [];
-    console.log('Productos cargados:', products.value);
-
     // Cargar asignaciones de restaurantes para cada producto
     await loadRestaurantAssignments();
   } catch (error) {
@@ -1103,7 +1107,7 @@ const getAssignedRestaurantsCount = (productId: number) => {
 const getPriceRange = (productId: number) => {
   const prices = [];
   const baseProduct = products.value.find(p => p.id === productId);
-  
+
   if (!baseProduct) return '';
 
   for (const restaurantId in restaurantProducts.value) {
@@ -1115,7 +1119,7 @@ const getPriceRange = (productId: number) => {
   }
 
   if (prices.length === 0) return '';
-  
+
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
 
@@ -1176,7 +1180,7 @@ const toggleProductAvailability = async (product: Product) => {
     product.isAvailable = newAvailability;
   } catch (error) {
     console.error('Error actualizando disponibilidad:', error);
-    alert('Error al actualizar la disponibilidad del producto');
+    toastNotification.value?.useToast().error('Error al actualizar la disponibilidad del producto');
   }
 };
 
@@ -1194,7 +1198,7 @@ const handleFileChange = async (event: Event) => {
   // Validar imagen
   const validation = ImageService.validateImage(file, 5 * 1024 * 1024); // 5MB máximo
   if (!validation.valid) {
-    alert('Archivo no válido:\n' + validation.errors.join('\n'));
+    toastNotification.value?.useToast().error('Archivo no válido:\n' + validation.errors.join('\n'));
     event.target.value = '';
     return;
   }
@@ -1206,7 +1210,7 @@ const handleFileChange = async (event: Event) => {
     productForm.imageUrl = base64;
   } catch (error) {
     console.error('Error procesando imagen:', error);
-    alert('Error al procesar la imagen');
+    toastNotification.value?.useToast().error('Error al procesar la imagen');
     event.target.value = '';
   }
 };
@@ -1249,32 +1253,29 @@ const submitProductForm = async () => {
     if (productForm.imageUrl && productForm.imageUrl.startsWith('data:')) {
       try {
         const imageResult = await ImageService.uploadBase64(
-          productForm.imageUrl, 
-          `product-${productId}`, 
+          productForm.imageUrl,
+          `product-${productId}`,
           'products'
         );
-        
+
         // Actualizar el producto con la URL de la imagen de S3
         await api.put(`/api/Products/${productId}`, {
           ...productData,
           imageUrl: imageResult.imageUrl
         });
-        
-        console.log('Imagen subida exitosamente a S3:', imageResult.imageUrl);
-        
       } catch (imageError) {
         console.error('Error subiendo imagen:', imageError);
-        alert('Producto guardado correctamente, pero hubo un error al subir la imagen. Puedes intentar subirla después editando el producto.');
+        toastNotification.value?.useToast().error('Producto guardado correctamente, pero hubo un error al subir la imagen. Puedes intentar subirla después editando el producto.');
       }
     }
 
     await loadProducts();
     closeModals();
-    alert(`Producto ${showEditModal.value ? 'actualizado' : 'creado'} correctamente.`);
+    toastNotification.value?.useToast().success(`Producto ${showEditModal.value ? 'actualizado' : 'creado'} correctamente.`);
 
   } catch (error) {
     console.error('Error guardando producto:', error);
-    alert(`Error al ${showEditModal.value ? 'actualizar' : 'crear'} el producto.`);
+    toastNotification.value?.useToast().error(`Error al ${showEditModal.value ? 'actualizar' : 'crear'} el producto.`);
   } finally {
     formSubmitting.value = false;
   }
@@ -1299,10 +1300,10 @@ const deleteProduct = async () => {
     await loadProducts();
     showDeleteModal.value = false;
     productToDelete.value = null;
-    alert('Producto eliminado correctamente.');
+    toastNotification.value?.useToast().success('Producto eliminado correctamente.');
   } catch (error) {
     console.error('Error eliminando producto:', error);
-    alert('Error al eliminar el producto.');
+    toastNotification.value?.useToast().error('Error al eliminar el producto.');
   } finally {
     deleteLoading.value = false;
   }
@@ -1311,11 +1312,11 @@ const deleteProduct = async () => {
 // Funciones de gestión de restaurantes
 const manageRestaurantAssignments = async (product: Product) => {
   selectedProduct.value = product;
-  
+
   // Inicializar asignaciones
   restaurantAssignments.value = restaurants.value.map(restaurant => {
     const existingAssignment = restaurantProducts.value[restaurant.id]?.find(rp => rp.productId === product.id);
-    
+
     return {
       restaurantId: restaurant.id,
       isAssigned: !!existingAssignment,
@@ -1337,7 +1338,7 @@ const toggleRestaurantAssignment = (restaurantId: number) => {
   const assignment = restaurantAssignments.value.find(a => a.restaurantId === restaurantId);
   if (assignment) {
     assignment.isAssigned = !assignment.isAssigned;
-    
+
     // Si se desasigna, resetear valores
     if (!assignment.isAssigned) {
       assignment.price = selectedProduct.value?.basePrice;
@@ -1422,11 +1423,11 @@ const saveRestaurantAssignments = async () => {
     // Recargar asignaciones
     await loadRestaurantAssignments();
     showRestaurantModal.value = false;
-    alert('Asignaciones guardadas correctamente.');
+    toastNotification.value?.useToast().success('Asignaciones guardadas correctamente.');
 
   } catch (error) {
     console.error('Error guardando asignaciones:', error);
-    alert('Error al guardar las asignaciones.');
+    toastNotification.value?.useToast().error('Error al guardar las asignaciones.');
   } finally {
     assignmentsLoading.value = false;
   }
@@ -1476,11 +1477,11 @@ const submitCategoryForm = async () => {
 
     await loadCategories();
     cancelCategoryForm();
-    alert(`Categoría ${showEditCategoryForm.value ? 'actualizada' : 'creada'} correctamente.`);
+    toastNotification.value?.useToast().success(`Categoría ${showEditCategoryForm.value ? 'actualizada' : 'creada'} correctamente.`);
 
   } catch (error) {
     console.error('Error al guardar categoría:', error);
-    alert(`Error al ${showEditCategoryForm.value ? 'actualizar' : 'crear'} la categoría.`);
+    toastNotification.value?.useToast().error(`Error al ${showEditCategoryForm.value ? 'actualizar' : 'crear'} la categoría.`);
   } finally {
     categoryFormSubmitting.value = false;
   }
@@ -1497,9 +1498,9 @@ const submitQuickCategory = async () => {
     };
 
     const response = await api.post('/api/categories', categoryData);
-    
+
     await loadCategories();
-    
+
     // Seleccionar automáticamente la nueva categoría en el formulario de producto
     if (response.data?.id) {
       productForm.categoryId = response.data.id;
@@ -1507,11 +1508,11 @@ const submitQuickCategory = async () => {
 
     showQuickCategoryModal.value = false;
     Object.assign(quickCategoryForm, { name: '', description: '' });
-    alert('Categoría creada correctamente.');
+    toastNotification.value?.useToast().success('Categoría creada correctamente.');
 
   } catch (error) {
     console.error('Error al crear categoría:', error);
-    alert('Error al crear la categoría.');
+    toastNotification.value?.useToast().error('Error al crear la categoría.');
   } finally {
     quickCategorySubmitting.value = false;
   }
@@ -1577,7 +1578,7 @@ onMounted(async () => {
   // =================================
   // LAYOUT PRINCIPAL
   // =================================
-  
+
   &__header {
     display: flex;
     justify-content: space-between;

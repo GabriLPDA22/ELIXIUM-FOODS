@@ -15,23 +15,6 @@ export interface User {
   addresses?: Address[]
 }
 
-export interface Address {
-  id: number
-  name?: string
-  street: string
-  number?: string
-  interior?: string
-  neighborhood?: string
-  city: string
-  state: string
-  zipCode: string
-  phone?: string
-  latitude?: number
-  longitude?: number
-  isDefault?: boolean
-  userId?: number
-}
-
 export interface Restaurant {
   id: number
   name: string
@@ -47,68 +30,203 @@ export interface Restaurant {
   address: Address
   createdAt: string
   updatedAt: string
+  // Additional fields for enhanced functionality
+  businessId?: number
+  categories?: Category[]
+  hours?: RestaurantHour[]
+}
+
+export interface RestaurantHour {
+  id: number
+  dayOfWeek: string
+  isOpen: boolean
+  openTime: string
+  closeTime: string
+  restaurantId: number
+}
+
+export interface RestaurantStatus {
+  isCurrentlyOpen: boolean
+  status: string
+  statusMessage: string
+  hours?: RestaurantHour[]
 }
 
 export interface Category {
   id: number
   name: string
   description: string
-  menuId: number
-  products: Product[]
+  businessId: number
+  products?: Product[]
 }
 
 export interface Product {
   id: number
   name: string
   description: string
-  price: number
+  basePrice: number
   imageUrl: string
   isAvailable: boolean
   categoryId: number
-  categoryName: string
+  businessId: number
+
+  // Restaurant-specific fields
+  restaurantId?: number
+  restaurantName?: string
+  restaurantPrice?: number
+  restaurantProductIsAvailable?: boolean
+  stockQuantity?: number
+}
+
+export interface ProductOffer {
+  id: number
+  name: string
+  description: string
+  discountType: 'percentage' | 'fixed' | '%'
+  discountValue: number
+  minimumOrderAmount: number
+  minimumQuantity: number
+  startDate: string
+  endDate: string
+  usageLimit: number
+  usageCount: number
+  status: 'active' | 'inactive' | 'expired'
   restaurantId: number
+  restaurantName: string
+  productId: number
+  productName: string
+  productImageUrl: string
+  createdAt: string
+  updatedAt: string
+  isActive: boolean
+  isExpired: boolean
+  remainingUses: number
+}
+
+export interface CartItem {
+  id: number
+  productId: number
+  name: string
+  price: number
+  originalPrice: number
+  imageUrl: string
+  restaurantId: number
+  restaurantName: string
+  categoryId: number
+  isAvailable: boolean
+  description: string
+  businessId: number
+  businessName: string
+  quantity: number
+  appliedOffer?: ProductOffer
+}
+
+export interface Address {
+  id: number
+  name: string
+  street: string
+  number: string
+  interior?: string
+  neighborhood?: string
+  city: string
+  state: string
+  zipCode: string
+  phone: string
+  latitude?: number
+  longitude?: number
+  isDefault: boolean
+  userId?: number
+}
+
+export interface PaymentMethod {
+  id: number
+  nickname: string
+  type: 'visa' | 'mastercard' | 'paypal' | 'other'
+  lastFourDigits?: string
+  expiryMonth?: number
+  expiryYear?: number
+  cardholderName?: string
+  payPalEmail?: string
+  isDefault: boolean
+  isActive: boolean
+  userId: number
 }
 
 export interface OrderItem {
-  id: number
-  orderId: number
+  id?: number
   productId: number
   productName: string
-  productDescription: string
-  productImageUrl: string
   quantity: number
   unitPrice: number
   subtotal: number
-}
-
-export interface Payment {
-  id: number
-  orderId: number
-  paymentMethod: string
-  status: string
-  transactionId: string
-  amount: number
-  paymentDate: string
+  productImageUrl?: string
 }
 
 export interface Order {
   id: number
-  userId: number
-  userFullName: string
-  restaurantId: number
-  restaurantName: string
-  deliveryAddressId: number
-  deliveryAddress: string
-  deliveryPersonId?: number
-  deliveryPersonName?: string
   subtotal: number
   deliveryFee: number
-  tax: number
   total: number
-  status: string
+  status: OrderStatus
   estimatedDeliveryTime: string
   createdAt: string
   updatedAt: string
+  userId: number
+  restaurantId: number
+  restaurantName: string
+  deliveryAddressId: number
+  deliveryAddress?: Address
+  deliveryPersonId?: number
   orderItems: OrderItem[]
-  payment: Payment
+  payment?: Payment
+}
+
+export interface Payment {
+  id: number
+  paymentMethod: string
+  status: 'Pending' | 'Completed' | 'Failed' | 'Refunded'
+  transactionId?: string
+  amount: number
+  paymentDate: string
+  orderId: number
+}
+
+export enum OrderStatus {
+  PENDING = 'Pending',
+  ACCEPTED = 'Accepted',
+  PREPARING = 'Preparing',
+  READY_FOR_PICKUP = 'ReadyForPickup',
+  ON_THE_WAY = 'OnTheWay',
+  DELIVERED = 'Delivered',
+  CANCELLED = 'Cancelled'
+}
+
+export interface CreateOrderRequest {
+  restaurantId: number
+  deliveryAddressId: number
+  items: {
+    productId: number
+    quantity: number
+    name?: string
+    price?: number
+  }[]
+  paymentMethod: string
+  deliveryInstructions?: string
+  promoCode?: string
+  scheduledDeliveryTime?: string
+}
+
+export interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  message?: string
+  errors?: string[]
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
 }

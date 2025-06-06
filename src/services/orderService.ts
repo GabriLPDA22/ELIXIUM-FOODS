@@ -1,5 +1,5 @@
-// src/services/orderService.ts - VERSIÓN CON FALLBACK MOCK
 import { api } from './api'
+import type { Order, CreateOrderRequest, Address, ApiResponse } from '@/types'
 
 export enum OrderStatus {
   PENDING = 'Pending',
@@ -11,485 +11,349 @@ export enum OrderStatus {
   CANCELLED = 'Cancelled',
 }
 
-export interface OrderItem {
-  id: number
-  orderId: number
-  productId: number
-  productName: string
-  productDescription: string
-  productImageUrl: string
-  quantity: number
-  unitPrice: number
-  subtotal: number
-  name?: string // Alias para productName
-  description?: string // Alias para productDescription
-  imageUrl?: string // Alias para productImageUrl
-  price?: number // Alias para unitPrice
-}
-
 export interface OrderResponse {
   id: number
   userId: number
-  userFullName: string
   restaurantId: number
   restaurantName: string
-  deliveryAddressId: number
-  deliveryAddress: string
-  deliveryPersonId?: number
-  deliveryPersonName?: string
+  status: OrderStatus
+  total: number
+  subtotal: number
+  deliveryFee: number
+  createdAt: string
+  updatedAt: string
+  estimatedDeliveryTime: string
+  orderItems?: {
+    id: number
+    productId: number
+    productName: string
+    name: string
+    quantity: number
+    unitPrice: number
+    productImageUrl?: string
+  }[]
+}
+
+export interface PromoCodeValidation {
+  valid: boolean
+  discount: number
+  message?: string
+  code?: string
+}
+
+export interface DeliveryTimeSlot {
+  time: string
+  available: boolean
+  estimatedDelivery: string
+}
+
+export interface OrderSummary {
   subtotal: number
   deliveryFee: number
   tax: number
   total: number
-  status: OrderStatus
-  estimatedDeliveryTime: string
-  createdAt: string
-  updatedAt: string
-  orderItems: OrderItem[]
-  payment: {
-    id: number
-    orderId: number
-    paymentMethod: string
-    status: string
-    transactionId: string
-    amount: number
-    paymentDate: string
-  }
-}
-
-export interface CreateOrderRequest {
-  restaurantId: number
-  deliveryAddressId: number
-  items: {
-    productId: number
-    quantity: number
-    name?: string
-    price?: number
-  }[]
-  paymentMethod: string
-  deliveryInstructions?: string
-  promoCode?: string
-  scheduledDeliveryTime?: string
-}
-
-export interface PromoCodeResult {
-  valid: boolean
-  discount: number
-  message?: string
+  savings: number
+  itemCount: number
 }
 
 class OrderService {
-  private isBackendAvailable = true // Flag para determinar si usar backend real o mock
+  private baseUrl = '/api'
 
-  /**
-   * Verificar si el backend está disponible
-   */
-  private async checkBackendHealth(): Promise<boolean> {
+  async createOrder(orderData: CreateOrderRequest): Promise<Order> {
     try {
-      // Intentar hacer una llamada simple al backend
-      await api.get('/api/health', { timeout: 3000 })
-      this.isBackendAvailable = true
-      return true
-    } catch (error) {
-      console.warn('⚠️ Backend no disponible, usando fallback mock')
-      this.isBackendAvailable = false
-      return false
+      const response = await api.post(`${this.baseUrl}/orders`, orderData)
+      return response.data
+    } catch (error: any) {
+      console.error('❌ Error creando pedido:', error)
+      let errorMessage = 'Error al crear el pedido'
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.response?.data?.errors?.length > 0) {
+        errorMessage = error.response.data.errors.join(', ')
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      throw new Error(errorMessage)
     }
   }
 
-  /**
-   * Obtener pedidos del usuario actual
-   */
   async getUserOrders(): Promise<OrderResponse[]> {
     try {
-      if (!this.isBackendAvailable) {
-        await this.checkBackendHealth()
-      }
-
-      if (this.isBackendAvailable) {
-        const response = await api.get('/api/Orders/user')
-        return response.data.map((order: any) => ({
-          ...order,
-          orderItems: (order.orderItems || order.items || []).map((item: any) => ({
-            ...item,
-            name: item.productName || item.name,
-            description: item.productDescription || item.description,
-            imageUrl: item.productImageUrl || item.imageUrl,
-            price: item.unitPrice || item.price
-          }))
-        }))
-      } else {
-        // Fallback: usar datos mock
-        return this.getMockUserOrders()
-      }
+      const response = await api.get(`${this.baseUrl}/orders`)
+      return response.data || []
     } catch (error: any) {
-      console.error('Error fetching user orders, usando fallback:', error)
-
-      // Si falla la llamada real, usar mock
-      this.isBackendAvailable = false
-      return this.getMockUserOrders()
+      console.error('❌ Error con /api/orders, intentando método alternativo:', error)
+      try {
+        const userResponse = await api.get(`${this.baseUrl}/auth/me`)
+        const userId = userResponse.data?.id || userResponse.data?.userId
+        if (userId) {
+          const ordersResponse = await api.get(`${this.baseUrl}/orders/user/${userId}`)
+          return ordersResponse.data || []
+        }
+        throw new Error('No se pudo obtener el ID del usuario')
+      } catch (secondError: any) {
+        console.error('❌ Error obteniendo pedidos del usuario:', secondError)
+        return []
+      }
     }
   }
 
-  /**
-   * Obtener un pedido por ID
-   */
   async getOrderById(orderId: number): Promise<OrderResponse> {
     try {
-      if (!this.isBackendAvailable) {
-        await this.checkBackendHealth()
-      }
-
-      if (this.isBackendAvailable) {
-        const response = await api.get(`/api/Orders/${orderId}`)
-        const order = response.data
-        return {
-          ...order,
-          orderItems: (order.orderItems || order.items || []).map((item: any) => ({
-            ...item,
-            name: item.productName || item.name,
-            description: item.productDescription || item.description,
-            imageUrl: item.productImageUrl || item.imageUrl,
-            price: item.unitPrice || item.price
-          }))
-        }
-      } else {
-        // Fallback: usar datos mock
-        return this.getMockOrderById(orderId)
-      }
+      const response = await api.get(`${this.baseUrl}/orders/${orderId}`)
+      return response.data
     } catch (error: any) {
-      console.error('Error fetching order, usando fallback:', error)
-
-      // Si falla la llamada real, usar mock
-      this.isBackendAvailable = false
-      return this.getMockOrderById(orderId)
+      console.error('Error fetching order:', error)
+      throw new Error(error.response?.data?.message || 'Pedido no encontrado')
     }
   }
 
-  /**
-   * Crear un nuevo pedido
-   */
-  async createOrder(orderData: CreateOrderRequest): Promise<OrderResponse> {
+  async updateOrderStatus(orderId: number, status: OrderStatus): Promise<OrderResponse> {
     try {
-      if (!this.isBackendAvailable) {
-        await this.checkBackendHealth()
-      }
-
-      console.log('🔄 Enviando pedido al backend:', orderData)
-
-      if (this.isBackendAvailable) {
-        const response = await api.post('/api/Orders', orderData)
-        console.log('✅ Pedido creado exitosamente:', response.data)
-
-        const order = response.data
-        return {
-          ...order,
-          orderItems: (order.orderItems || order.items || []).map((item: any) => ({
-            ...item,
-            name: item.productName || item.name,
-            description: item.productDescription || item.description,
-            imageUrl: item.productImageUrl || item.imageUrl,
-            price: item.unitPrice || item.price
-          }))
-        }
-      } else {
-        // Fallback: crear pedido mock
-        return this.createMockOrder(orderData)
-      }
+      const response = await api.put(`${this.baseUrl}/orders/${orderId}/status`, {
+        status,
+      })
+      return response.data
     } catch (error: any) {
-      console.error('❌ Error creating order, usando fallback:', error)
-
-      // Si falla la llamada real, usar mock
-      this.isBackendAvailable = false
-      return this.createMockOrder(orderData)
+      console.error('Error updating order status:', error)
+      throw new Error(error.response?.data?.message || 'Error al actualizar el pedido')
     }
   }
 
-  /**
-   * Cancelar un pedido
-   */
-  async cancelOrder(orderId: number): Promise<boolean> {
+  async cancelOrder(orderId: number, reason?: string): Promise<OrderResponse> {
     try {
-      if (!this.isBackendAvailable) {
-        await this.checkBackendHealth()
-      }
-
-      console.log(`🔄 Cancelando pedido ${orderId}...`)
-
-      if (this.isBackendAvailable) {
-        await api.put(`/api/Orders/${orderId}/cancel`, {})
-        console.log(`✅ Pedido ${orderId} cancelado en backend`)
-        return true
-      } else {
-        // Fallback: simular cancelación exitosa
-        console.log(`✅ Pedido ${orderId} cancelado (mock)`)
-        await new Promise(resolve => setTimeout(resolve, 800)) // Simular delay
-        return true
-      }
+      const response = await api.post(`${this.baseUrl}/Orders/${orderId}/cancel`, {
+        reason,
+      })
+      return response.data
     } catch (error: any) {
-      console.error(`❌ Error cancelling order ${orderId}, usando fallback:`, error)
-
-      // Si falla la llamada real, usar mock exitoso
-      this.isBackendAvailable = false
-      console.log(`✅ Pedido ${orderId} cancelado (fallback mock)`)
-      await new Promise(resolve => setTimeout(resolve, 800))
-      return true
+      console.error('Error cancelling order (original AxiosError):', error)
+      throw error
     }
   }
 
-  /**
-   * Actualizar estado de un pedido
-   */
-  async updateOrderStatus(orderId: number, status: OrderStatus): Promise<boolean> {
-    try {
-      if (!this.isBackendAvailable) {
-        await this.checkBackendHealth()
-      }
-
-      if (this.isBackendAvailable) {
-        await api.put(`/api/Orders/${orderId}/status`, { status })
-        return true
-      } else {
-        // Fallback: simular actualización exitosa
-        await new Promise(resolve => setTimeout(resolve, 600))
-        return true
-      }
-    } catch (error: any) {
-      console.error('Error updating order status, usando fallback:', error)
-
-      // Si falla la llamada real, usar mock exitoso
-      this.isBackendAvailable = false
-      await new Promise(resolve => setTimeout(resolve, 600))
-      return true
-    }
-  }
-
-  /**
-   * Calcular costo de envío
-   */
-  async getDeliveryFee(restaurantId: number, addressId: number): Promise<number> {
-    try {
-      if (this.isBackendAvailable) {
-        const response = await api.get(`/api/Orders/delivery-fee?restaurantId=${restaurantId}&addressId=${addressId}`)
-        return response.data.fee || 3.99
-      }
-    } catch (error) {
-      console.error('Error calculating delivery fee:', error)
-    }
-
-    // Usar costo fijo si no se puede calcular
-    return 3.99
-  }
-
-  /**
-   * Validar código promocional
-   */
   async validatePromoCode(
     code: string,
     restaurantId: number,
-    orderAmount: number
-  ): Promise<PromoCodeResult> {
+    subtotal: number
+  ): Promise<PromoCodeValidation> {
     try {
-      if (this.isBackendAvailable) {
-        const response = await api.post('/api/Orders/validate-promo', {
-          code,
-          restaurantId,
-          orderAmount
-        })
-        return response.data
-      }
-    } catch (error) {
-      console.error('Error validating promo code:', error)
-    }
-
-    // Fallback: códigos simulados para desarrollo
-    const validCodes: Record<string, number> = {
-      WELCOME10: 0.1, // 10% descuento
-      SAVE5: 5.0, // $5 descuento fijo
-      FIRST: 0.15, // 15% descuento primer pedido
-    }
-
-    const discountRate = validCodes[code.toUpperCase()]
-
-    if (discountRate) {
-      const discount =
-        discountRate <= 1 ? orderAmount * discountRate : Math.min(discountRate, orderAmount)
-
+      const response = await api.post(`${this.baseUrl}/promocodes/validate`, {
+        code,
+        restaurantId,
+        subtotal,
+      })
       return {
-        valid: true,
-        discount: discount,
-        message: `Código aplicado correctamente: ${code.toUpperCase()}`,
+        valid: response.data.valid,
+        discount: response.data.discount || 0,
+        message: response.data.message,
+        code: response.data.code,
       }
-    } else {
+    } catch (error: any) {
+      console.error('Error validating promo code:', error)
       return {
         valid: false,
         discount: 0,
-        message: 'Código promocional inválido',
+        message: error.response?.data?.message || 'Código promocional inválido',
       }
     }
   }
 
-  // ============= MÉTODOS MOCK PARA FALLBACK =============
-
-  private getMockUserOrders(): OrderResponse[] {
-    return [
-      {
-        id: 12345,
-        userId: 1,
-        userFullName: 'Usuario Demo',
-        restaurantId: 123,
-        restaurantName: 'Restaurante Demo',
-        deliveryAddressId: 456,
-        deliveryAddress: 'Calle Demo, 123, Madrid',
-        subtotal: 30.97,
-        deliveryFee: 3.99,
-        tax: 4.96,
-        total: 39.92,
-        status: OrderStatus.DELIVERED,
-        estimatedDeliveryTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        orderItems: [
-          {
-            id: 1,
-            orderId: 12345,
-            productId: 101,
-            productName: 'Hamburguesa Clásica',
-            productDescription: 'Deliciosa hamburguesa con carne 100% res',
-            productImageUrl: '/images/burger.jpg',
-            quantity: 2,
-            unitPrice: 12.99,
-            subtotal: 25.98,
-            name: 'Hamburguesa Clásica',
-            description: 'Deliciosa hamburguesa con carne 100% res',
-            imageUrl: '/images/burger.jpg',
-            price: 12.99
-          },
-          {
-            id: 2,
-            orderId: 12345,
-            productId: 102,
-            productName: 'Papas Fritas',
-            productDescription: 'Papas crujientes doradas',
-            productImageUrl: '/images/fries.jpg',
-            quantity: 1,
-            unitPrice: 4.99,
-            subtotal: 4.99,
-            name: 'Papas Fritas',
-            description: 'Papas crujientes doradas',
-            imageUrl: '/images/fries.jpg',
-            price: 4.99
-          }
-        ],
-        payment: {
-          id: 22345,
-          orderId: 12345,
-          paymentMethod: 'Tarjeta de crédito',
-          status: 'completed',
-          transactionId: 'TXN_22345',
-          amount: 39.92,
-          paymentDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      }
-    ]
+  async getAvailableDeliveryTimes(
+    restaurantId: number,
+    addressId: number,
+    date: string
+  ): Promise<string[]> {
+    try {
+      const response = await api.get(`${this.baseUrl}/restaurants/${restaurantId}/delivery-times`, {
+        params: { addressId, date },
+      })
+      return response.data || []
+    } catch (error: any) {
+      console.error('Error fetching delivery times:', error)
+      return this.generateBasicTimeSlots(date)
+    }
   }
 
-  private getMockOrderById(orderId: number): OrderResponse {
-    return {
-      id: orderId,
-      userId: 1,
-      userFullName: 'Usuario Demo',
-      restaurantId: 123,
-      restaurantName: 'Restaurante Demo',
-      deliveryAddressId: 456,
-      deliveryAddress: 'Calle Demo, 123, Madrid',
-      subtotal: 30.97,
-      deliveryFee: 3.99,
-      tax: 4.96,
-      total: 39.92,
-      status: OrderStatus.PREPARING,
-      estimatedDeliveryTime: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
-      createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      orderItems: [
+  async estimateDeliveryTime(
+    restaurantId: number,
+    addressId: number
+  ): Promise<{ estimatedMinutes: number; estimatedTime: string }> {
+    try {
+      const response = await api.get(
+        `${this.baseUrl}/restaurants/${restaurantId}/estimate-delivery`,
         {
-          id: 1,
-          orderId: orderId,
-          productId: 101,
-          productName: 'Hamburguesa Clásica',
-          productDescription: 'Deliciosa hamburguesa con carne 100% res',
-          productImageUrl: '/images/burger.jpg',
-          quantity: 2,
-          unitPrice: 12.99,
-          subtotal: 25.98,
-          name: 'Hamburguesa Clásica',
-          description: 'Deliciosa hamburguesa con carne 100% res',
-          imageUrl: '/images/burger.jpg',
-          price: 12.99
+          params: { addressId },
         }
-      ],
-      payment: {
-        id: orderId + 1000,
-        orderId: orderId,
-        paymentMethod: 'Tarjeta de crédito',
-        status: 'completed',
-        transactionId: `TXN_${orderId}`,
-        amount: 39.92,
-        paymentDate: new Date(Date.now() - 15 * 60 * 1000).toISOString()
-      }
+      )
+      return response.data
+    } catch (error: any) {
+      console.error('Error estimating delivery time:', error)
+      const estimatedMinutes = 35
+      const estimatedTime = new Date(Date.now() + estimatedMinutes * 60000).toLocaleTimeString(
+        'es-ES',
+        {
+          hour: '2-digit',
+          minute: '2-digit',
+        }
+      )
+      return { estimatedMinutes, estimatedTime }
     }
   }
 
-  private createMockOrder(orderData: CreateOrderRequest): OrderResponse {
-    const orderId = Math.floor(10000 + Math.random() * 90000)
-    const subtotal = orderData.items.reduce((total, item) => total + (item.price || 19.99) * item.quantity, 0)
-    const deliveryFee = 3.99
-    const tax = subtotal * 0.16
-    const total = subtotal + deliveryFee + tax
-
+  calculateOrderSummary(
+    items: { price: number; quantity: number }[],
+    deliveryFee: number = 0,
+    taxRate: number = 0.16,
+    promoDiscount: number = 0
+  ): OrderSummary {
+    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount)
+    const tax = subtotalAfterPromo * taxRate
+    const total = subtotalAfterPromo + deliveryFee + tax
+    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
     return {
-      id: orderId,
-      userId: 1,
-      userFullName: 'Usuario Demo',
-      restaurantId: orderData.restaurantId,
-      restaurantName: 'Restaurante Demo',
-      deliveryAddressId: orderData.deliveryAddressId,
-      deliveryAddress: 'Dirección de entrega demo',
-      subtotal,
+      subtotal: subtotalAfterPromo,
       deliveryFee,
       tax,
       total,
-      status: OrderStatus.PENDING,
-      estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      orderItems: orderData.items.map((item, index) => ({
-        id: index + 1,
-        orderId: orderId,
-        productId: item.productId,
-        productName: item.name || 'Producto Demo',
-        productDescription: 'Descripción del producto',
-        productImageUrl: '/images/placeholder.jpg',
-        quantity: item.quantity,
-        unitPrice: item.price || 19.99,
-        subtotal: (item.price || 19.99) * item.quantity,
-        name: item.name || 'Producto Demo',
-        description: 'Descripción del producto',
-        imageUrl: '/images/placeholder.jpg',
-        price: item.price || 19.99
-      })),
-      payment: {
-        id: orderId + 1000,
-        orderId: orderId,
-        paymentMethod: orderData.paymentMethod,
-        status: 'pending',
-        transactionId: `TXN_${orderId}`,
-        amount: total,
-        paymentDate: new Date().toISOString()
+      savings: promoDiscount,
+      itemCount,
+    }
+  }
+
+  getOrderStatusText(status: OrderStatus): string {
+    const statusTexts: Record<OrderStatus, string> = {
+      [OrderStatus.PENDING]: 'Pendiente',
+      [OrderStatus.ACCEPTED]: 'Aceptado',
+      [OrderStatus.PREPARING]: 'Preparando',
+      [OrderStatus.READY_FOR_PICKUP]: 'Listo para recoger',
+      [OrderStatus.ON_THE_WAY]: 'En camino',
+      [OrderStatus.DELIVERED]: 'Entregado',
+      [OrderStatus.CANCELLED]: 'Cancelado',
+    }
+    return statusTexts[status] || status
+  }
+
+  getOrderStatusClass(status: OrderStatus): string {
+    switch (status) {
+      case OrderStatus.DELIVERED:
+        return 'status--delivered'
+      case OrderStatus.CANCELLED:
+        return 'status--cancelled'
+      case OrderStatus.ON_THE_WAY:
+        return 'status--on-the-way'
+      case OrderStatus.ACCEPTED:
+      case OrderStatus.PREPARING:
+      case OrderStatus.READY_FOR_PICKUP:
+        return 'status--preparing'
+      default:
+        return 'status--pending'
+    }
+  }
+
+  canCancelOrder(order: OrderResponse): boolean {
+    return [OrderStatus.PENDING, OrderStatus.ACCEPTED].includes(order.status)
+  }
+
+  canReorderOrder(order: OrderResponse): boolean {
+    return [OrderStatus.DELIVERED, OrderStatus.CANCELLED].includes(order.status)
+  }
+
+  formatOrderDate(dateString: string): string {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      return `Hoy, ${date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Madrid', // ✅ ARREGLO: Zona horaria española
+      })}`
+    } else if (diffDays === 1) {
+      return `Ayer, ${date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Madrid', // ✅ ARREGLO: Zona horaria española
+      })}`
+    } else if (diffDays < 7) {
+      return `Hace ${diffDays} días`
+    } else {
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        year: diffDays > 365 ? 'numeric' : undefined,
+        timeZone: 'Europe/Madrid', // ✅ ARREGLO: Zona horaria española
+      })
+    }
+  }
+
+  // ✅ NUEVO: Método helper para formatear fechas consistentemente
+  formatDateWithTimezone(dateString: string): string {
+    const date = new Date(dateString)
+    return date.toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid', // Zona horaria española (GMT+1/GMT+2)
+    })
+  }
+
+  summarizeOrderItems(items: { productName: string; quantity: number }[]): string {
+    if (!items || items.length === 0) return 'Sin productos'
+    const itemSummary = items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')
+    return itemSummary.length > 60 ? itemSummary.substring(0, 57) + '...' : itemSummary
+  }
+
+  private generateBasicTimeSlots(date: string): string[] {
+    const slots: string[] = []
+    const selectedDate = new Date(date + 'T00:00:00')
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const isToday = selectedDate.getTime() === today.getTime()
+    const currentHour = new Date().getHours()
+    let startHour = 11
+    if (isToday) {
+      startHour = Math.max(startHour, currentHour + 1)
+    }
+    for (let hour = startHour; hour <= 22; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`)
+      if (hour < 22) {
+        slots.push(`${hour.toString().padStart(2, '0')}:30`)
+      }
+    }
+    return slots
+  }
+
+  async trackOrder(orderId: number): Promise<{
+    currentStatus: OrderStatus
+    estimatedDelivery: string
+    steps: { status: OrderStatus; completed: boolean; timestamp?: string }[]
+  }> {
+    try {
+      const response = await api.get(`${this.baseUrl}/orders/${orderId}/track`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error tracking order:', error)
+      const order = await this.getOrderById(orderId)
+      return {
+        currentStatus: order.status,
+        estimatedDelivery: order.estimatedDeliveryTime,
+        steps: [
+          { status: OrderStatus.PENDING, completed: true },
+          { status: OrderStatus.ACCEPTED, completed: order.status !== OrderStatus.PENDING },
+          { status: OrderStatus.PREPARING, completed: false },
+          { status: OrderStatus.ON_THE_WAY, completed: false },
+          { status: OrderStatus.DELIVERED, completed: false },
+        ],
       }
     }
   }
 }
 
-const orderService = new OrderService()
+export const orderService = new OrderService()
 export default orderService

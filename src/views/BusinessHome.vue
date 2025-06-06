@@ -8,16 +8,16 @@
       <div class="business-home__header-right">
         <div class="business-home__restaurant-selector" v-if="restaurants.length > 1">
           <label for="restaurantSelect" class="business-home__selector-label">Restaurante:</label>
-          <select 
-            id="restaurantSelect" 
-            v-model="selectedRestaurantId" 
+          <select
+            id="restaurantSelect"
+            v-model="selectedRestaurantId"
             @change="onRestaurantChange"
             class="business-home__selector"
           >
             <option value="all">Todos los restaurantes</option>
-            <option 
-              v-for="restaurant in restaurants" 
-              :key="restaurant.id" 
+            <option
+              v-for="restaurant in restaurants"
+              :key="restaurant.id"
               :value="restaurant.id"
             >
               {{ restaurant.name }}
@@ -128,23 +128,23 @@
         </div>
       </div>
 
-      <div class="business-home__card business-home__card--products">
+      <div class="business-home__card business-home__card--restaurants">
         <div class="business-home__card-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
-            <path
-              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-            </path>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+            <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+            <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+            <rect x="7" y="7" width="10" height="10" rx="1"></rect>
           </svg>
         </div>
         <div class="business-home__card-content">
-          <h3 class="business-home__card-title">Total Productos</h3>
+          <h3 class="business-home__card-title">Restaurantes</h3>
           <div class="business-home__card-stats">
-            <p class="business-home__card-value">{{ currentStats.totalProducts }}</p>
+            <p class="business-home__card-value">{{ restaurants.length }}</p>
           </div>
-          <p class="business-home__card-period">{{ selectedRestaurantId === 'all' ? 'en todos tus restaurantes' : 'en este restaurante' }}</p>
+          <p class="business-home__card-period">{{ restaurants.length === 1 ? 'restaurante activo' : 'restaurantes activos' }}</p>
         </div>
       </div>
 
@@ -181,9 +181,9 @@
         </router-link>
       </div>
       <div class="business-home__restaurants-grid">
-        <div 
-          v-for="restaurant in restaurants" 
-          :key="restaurant.id" 
+        <div
+          v-for="restaurant in restaurants"
+          :key="restaurant.id"
           :class="['business-home__restaurant-card', { 'business-home__restaurant-card--selected': selectedRestaurantId === restaurant.id }]"
           @click="selectRestaurant(restaurant.id)"
         >
@@ -203,11 +203,11 @@
               <div class="business-home__restaurant-stat">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
-                <span>{{ getRestaurantProductCount(restaurant.id) }} productos</span>
+                <span>{{ getTodayOrdersCount(restaurant.id) }} pedidos hoy</span>
               </div>
               <div class="business-home__restaurant-stat">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -222,7 +222,8 @@
       </div>
     </div>
 
-    <div class="business-home__sections">
+    <!-- Sección de pedidos pendientes centrada y más ancha -->
+    <div class="business-home__main-section">
       <div class="business-home__section business-home__section--pending">
         <div class="business-home__section-header">
           <h2 class="business-home__section-title">
@@ -242,7 +243,7 @@
           <p>Cargando pedidos...</p>
         </div>
         <div v-else-if="pendingOrders.length > 0" class="business-home__orders-list">
-          <div v-for="order in pendingOrders.slice(0, 3)" :key="order.id" class="business-home__order-item">
+          <div v-for="order in pendingOrders.slice(0, 6)" :key="order.id" class="business-home__order-item">
             <div class="business-home__order-info">
               <div class="business-home__order-header">
                 <h4 class="business-home__order-id">Pedido #{{ order.id }}</h4>
@@ -271,69 +272,6 @@
           </div>
           <h4>Todo al día</h4>
           <p>No tienes pedidos pendientes en este momento. ¡Buen trabajo!</p>
-        </div>
-      </div>
-
-      <div class="business-home__section business-home__section--products">
-        <div class="business-home__section-header">
-          <h2 class="business-home__section-title">Productos Populares</h2>
-          <router-link :to="{ name: 'business-products' }" class="business-home__section-link">
-            Ver todos
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </router-link>
-        </div>
-        <div v-if="popularProducts.length > 0" class="business-home__products-grid">
-          <div v-for="product in popularProducts.slice(0, 4)" :key="product.id" class="business-home__product-card">
-            <div class="business-home__product-image">
-              <img :src="product.image || '/images/product-placeholder.png'" :alt="product.name">
-            </div>
-            <div class="business-home__product-info">
-              <h4 class="business-home__product-name">{{ product.name }}</h4>
-              <p class="business-home__product-price">{{ formatCurrency(product.price) }}</p>
-              <div class="business-home__product-stats">
-                <span class="business-home__product-orders">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="9" cy="21" r="1"></circle>
-                    <circle cx="20" cy="21" r="1"></circle>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                  </svg>
-                  {{ product.ordersCount }} pedidos
-                </span>
-                <span class="business-home__product-revenue">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                  {{ formatCurrency(product.revenue || 0) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="business-home__empty">
-          <div class="business-home__empty-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <path d="M16 10a4 4 0 0 1-8 0"></path>
-            </svg>
-          </div>
-          <h4>Sin productos populares aún</h4>
-          <p>A medida que recibas pedidos, tus productos más vendidos aparecerán aquí.</p>
-          <router-link :to="{ name: 'business-products' }" class="business-home__add-product-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Añadir Nuevo Producto</span>
-          </router-link>
         </div>
       </div>
     </div>
@@ -392,6 +330,8 @@
       </div>
     </div>
 
+    <!-- Toast Notification Component -->
+    <ToastNotification ref="toastRef" />
   </div>
 </template>
 
@@ -400,17 +340,26 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Toast ref
+const toastRef = ref(null)
+
+// Toast helper function
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  if (toastRef.value) {
+    toastRef.value.useToast()[type](message, title)
+  }
+}
 
 // Estados básicos
 const business = ref(null)
 const restaurants = ref([])
 const selectedRestaurantId = ref('all')
 const isRefreshing = ref(false)
-const popularProducts = ref([])
-const allProducts = ref([])
 const allOrders = ref([])
 const loadingOrders = ref(false)
 
@@ -429,7 +378,7 @@ const selectedRestaurantName = computed(() => {
 
 // Pedidos filtrados según el estado
 const pendingOrders = computed(() => {
-  return allOrders.value.filter(order => 
+  return allOrders.value.filter(order =>
     ['Pending', 'Accepted', 'Preparing'].includes(order.status)
   ).filter(order => {
     // Filtrar por restaurante si está seleccionado
@@ -446,44 +395,35 @@ const pendingOrdersCount = computed(() => {
 const currentStats = computed(() => {
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  
+
   let filteredOrders = allOrders.value
-  
+
   // Filtrar por restaurante si está seleccionado
   if (selectedRestaurantId.value !== 'all') {
     filteredOrders = filteredOrders.filter(order => order.restaurantId === selectedRestaurantId.value)
   }
-  
+
   // Pedidos de hoy
-  const todayOrders = filteredOrders.filter(order => 
+  const todayOrders = filteredOrders.filter(order =>
     new Date(order.createdAt) >= todayStart
   )
-  
+
   // Ingresos de hoy
   const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0)
-  
-  // Calcular productos totales
-  let totalProducts = 0
-  if (selectedRestaurantId.value === 'all') {
-    totalProducts = allProducts.value.length
-  } else {
-    totalProducts = allProducts.value.filter(p => p.restaurantId === selectedRestaurantId.value).length
-  }
-  
+
   // Rating promedio (hardcodeado por ahora)
   let averageRating = 4.5
   if (selectedRestaurantId.value !== 'all') {
     const restaurant = restaurants.value.find(r => r.id === selectedRestaurantId.value)
     averageRating = restaurant?.averageRating || 4.5
   }
-  
+
   return {
     todayOrders: todayOrders.length,
     todayRevenue: todayRevenue,
     orderChange: 12, // Hardcodeado por ahora
     revenueChange: 18, // Hardcodeado por ahora
-    averageRating: averageRating,
-    totalProducts: totalProducts
+    averageRating: averageRating
   }
 })
 
@@ -513,7 +453,7 @@ const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     'Pending': 'Pendiente',
     'Accepted': 'Aceptado',
-    'Preparing': 'En preparación', 
+    'Preparing': 'En preparación',
     'ReadyForPickup': 'Listo',
     'OnTheWay': 'En reparto',
     'Delivered': 'Entregado',
@@ -534,8 +474,14 @@ const getRestaurantAddress = (restaurant: any): string => {
   return `${restaurant.address.street}, ${restaurant.address.city}`
 }
 
-const getRestaurantProductCount = (restaurantId: number): number => {
-  return allProducts.value.filter(p => p.restaurantId === restaurantId).length
+const getTodayOrdersCount = (restaurantId: number): number => {
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+
+  return allOrders.value.filter(order =>
+    order.restaurantId === restaurantId &&
+    new Date(order.createdAt) >= todayStart
+  ).length
 }
 
 // Cargar business REAL usando tu endpoint
@@ -551,75 +497,70 @@ const loadBusiness = async () => {
   } catch (error) {
     console.error('Error cargando business:', error)
     business.value = null
+    showToast('error', 'No se pudo cargar la información del negocio', 'Error de conexión')
   }
 }
 
-// Cargar restaurantes REALES del business
+// ARREGLADO: Cargar restaurantes con estado real de horarios
 const loadRestaurants = async () => {
   try {
     if (!business.value?.id) return
 
     const response = await api.get(`/api/Restaurants/business/${business.value.id}`)
     if (response.data) {
-      restaurants.value = response.data
-      console.log('Restaurantes cargados:', restaurants.value)
+      const restaurantData = response.data
+
+      // Para cada restaurante, verificar su estado real usando horarios
+      const restaurantsWithStatus = await Promise.all(
+        restaurantData.map(async (restaurant: any) => {
+          let isCurrentlyOpen = restaurant.isOpen || false // Fallback
+          let statusMessage = 'Estado desconocido'
+
+          try {
+            // Verificar estado real usando el endpoint de horarios
+            const statusResponse = await api.get(`/api/restaurants/${restaurant.id}/hours/status`)
+            if (statusResponse.data) {
+              isCurrentlyOpen = statusResponse.data.isOpen
+              statusMessage = statusResponse.data.status
+            }
+          } catch (error) {
+            console.warn(`Error verificando estado del restaurante ${restaurant.id}:`, error)
+            showToast('warning', `No se pudo verificar el estado de ${restaurant.name}`, 'Advertencia')
+            // Usar valor por defecto si falla
+          }
+
+          return {
+            ...restaurant,
+            isCurrentlyOpen,
+            statusMessage,
+            // Mantener compatibilidad
+            isOpen: isCurrentlyOpen
+          }
+        })
+      )
+
+      restaurants.value = restaurantsWithStatus
+      console.log('Restaurantes cargados con estado real:', restaurants.value.map(r => ({
+        name: r.name,
+        isOpen: r.isCurrentlyOpen,
+        status: r.statusMessage
+      })))
     }
   } catch (error) {
     console.error('Error cargando restaurantes:', error)
     restaurants.value = []
-  }
-}
-
-// Cargar productos REALES usando tus endpoints
-const loadProducts = async () => {
-  try {
-    if (!business.value?.id) return
-
-    const allProductsData = []
-    
-    for (const restaurant of restaurants.value) {
-      try {
-        const productsResponse = await api.get(`/api/Products/Restaurant/${restaurant.id}`)
-        if (productsResponse.data) {
-          const restaurantProducts = productsResponse.data.map((product: any) => ({
-            ...product,
-            restaurantId: restaurant.id,
-            restaurantName: restaurant.name,
-            image: product.imageUrl,
-            price: product.basePrice
-          }))
-          allProductsData.push(...restaurantProducts)
-        }
-      } catch (error) {
-        console.error(`Error productos restaurante ${restaurant.id}:`, error)
-      }
-    }
-    
-    allProducts.value = allProductsData
-    
-    // Filtrar productos populares (simulado por ahora)
-    popularProducts.value = allProductsData.slice(0, 8).map(product => ({
-      ...product,
-      ordersCount: Math.floor(Math.random() * 50) + 5,
-      revenue: product.price * (Math.floor(Math.random() * 50) + 5)
-    }))
-    
-    console.log('Productos cargados:', allProducts.value.length)
-  } catch (error) {
-    console.error('Error cargando productos:', error)
-    allProducts.value = []
-    popularProducts.value = []
+    showToast('error', 'No se pudieron cargar los restaurantes', 'Error de conexión')
   }
 }
 
 // Cargar pedidos REALES desde la API
 const loadOrders = async () => {
   if (restaurants.value.length === 0) return
-  
+
   loadingOrders.value = true
   try {
     const allOrdersData = []
-    
+
     for (const restaurant of restaurants.value) {
       try {
         const ordersResponse = await api.get(`/api/Orders/restaurant/${restaurant.id}`)
@@ -633,14 +574,16 @@ const loadOrders = async () => {
         }
       } catch (error) {
         console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
+        showToast('warning', `No se pudieron cargar los pedidos de ${restaurant.name}`, 'Advertencia')
       }
     }
-    
+
     allOrders.value = allOrdersData
     console.log('Pedidos cargados:', allOrders.value.length)
   } catch (error) {
     console.error('Error cargando pedidos:', error)
     allOrders.value = []
+    showToast('error', 'Error general al cargar los pedidos', 'Error de conexión')
   } finally {
     loadingOrders.value = false
   }
@@ -648,6 +591,8 @@ const loadOrders = async () => {
 
 const selectRestaurant = (restaurantId: number | string) => {
   selectedRestaurantId.value = restaurantId
+  const restaurantName = restaurantId === 'all' ? 'todos los restaurantes' : restaurants.value.find(r => r.id === restaurantId)?.name || 'restaurante'
+  showToast('info', `Vista cambiada a ${restaurantName}`, 'Filtro actualizado')
   console.log('Restaurante seleccionado:', restaurantId)
 }
 
@@ -655,13 +600,16 @@ const onRestaurantChange = () => {
   console.log('Cambio de restaurante:', selectedRestaurantId.value)
 }
 
+// ARREGLADO: Función refreshData
 const refreshData = async () => {
   isRefreshing.value = true
   try {
     await loadBusiness()
-    await loadRestaurants()
-    await loadProducts()
-    await loadOrders()
+    await loadRestaurants() // Primero restaurantes
+    await loadOrders()      // Luego pedidos
+    showToast('success', 'Todos los datos han sido actualizados correctamente', '¡Actualización exitosa!')
+  } catch (error) {
+    showToast('error', 'Ocurrió un error durante la actualización', 'Error')
   } finally {
     isRefreshing.value = false
   }
@@ -669,30 +617,39 @@ const refreshData = async () => {
 
 const toggleRestaurantOpen = () => {
   isRestaurantOpen.value = !isRestaurantOpen.value
+  const status = isRestaurantOpen.value ? 'abierto' : 'cerrado'
+  showToast('success', `${selectedRestaurantName.value} está ahora ${status}`, 'Estado actualizado')
 }
 
 const viewOrderDetails = (order: any) => {
   selectedOrder.value = order
+  showToast('info', `Mostrando detalles del pedido #${order.id}`, 'Detalles del pedido')
 }
 
 const closeOrderDetails = () => {
   selectedOrder.value = null
 }
 
+// ARREGLADO: onMounted con orden correcto
 onMounted(async () => {
   if (!authStore.isAuthenticated) {
     const isAuth = await authStore.checkAuth()
     if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
+      showToast('error', 'Necesitas iniciar sesión como propietario de negocio', 'Acceso denegado')
       router.push('/login')
       return
     }
   }
 
-  // Cargar todo en secuencia
+  // Cargar todo en secuencia CORRECTA
   await loadBusiness()
   await loadRestaurants()
-  await loadProducts()
   await loadOrders()
+
+  // Mensaje de bienvenida después de cargar todo
+  if (business.value) {
+    showToast('success', `¡Bienvenido de nuevo a ${business.value.name}!`, '¡Hola!')
+  }
 })
 </script>
 
@@ -723,14 +680,13 @@ onMounted(async () => {
   }
 }
 
-// El resto de estilos se mantienen igual...
 .business-home {
   &__restaurant-selector {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    
+
     @media (max-width: 480px) {
       width: 100%;
     }
@@ -795,7 +751,7 @@ onMounted(async () => {
     &--selected {
       border-color: #06a98d;
       background-color: rgba(6, 169, 141, 0.05);
-      
+
       &:hover {
         border-color: #058a73;
       }
@@ -879,7 +835,10 @@ onMounted(async () => {
     }
   }
 
-  // Resto de estilos existentes...
+  // Nueva sección principal centrada
+  &__main-section {
+    margin: 0 auto;
+  }
   &__header {
     display: flex;
     justify-content: space-between;
@@ -1089,7 +1048,7 @@ onMounted(async () => {
       border-left-color: #10b981;
     }
 
-    &--products {
+    &--restaurants {
       border-left-color: #8b5cf6;
     }
 
@@ -1122,7 +1081,7 @@ onMounted(async () => {
       color: #10b981;
     }
 
-    .business-home__card--products & {
+    .business-home__card--restaurants & {
       background-color: rgba(139, 92, 246, 0.1);
       color: #8b5cf6;
     }
@@ -1208,13 +1167,6 @@ onMounted(async () => {
     }
   }
 
-  &__sections {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-  }
-
   &__section {
     background-color: white;
     border-radius: 12px;
@@ -1282,10 +1234,14 @@ onMounted(async () => {
   }
 
   &__orders-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
     flex-grow: 1;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   &__order-item {
@@ -1502,118 +1458,6 @@ onMounted(async () => {
       margin: 0 0 1.5rem;
       max-width: 300px;
       line-height: 1.5;
-    }
-  }
-
-  &__add-product-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.7rem 1.2rem;
-    background-color: #06a98d;
-    color: white;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.15s ease;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    &:hover {
-      background-color: #058a73;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  &__products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 1rem;
-    flex-grow: 1;
-  }
-
-  &__product-card {
-    background-color: white;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease-in-out;
-    display: flex;
-    flex-direction: column;
-
-    &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      border-color: #cbd5e0;
-    }
-  }
-
-  &__product-image {
-    height: 120px;
-    overflow: hidden;
-    background-color: #f8fafc;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-  }
-
-  &:hover &__product-image img {
-    transform: scale(1.05);
-  }
-
-  &__product-info {
-    padding: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-
-  &__product-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0 0 0.35rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-  }
-
-  &__product-price {
-    font-weight: 600;
-    color: #06a98d;
-    margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-  }
-
-  &__product-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    color: #64748b;
-    margin-top: auto;
-  }
-
-  &__product-orders,
-  &__product-revenue {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-
-    svg {
-      width: 12px;
-      height: 12px;
-      opacity: 0.8;
     }
   }
 

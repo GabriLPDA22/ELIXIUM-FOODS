@@ -8,21 +8,13 @@
         </p>
       </div>
 
-      <div v-if="isLoading" class="categories__loading">
-        <div class="loading-spinner"></div>
-        <p>Cargando categorías...</p>
-      </div>
-
-      <div v-else-if="categories.length === 0" class="categories__empty">
-        <p>No hay categorías disponibles en este momento.</p>
-      </div>
-
-      <div v-else class="categories__grid">
-        <router-link v-for="category in categories" :key="category.id" :to="`/category/${category.id}`"
+      <div class="categories__grid">
+        <router-link v-for="category in categories" :key="category.id"
+          :to="`/restaurants?category=${category.id}`"
           class="category-card">
           <div class="category-card__image-wrapper">
             <div class="category-card__gradient-bg"></div>
-            <div class="category-card__icon">{{ getCategoryIcon(category.name) }}</div>
+            <div class="category-card__icon">{{ category.icon }}</div>
             <div class="category-card__circles">
               <span class="category-card__circle"></span>
               <span class="category-card__circle"></span>
@@ -31,7 +23,7 @@
           </div>
           <div class="category-card__content">
             <h3 class="category-card__title">{{ category.name }}</h3>
-            <span class="category-card__count">{{ category.products?.length || 0 }} productos</span>
+            <span class="category-card__count">{{ category.description }}</span>
           </div>
           <div class="category-card__arrow">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -42,71 +34,67 @@
           </div>
         </router-link>
       </div>
-
-      <!-- <div class="categories__more">
-        <router-link to="/categories" class="categories__more-link">
-          Ver todas las categorías
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
-        </router-link> -->
-      <!-- </div> -->
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { type Category } from '@/services/categoryService'
-
-interface Props {
-  categories: Category[]
-  isLoading: boolean
-}
-
-const props = defineProps<Props>()
-
-// Función para asignar iconos a las categorías
-const getCategoryIcon = (categoryName: string): string => {
-  const categoryIcons: Record<string, string> = {
-    'Hamburguesas': '🍔',
-    'Pizza': '🍕',
-    'Sushi': '🍣',
-    'Ensaladas': '🥗',
-    'Pollo': '🍗',
-    'Mexicana': '🌮',
-    'Italiana': '🍝',
-    'Postres': '🍦',
-    'Pasta': '🍜',
-    'Vegetariana': '🥕',
-    'Saludable': '🌱',
-    'Cafe': '☕',
-    'Bebidas': '🥤',
-    'Mariscos': '🦐',
-    'Parrilla': '🔥',
-    'Comida China': '🥡',
-    'Comida Mexicana': '🌯',
-    'Comida Rapida': '🍔',
-    'Asiatica': '🍜',
-    'Sopas': '🍲',
-    'Snacks': '🍿',
-    // Valor por defecto
-    'default': '🍽️'
+// Categorías hardcodeadas con sus emojis
+const categories = [
+  {
+    id: 1,
+    name: 'Americano',
+    icon: '🍔',
+    description: 'Comida clásica americana'
+  },
+  {
+    id: 2,
+    name: 'Italiano',
+    icon: '🍕',
+    description: 'Auténtica cocina italiana'
+  },
+  {
+    id: 3,
+    name: 'Mexicano',
+    icon: '🌮',
+    description: 'Sabores tradicionales mexicanos'
+  },
+  {
+    id: 4,
+    name: 'Asiático',
+    icon: '🍜',
+    description: 'Deliciosa comida asiática'
+  },
+  {
+    id: 5,
+    name: 'Fast Food',
+    icon: '🍟',
+    description: 'Comida rápida deliciosa'
+  },
+  {
+    id: 6,
+    name: 'Saludable',
+    icon: '🥗',
+    description: 'Opciones nutritivas y frescas'
+  },
+  {
+    id: 7,
+    name: 'Postres',
+    icon: '🍦',
+    description: 'Dulces tentaciones'
+  },
+  {
+    id: 8,
+    name: 'Vegano',
+    icon: '🥑',
+    description: 'Plant-based delicioso'
   }
-
-  // Buscar el icono por coincidencia parcial o devolver el icono por defecto
-  const matchingKey = Object.keys(categoryIcons).find(key =>
-    categoryName.toLowerCase().includes(key.toLowerCase())
-  )
-
-  return matchingKey ? categoryIcons[matchingKey] : categoryIcons['default']
-}
+]
 </script>
 
 <style lang="scss" scoped>
 .categories {
-  padding: 7rem 0;
+  padding: 4rem 0;
   background-color: #f8fafc;
   position: relative;
   overflow: hidden;
@@ -176,76 +164,10 @@ const getCategoryIcon = (categoryName: string): string => {
     margin: 0 auto;
   }
 
-  &__loading {
-    text-align: center;
-    padding: 4rem 0;
-
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #FF416C;
-      border-radius: 50%;
-      margin: 0 auto 1rem;
-      animation: spin 1s linear infinite;
-    }
-  }
-
-  &__empty {
-    text-align: center;
-    padding: 4rem 0;
-    color: #64748b;
-    font-size: 1.1rem;
-  }
-
   &__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 2rem;
-  }
-
-  &__more {
-    text-align: center;
-    margin-top: 3rem;
-
-    &-link {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.75rem 1.5rem;
-      background: white;
-      border-radius: 50px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-      color: #FF416C;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.3s ease;
-
-      svg {
-        margin-left: 0.5rem;
-        transition: transform 0.3s ease;
-      }
-
-      &:hover {
-        background: linear-gradient(to right, #FF416C, #FF4B2B);
-        color: white;
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(255, 65, 108, 0.3);
-
-        svg {
-          transform: translateX(4px);
-        }
-      }
-    }
-  }
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
   }
 }
 
@@ -311,6 +233,18 @@ const getCategoryIcon = (categoryName: string): string => {
 
     .category-card:nth-child(5n) & {
       background: linear-gradient(135deg, #20BF6B, #0ED573);
+    }
+
+    .category-card:nth-child(6n) & {
+      background: linear-gradient(135deg, #FF7675, #FD79A8);
+    }
+
+    .category-card:nth-child(7n) & {
+      background: linear-gradient(135deg, #FDCB6E, #E17055);
+    }
+
+    .category-card:nth-child(8n) & {
+      background: linear-gradient(135deg, #6C5CE7, #A29BFE);
     }
   }
 
@@ -404,6 +338,18 @@ const getCategoryIcon = (categoryName: string): string => {
 
     .category-card:nth-child(5n) & {
       background: linear-gradient(to right, #20BF6B, #0ED573);
+    }
+
+    .category-card:nth-child(6n) & {
+      background: linear-gradient(to right, #FF7675, #FD79A8);
+    }
+
+    .category-card:nth-child(7n) & {
+      background: linear-gradient(to right, #FDCB6E, #E17055);
+    }
+
+    .category-card:nth-child(8n) & {
+      background: linear-gradient(to right, #6C5CE7, #A29BFE);
     }
   }
 }

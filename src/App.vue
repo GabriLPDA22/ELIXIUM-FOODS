@@ -1,21 +1,64 @@
-<!-- src/App.vue -->
 <template>
     <div class="app">
-        <UHeader />
-        <main class="app__content">
-            <router-view v-slot="{ Component }">
+        <UHeader v-if="showGlobalLayout" />
+        <main class="app__content" :class="{ 'app__content--no-header': !showGlobalLayout }">
+            <router-view v-slot="{ Component, route }">
                 <transition name="fade" mode="out-in">
-                    <component :is="Component" />
+                    <component :is="Component" :key="route.path" />
                 </transition>
             </router-view>
         </main>
-        <UFooter />
+        <UFooter v-if="showGlobalLayout" />
+
+        <!-- 🎉 Toast Notification System -->
+        <ToastNotification ref="toastRef" />
+
+        <!-- ✨ Custom Scrollbar Component -->
+        <CustomScrollbar
+          :width="'8px'"
+          :thumb-color="'#ff4550'"
+          :track-color="'rgba(0, 0, 0, 0.05)'"
+          :hover-color="'#048a48'"
+          :border-radius="'10px'"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-import UHeader from '@/components/layout/UHeader.vue'
-import UFooter from '@/components/layout/UFooter.vue'
+import { computed, ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import UHeader from '@/components/layout/UHeader.vue';
+import UFooter from '@/components/layout/UFooter.vue';
+import ToastNotification from '@/components/ui/ToastNotification.vue';
+import CustomScrollbar from '@/components/ui/CustomScrollbar.vue';
+
+const route = useRoute();
+const toastRef = ref();
+
+// Propiedad computada para determinar si se muestra el UHeader y UFooter
+const showGlobalLayout = computed(() => {
+  return !route.matched.some(record => record.meta.hideHeaderFooter);
+});
+
+// 🚀 Configurar el sistema de toast globalmente
+onMounted(() => {
+  if (toastRef.value && typeof window !== 'undefined') {
+    (window as any).useToast = toastRef.value.useToast;
+  }
+});
+
+// 💡 Declaración de tipos para TypeScript
+declare global {
+  interface Window {
+    useToast: () => {
+      success: (message: string, title?: string) => void;
+      error: (message: string, title?: string) => void;
+      warning: (message: string, title?: string) => void;
+      info: (message: string, title?: string) => void;
+      academy: (message: string, title?: string) => void;
+    };
+  }
+}
 </script>
 
 <style lang="scss">
@@ -96,30 +139,16 @@ body {
 
     &__content {
         flex: 1;
-        margin-top: 70px; // Altura del header
+        margin-top: 70px; // Altura del header (ajusta este valor si la altura de tu UHeader es diferente)
+
+        // Clase para cuando el header NO se muestra
+        &--no-header {
+            margin-top: 0;
+        }
     }
 }
 
-// Scrollbar personalizado
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background-color: #f1f5f9;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 10px;
-    transition: background 0.3s ease;
-
-    &:hover {
-        background: #94a3b8;
-    }
-}
+// ✅ Scrollbar personalizado removido - ahora se maneja con CustomScrollbar.vue
 
 // Animaciones de transición para router-view
 .fade-enter-active,
@@ -253,10 +282,9 @@ img {
     border: 0;
 }
 
-// Estilos para dark mode (podría implementarse después)
 @media (prefers-color-scheme: dark) {
     :root {
+        // Variables para modo oscuro si las necesitas
     }
-
 }
 </style>

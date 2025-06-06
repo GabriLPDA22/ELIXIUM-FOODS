@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router'
+import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -10,6 +10,12 @@ const routes: RouteRecordRaw[] = [
     path: '/restaurants',
     name: 'restaurants',
     component: () => import('@/views/RestaurantList.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/search',
+    name: 'search',
+    component: () => import('@/views/SearchResults.vue'),
     meta: { requiresAuth: false },
   },
   {
@@ -82,14 +88,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ForgotPassword.vue'),
     meta: { guest: true },
   },
-  // NUEVA RUTA: Reset Password
   {
     path: '/reset-password',
     name: 'reset-password',
     component: () => import('@/views/ResetPassword.vue'),
     meta: { guest: true },
   },
-  // NUEVAS RUTAS: Términos y Privacidad
   {
     path: '/terms-and-conditions',
     name: 'terms-and-conditions',
@@ -103,6 +107,91 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/delivery-zones',
+    name: 'delivery-zones',
+    component: () => import('@/views/DeliveryZonesView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/chefs',
+    name: 'chefs',
+    component: () => import('@/views/ChefsView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/chefs/:slug',
+    name: 'chef-detail',
+    component: () => import('@/views/ChefDetailView.vue'),
+    meta: { requiresAuth: false },
+    props: true
+  },
+  // ✅ NUEVA RUTA PARA CHEF SIGNUP
+  {
+    path: '/chef-signup',
+    name: 'chef-signup',
+    component: () => import('@/views/ChefSignupForm.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/for-business',
+    name: 'for-business',
+    component: () => import('@/views/ForBusiness.vue'),
+    meta: {
+      requiresAuth: false,
+    }
+  },
+  {
+    path: '/blog',
+    name: 'blog',
+    component: () => import('@/views/BlogPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/blog/:slug',
+    name: 'blog-post-detail',
+    component: () => import('@/views/BlogPostDetailPage.vue'),
+    meta: { requiresAuth: false },
+    props: true
+  },
+    {
+    path: '/centro-de-ayuda',
+    name: 'help-center',
+    component: () => import('@/views/HelpCenterPage.vue'),
+    meta: { requiresAuth: false }
+  },
+    {
+    path: '/empleos',
+    name: 'careers',
+    component: () => import('@/views/CareersPage.vue'),
+    meta: { requiresAuth: false }
+  },
+    {
+    path: '/faq',
+    name: 'faq',
+    component: () => import('@/views/FaqPage.vue'),
+    meta: { requiresAuth: false }
+  },
+    {
+    path: '/politica-de-cookies',
+    name: 'cookie-policy',
+    component: () => import('@/views/CookiePolicyPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/business-register',
+    name: 'business-register',
+    component: () => import('@/views/BusinessRegisterForm.vue'),
+    meta: {
+      requiresAuth: false,
+    }
+  },
+  {
+    path: '/contact',
+    name: 'contact',
+    component: () => import('@/views/ContactPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/unauthorized',
     name: 'unauthorized',
     component: () => import('@/views/Unauthorized.vue'),
@@ -113,13 +202,57 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AdminPanel.vue'),
     meta: {
       requiresAuth: true,
-      requiresRole: ['Admin']
+      requiresRole: ['Admin'],
+      hideHeaderFooter: true,
     }
+  },
+  // 🎓 ELIXIUM ACADEMY ROUTES
+  {
+    path: '/academy',
+    name: 'academy-landing',
+    component: () => import('@/views/academy/AcademyLanding.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/academy/dashboard',
+    name: 'academy-dashboard',
+    component: () => import('@/views/academy/AcademyDashboard.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/academy/courses',
+    name: 'academy-courses',
+    component: () => import('@/views/academy/AcademyCourses.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/academy/course/:id',
+    name: 'academy-course-detail',
+    component: () => import('@/views/academy/AcademyCourseDetail.vue'),
+    meta: { requiresAuth: false },
+    props: true
+  },
+  {
+    path: '/academy/achievements',
+    name: 'academy-achievements',
+    component: () => import('@/views/academy/AcademyAchievements.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/academy/leaderboard',
+    name: 'academy-leaderboard',
+    component: () => import('@/views/academy/AcademyLeaderboard.vue'),
+    meta: { requiresAuth: false }
   },
   {
     path: '/business/dashboard',
     component: () => import('@/views/BusinessDashboard.vue'),
-        children: [
+    meta: {
+      requiresAuth: true,
+      roles: ['Business', 'Admin'],
+      hideHeaderFooter: true,
+    },
+    children: [
       {
         path: '',
         name: 'business-dashboard',
@@ -156,12 +289,15 @@ const routes: RouteRecordRaw[] = [
     path: '/business/unauthorized',
     name: 'business-unauthorized',
     component: () => import('@/views/BusinessUnauthorized.vue'),
+    meta: {
+        hideHeaderFooter: true,
+    }
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFound.vue'),
   },
-]
+];
 
-export default routes
+export default routes;

@@ -18,9 +18,9 @@
         <div class="business-orders__restaurant-filter" v-if="restaurants.length > 1">
           <select v-model="restaurantFilter" class="business-orders__select">
             <option value="all">Todos los restaurantes</option>
-            <option 
-              v-for="restaurant in restaurants" 
-              :key="restaurant.id" 
+            <option
+              v-for="restaurant in restaurants"
+              :key="restaurant.id"
               :value="restaurant.id"
             >
               {{ restaurant.name }}
@@ -279,7 +279,7 @@
                     <td>
                       <div class="business-orders__product">
                         <div class="business-orders__product-image">
-                          <img :src="item.product?.imageUrl || '/images/product-placeholder.png'" :alt="item.product?.name">
+                          <img :src="item.product?.imageUrl || '/Images/product-placeholder.png'" :alt="item.product?.name">
                         </div>
                         <div class="business-orders__product-info">
                           <span class="business-orders__product-name">{{ item.product?.name || 'Producto' }}</span>
@@ -383,6 +383,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification ref="toastNotification" />
   </div>
 </template>
 
@@ -390,8 +393,12 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 const authStore = useAuthStore()
+
+// Toast notification ref
+const toastNotification = ref()
 
 // Estados
 const loading = ref(true)
@@ -447,11 +454,11 @@ const loadRestaurants = async () => {
 // Cargar pedidos de todos los restaurantes
 const loadOrders = async () => {
   if (restaurants.value.length === 0) return
-  
+
   loading.value = true
   try {
     const allOrdersData = []
-    
+
     for (const restaurant of restaurants.value) {
       try {
         const ordersResponse = await api.get(`/api/Orders/restaurant/${restaurant.id}`)
@@ -462,7 +469,7 @@ const loadOrders = async () => {
         console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
       }
     }
-    
+
     orders.value = allOrdersData
     console.log('Pedidos cargados:', orders.value.length)
   } catch (error) {
@@ -531,28 +538,53 @@ const totalPages = computed(() => {
 
 // Funciones de utilidad
 const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  return new Intl.DateTimeFormat('es', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
+  if (!dateStr) return 'Sin fecha'
+  try {
+    const date = new Date(dateStr)
+    return new Intl.DateTimeFormat('es', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date)
+  } catch (error) {
+    return 'Fecha inválida'
+  }
 }
 
 const formatTime = (dateStr: string) => {
-  const date = new Date(dateStr)
-  return new Intl.DateTimeFormat('es', {
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
+  if (!dateStr) return 'Sin hora'
+  try {
+    const date = new Date(dateStr)
+    return new Intl.DateTimeFormat('es', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date)
+  } catch (error) {
+    return 'Hora inválida'
+  }
 }
 
 const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return 'Sin fecha'
   return `${formatDate(dateStr)} ${formatTime(dateStr)}`
 }
 
-const formatCurrency = (value: number) => {
-  return value.toFixed(2).replace('.', ',') + ' €'
+// FUNCIÓN CORREGIDA - Esta era la que causaba el error
+const formatCurrency = (value: number | undefined | null) => {
+  // Validar que el valor exista y sea un número válido
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0,00 €'
+  }
+
+  // Convertir a número si es string
+  const numericValue = typeof value === 'string' ? parseFloat(value) : value
+
+  // Verificar nuevamente después de la conversión
+  if (isNaN(numericValue)) {
+    return '0,00 €'
+  }
+
+  return numericValue.toFixed(2).replace('.', ',') + ' €'
 }
 
 const getStatusLabel = (status: string) => {
@@ -570,21 +602,27 @@ const getStatusLabel = (status: string) => {
 
 const getCustomerName = (order: any) => {
   if (order.user) {
-    return `${order.user.firstName} ${order.user.lastName}`.trim()
+    const firstName = order.user.firstName || ''
+    const lastName = order.user.lastName || ''
+    const fullName = `${firstName} ${lastName}`.trim()
+    return fullName || 'Cliente'
   }
   return 'Cliente'
 }
 
 const getDeliveryAddress = (order: any) => {
   if (order.deliveryAddress) {
-    return `${order.deliveryAddress.street} ${order.deliveryAddress.number}, ${order.deliveryAddress.city}`
+    const street = order.deliveryAddress.street || ''
+    const number = order.deliveryAddress.number || ''
+    const city = order.deliveryAddress.city || ''
+    return `${street} ${number}, ${city}`.trim() || 'Dirección no disponible'
   }
   return 'Dirección no disponible'
 }
 
 const getOrdersCountByTab = (tabValue: string) => {
   let filtered = orders.value
-  
+
   if (tabValue === 'today') {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -602,7 +640,7 @@ const getOrdersCountByTab = (tabValue: string) => {
       ['Delivered', 'Cancelled'].includes(order.status)
     )
   }
-  
+
   return filtered.length
 }
 
@@ -634,12 +672,12 @@ const getNextStatusActionLabel = (currentStatus: string) => {
 
 const getAvailableStatusOptions = (currentStatus: string) => {
   const options = []
-  
+
   const nextStatus = getNextStatus(currentStatus)
   if (nextStatus !== currentStatus) {
-    options.push({ 
-      label: getNextStatusActionLabel(currentStatus), 
-      value: nextStatus 
+    options.push({
+      label: getNextStatusActionLabel(currentStatus),
+      value: nextStatus
     })
   }
 
@@ -678,7 +716,12 @@ const resetFilters = () => {
   currentTab.value = 'today'
 }
 
+// FUNCIÓN CORREGIDA - viewOrder ahora maneja mejor los datos
 const viewOrder = (order: any) => {
+  if (!order) {
+    console.error('No se puede ver el pedido: datos no válidos')
+    return
+  }
   selectedOrder.value = order
 }
 
@@ -696,24 +739,25 @@ const updateStatus = async (order: any, newStatus: string) => {
     const response = await api.put(`/api/Orders/${order.id}/status`, {
       status: newStatus
     })
-    
+
     if (response.data) {
       // Actualizar el pedido en la lista local
       const orderIndex = orders.value.findIndex(o => o.id === order.id)
       if (orderIndex !== -1) {
         orders.value[orderIndex] = { ...orders.value[orderIndex], status: newStatus }
       }
-      
+
       // Actualizar el pedido seleccionado si está abierto
       if (selectedOrder.value && selectedOrder.value.id === order.id) {
         selectedOrder.value = { ...selectedOrder.value, status: newStatus }
       }
-      
-      console.log(`Pedido #${order.id} actualizado a estado: ${newStatus}`)
+
+      // Mostrar notificación de éxito
+      toastNotification.value?.useToast().success(`Estado del pedido actualizado a: ${getStatusLabel(newStatus)}`)
     }
   } catch (error) {
     console.error('Error actualizando estado del pedido:', error)
-    // Aquí podrías mostrar una notificación de error
+    toastNotification.value?.useToast().error('Error al actualizar el estado del pedido')
   } finally {
     statusUpdateOrder.value = null
   }
@@ -725,9 +769,9 @@ onMounted(async () => {
     return
   }
 
-  updateViewType()  
+  updateViewType()
   window.addEventListener('resize', updateViewType)
-  
+
   // Cargar datos en secuencia
   await loadBusiness()
   await loadRestaurants()
@@ -1849,6 +1893,3 @@ watch([searchQuery, statusFilter, restaurantFilter, currentTab], () => {
   }
 }
 </style>
-
-
-

@@ -1,4 +1,4 @@
-<!-- views/admin/AdminBusinesses.vue -->
+<!-- views/Admin/AdminBusinesses.vue -->
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">

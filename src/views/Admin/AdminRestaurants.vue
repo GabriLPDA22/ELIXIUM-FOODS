@@ -1,4 +1,4 @@
-<!-- views/admin/AdminRestaurants.vue -->
+<!-- views/Admin/AdminRestaurants.vue -->
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
@@ -504,10 +504,7 @@ const addRestaurant = () => {
 
 const editRestaurant = (restaurant) => {
   try {
-    console.log('Editando restaurante:', restaurant);
-
     const restaurantCopy = JSON.parse(JSON.stringify(restaurant));
-
     Object.assign(editingRestaurant, {
       id: restaurantCopy.id,
       name: restaurantCopy.name || '',

@@ -109,8 +109,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/stores/cart';
 import { useOrderStore } from '@/stores/orderStore';
-import orderService, { OrderStatus } from '@/services/orderService';
-import type { OrderResponse } from '@/services/orderService';
+import orderService, { OrderStatus, type OrderResponse } from '@/services/orderService';
 
 const router = useRouter();
 const cartStore = useCartStore();
@@ -141,6 +140,7 @@ const loadOrders = async () => {
 };
 
 // Helper functions
+// ✅ ARREGLO: formatDate corregido para España (CEST = UTC+2 en verano)
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   const now = new Date();
@@ -148,20 +148,30 @@ const formatDate = (dateString: string): string => {
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
-    return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    return `Hoy, ${date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid' // ✅ CEST = UTC+2 en verano, CET = UTC+1 en invierno
+    })}`;
   } else if (diffDays === 1) {
-    return `Ayer, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    return `Ayer, ${date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid' // ✅ CEST = UTC+2 en verano
+    })}`;
   } else if (diffDays < 7) {
     return `Hace ${diffDays} días`;
   } else {
     return date.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: 'short',
-      year: diffDays > 365 ? 'numeric' : undefined
+      year: diffDays > 365 ? 'numeric' : undefined,
+      timeZone: 'Europe/Madrid' // ✅ CEST = UTC+2 en verano
     });
   }
 };
 
+// ✅ VERIFICACIÓN: Console log para debug de fechas problemas de veranitos utc +2 momento comedia
 const summarizeOrderItems = (items: any[]): string => {
   if (!items || items.length === 0) return 'Sin productos';
 
@@ -314,7 +324,8 @@ $border: #e2e8f0;
   color: $text;
 }
 
-.loading-container, .error-container {
+.loading-container,
+.error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -338,7 +349,8 @@ $border: #e2e8f0;
   margin-bottom: 1.5rem;
 }
 
-.retry-button, .empty-orders__button {
+.retry-button,
+.empty-orders__button {
   background-color: $primary;
   color: white;
   font-weight: 600;

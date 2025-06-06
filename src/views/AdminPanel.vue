@@ -146,12 +146,14 @@
           <!-- Tab: Dashboard principal -->
           <div v-if="activeTab === 'dashboard'" class="space-y-6">
             <!-- Gráficas del Dashboard -->
-            <DashboardCharts :totalUsers="users.length" :orders="orders" :restaurants="restaurants" />
+            <DashboardCharts :totalUsers="users.length" :orders="orders" :restaurants="restaurants" :users="users"
+              :businesses="businesses" />
           </div>
 
           <!-- Tabs de componentes -->
           <AdminUsers v-if="activeTab === 'users'" :users="users" @refresh="refreshAllData" @update="updateStats"
-            @add-alert="addAlert" @view-user-secret="handleViewUserSecret" @go-to-jwt-debug="handleGoToJWTDebug" />
+            @add-alert="addAlert" @view-user-secret="handleViewUserSecret"
+            @go-to-security-manager="handleGoToSecurityManager" />
 
           <AdminBusinesses v-if="activeTab === 'businesses'" :businesses="businesses" @refresh="refreshAllData"
             @update="updateStats" @add-alert="addAlert" @view-restaurants="handleViewBusinessRestaurants"
@@ -169,14 +171,15 @@
           <AdminProducts v-if="activeTab === 'products'" :products="products" :categories="categories"
             :businesses="businesses" :filterByCategoryId="activeFilterCategoryId"
             :filterByBusinessId="activeFilterBusinessId" @refresh="refreshAllData" @update="updateStats"
-            @add-alert="addAlert" @clear-filters="handleClearProductFilters" @view-restaurants="handleViewProductRestaurants" />
+            @add-alert="addAlert" @clear-filters="handleClearProductFilters"
+            @view-restaurants="handleViewProductRestaurants" />
 
           <AdminOrders v-if="activeTab === 'orders'" :orders="orders" :deliveryPersons="deliveryPersons"
             @refresh="refreshOrders" @update="updateStats" @add-alert="addAlert" />
 
-          <AdminJwtDebug v-if="activeTab === 'jwt'" :users="users" @add-alert="addAlert" />
+          <AdminSecurityManager v-if="activeTab === 'security'" :users="users" @add-alert="addAlert" />
 
-          <AdminLogs v-if="activeTab === 'logs'" :logs="logs" @add-alert="addAlert" />
+          <AdminSystemLogs v-if="activeTab === 'logs'" :logs="logs" @add-alert="addAlert" />
         </div>
       </div>
     </div>
@@ -190,14 +193,14 @@ import { api } from '@/services/api';
 import authService from '@/services/authService';
 import { useAuthStore } from '@/stores/auth';
 import DashboardCharts from '@/components/DashboardCharts.vue';
-import AdminUsers from '@/views/admin/AdminUsers.vue';
-import AdminBusinesses from '@/views/admin/AdminBusinesses.vue';
-import AdminRestaurants from '@/views/admin/AdminRestaurants.vue';
-import AdminCategories from '@/views/admin/AdminCategories.vue';
-import AdminProducts from '@/views/admin/AdminProducts.vue';
-import AdminOrders from '@/views/admin/AdminOrders.vue';
-import AdminJwtDebug from '@/views/admin/AdminJwtDebug.vue';
-import AdminLogs from '@/views/admin/AdminLogs.vue';
+import AdminUsers from '@/views/Admin/AdminUsers.vue';
+import AdminBusinesses from '@/views/Admin/AdminBusinesses.vue';
+import AdminRestaurants from '@/views/Admin/AdminRestaurants.vue';
+import AdminCategories from '@/views/Admin/AdminCategories.vue';
+import AdminProducts from '@/views/Admin/AdminProducts.vue';
+import AdminOrders from '@/views/Admin/AdminOrders.vue';
+import AdminSecurityManager from '@/views/Admin/AdminSecurityManager.vue';
+import AdminSystemLogs from '@/views/Admin/AdminSystemLogs.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -227,7 +230,7 @@ const stats = reactive({
   revenueGrowth: 0
 });
 
-// Tabs principales
+// Tabs principales - NOMBRES AMIGABLES
 const mainTabs = [
   { id: 'dashboard', name: 'Dashboard', icon: '📊' },
   { id: 'users', name: 'Usuarios', icon: '👥' },
@@ -236,8 +239,8 @@ const mainTabs = [
   { id: 'categories', name: 'Categorías', icon: '📂' },
   { id: 'products', name: 'Productos', icon: '🛒' },
   { id: 'orders', name: 'Pedidos', icon: '📦' },
-  { id: 'jwt', name: 'JWT Debug', icon: '🔐' },
-  { id: 'logs', name: 'Logs', icon: '📝' }
+  { id: 'security', name: 'Seguridad', icon: '🔐' },
+  { id: 'logs', name: 'Actividad', icon: '📝' }
 ];
 
 // Lifecycle hooks
@@ -304,43 +307,48 @@ const checkAuthorization = async () => {
         return;
       }
     }
-
-    console.log('✅ Autorización de admin verificada exitosamente');
-    console.log('Usuario admin:', authStore.user?.firstName, authStore.user?.lastName);
   } catch (error) {
     console.error('Error verificando autorización:', error);
     router.push('/unauthorized');
   }
 };
 
-// Métodos de carga de datos
+// Métodos de carga de datos CORREGIDOS
 const refreshAllData = async () => {
   refreshing.value = true;
-  try {
-    await Promise.all([
-      fetchUsers(),
-      fetchBusinesses(),
-      fetchRestaurants(),
-      fetchCategories(),
-      fetchProducts(),
-      fetchOrders(),
-      fetchLogs()
-    ]);
 
+  try {
+    // Cargar datos secuencialmente para mejor debugging
+    await fetchUsers();
+    await fetchBusinesses();
+    await fetchRestaurants();
+    await fetchCategories();
+    await fetchProducts();
+    await fetchOrders();
+    await fetchLogs();
     updateStats();
     addAlert('Datos actualizados correctamente', 'success');
   } catch (error) {
-    console.error('Error refrescando datos:', error);
-    addAlert('Error al actualizar algunos datos', 'error');
+    console.error('❌ Error refrescando datos:', error);
+    addAlert('Error al actualizar algunos datos: ' + (error.message || 'Error desconocido'), 'error');
   } finally {
     refreshing.value = false;
   }
 };
 
+// ✅ CORREGIDO: Cambiar de /api/Users a /api/User
 const fetchUsers = async () => {
   try {
-    const response = await api.get('/api/Users');
-    users.value = response.data || [];
+    const response = await api.get('/api/User');
+
+    // Manejar diferentes estructuras de respuesta
+    if (response.data?.data) {
+      users.value = response.data.data || [];
+    } else if (Array.isArray(response.data)) {
+      users.value = response.data;
+    } else {
+      users.value = response.data || [];
+    }
 
     // Filtrar usuarios por rol
     restaurantOwners.value = users.value.filter(user =>
@@ -351,8 +359,15 @@ const fetchUsers = async () => {
       user.role === 'DeliveryPerson'
     );
   } catch (error) {
-    console.error('Error fetchUsers:', error);
-    addAlert('Error al obtener usuarios', 'error');
+    console.error('❌ Error fetchUsers:', error);
+    console.error('Details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url
+    });
+
+    addAlert('Error al obtener usuarios: ' + (error.response?.data?.message || error.message), 'error');
     users.value = [];
     restaurantOwners.value = [];
     deliveryPersons.value = [];
@@ -362,10 +377,16 @@ const fetchUsers = async () => {
 const fetchBusinesses = async () => {
   try {
     const response = await api.get('/api/Business');
-    businesses.value = response.data || [];
+    if (response.data?.data) {
+      businesses.value = response.data.data || [];
+    } else if (Array.isArray(response.data)) {
+      businesses.value = response.data;
+    } else {
+      businesses.value = response.data || [];
+    }
   } catch (error) {
-    console.error('Error fetchBusinesses:', error);
-    addAlert('Error al obtener negocios', 'error');
+    console.error('❌ Error fetchBusinesses:', error);
+    addAlert('Error al obtener negocios: ' + (error.response?.data?.message || error.message), 'error');
     businesses.value = [];
   }
 };
@@ -373,10 +394,16 @@ const fetchBusinesses = async () => {
 const fetchRestaurants = async () => {
   try {
     const response = await api.get('/api/Restaurants');
-    restaurants.value = response.data || [];
+    if (response.data?.data) {
+      restaurants.value = response.data.data || [];
+    } else if (Array.isArray(response.data)) {
+      restaurants.value = response.data;
+    } else {
+      restaurants.value = response.data || [];
+    }
   } catch (error) {
-    console.error('Error fetchRestaurants:', error);
-    addAlert('Error al obtener restaurantes', 'error');
+    console.error('❌ Error fetchRestaurants:', error);
+    addAlert('Error al obtener restaurantes: ' + (error.response?.data?.message || error.message), 'error');
     restaurants.value = [];
   }
 };
@@ -384,10 +411,17 @@ const fetchRestaurants = async () => {
 const fetchCategories = async () => {
   try {
     const response = await api.get('/api/Categories');
-    categories.value = response.data || [];
+
+    if (response.data?.data) {
+      categories.value = response.data.data || [];
+    } else if (Array.isArray(response.data)) {
+      categories.value = response.data;
+    } else {
+      categories.value = response.data || [];
+    }
   } catch (error) {
-    console.error('Error fetchCategories:', error);
-    addAlert('Error al obtener categorías', 'error');
+    console.error('❌ Error fetchCategories:', error);
+    addAlert('Error al obtener categorías: ' + (error.response?.data?.message || error.message), 'error');
     categories.value = [];
   }
 };
@@ -395,10 +429,16 @@ const fetchCategories = async () => {
 const fetchProducts = async () => {
   try {
     const response = await api.get('/api/Products');
-    products.value = response.data || [];
+    if (response.data?.data) {
+      products.value = response.data.data || [];
+    } else if (Array.isArray(response.data)) {
+      products.value = response.data;
+    } else {
+      products.value = response.data || [];
+    }
   } catch (error) {
-    console.error('Error fetchProducts:', error);
-    addAlert('Error al obtener productos', 'error');
+    console.error('❌ Error fetchProducts:', error);
+    addAlert('Error al obtener productos: ' + (error.response?.data?.message || error.message), 'error');
     products.value = [];
   }
 };
@@ -406,10 +446,19 @@ const fetchProducts = async () => {
 const fetchOrders = async () => {
   try {
     const response = await api.get('/api/Orders');
-    orders.value = response.data || [];
+
+    if (response.data?.data) {
+      orders.value = response.data.data || [];
+    } else if (Array.isArray(response.data)) {
+      orders.value = response.data;
+    } else {
+      orders.value = response.data || [];
+    }
+
+    console.log('✅ Pedidos cargados:', orders.value.length);
   } catch (error) {
-    console.error('Error fetchOrders:', error);
-    addAlert('Error al obtener pedidos', 'error');
+    console.error('❌ Error fetchOrders:', error);
+    addAlert('Error al obtener pedidos: ' + (error.response?.data?.message || error.message), 'error');
     orders.value = [];
   }
 };
@@ -444,7 +493,7 @@ const fetchLogs = async () => {
       }
     ];
   } catch (error) {
-    console.error('Error fetchLogs:', error);
+    console.error('❌ Error fetchLogs:', error);
     logs.value = [];
   }
 };
@@ -524,17 +573,10 @@ const handleViewProductRestaurants = (data) => {
 
   // Mostrar alerta informativa
   addAlert(`Funcionalidad: Ver restaurantes que ofrecen "${data.productName}" - En desarrollo`, 'info');
-
-  // TODO: Aquí podrías implementar un filtro específico para mostrar
-  // solo los restaurantes que tienen este producto
-  // Por ejemplo: activeFilterByProductId.value = data.productId;
 };
 
-// Manejadores para JWT Debug
+// Manejadores para Control de Seguridad (antes JWT Debug)
 const handleViewUserSecret = (user) => {
-  // Este manejador maneja cuando se hace clic en el ícono de clave secreta
-  // pero se mantiene en el popup, no cambia de pestaña
-  console.log('Ver clave secreta de:', user);
 };
 
 const handleClearProductFilters = () => {
@@ -543,9 +585,9 @@ const handleClearProductFilters = () => {
   addAlert('Filtros eliminados', 'info');
 };
 
-const handleGoToJWTDebug = (user) => {
-  activeTab.value = 'jwt';
-  addAlert(`Cambiando a JWT Debug para ${user.firstName} ${user.lastName}`, 'info');
+const handleGoToSecurityManager = (user) => {
+  activeTab.value = 'security';
+  addAlert(`Cambiando a Control de Seguridad para ${user.firstName} ${user.lastName}`, 'info');
 };
 
 // Exportar datos
@@ -587,6 +629,85 @@ const exportUserData = async () => {
     addAlert('Error al exportar datos', 'error');
   }
 };
+
+const debugEndpoints = async () => {
+  const endpoints = [
+    { name: 'Users (singular)', url: '/api/User', method: 'GET' },
+    { name: 'Users (plural)', url: '/api/Users', method: 'GET' },
+    { name: 'Business', url: '/api/Business', method: 'GET' },
+    { name: 'Restaurants', url: '/api/Restaurants', method: 'GET' },
+    { name: 'Categories', url: '/api/Categories', method: 'GET' },
+    { name: 'Products', url: '/api/Products', method: 'GET' },
+    { name: 'Orders', url: '/api/Orders', method: 'GET' }
+  ];
+
+  const results = {};
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await api.get(endpoint.url);
+
+      results[endpoint.name] = {
+        status: '✅ SUCCESS',
+        statusCode: response.status,
+        dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
+        dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+        hasData: response.data?.data ? 'Yes (nested)' : 'No (direct)',
+        sample: Array.isArray(response.data) && response.data.length > 0 ?
+          Object.keys(response.data[0]).slice(0, 5) :
+          (response.data ? Object.keys(response.data).slice(0, 5) : [])
+      };
+    } catch (error) {
+      results[endpoint.name] = {
+        status: '❌ FAILED',
+        statusCode: error.response?.status || 'No response',
+        error: error.response?.data?.message || error.message,
+        suggestion: error.response?.status === 404 ?
+          'Verificar ruta en backend' :
+          'Verificar autenticación'
+      };
+
+      console.error(`❌ ${endpoint.name}: ${error.response?.status || 'ERROR'}`);
+    }
+  }
+  console.table(results);
+  return results;
+};
+const debugAuth = () => {
+  const token = localStorage.getItem('token');
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (token) {
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+      }
+    } catch (error) {
+      console.error('Error decodificando token:', error);
+    }
+  }
+};
+
+const debugDataState = () => {
+};
+
+const runFullDebug = async () => {
+  console.clear();
+  debugAuth();
+  await debugEndpoints();
+  debugDataState();
+  await refreshAllData();
+};
+
+// Exportar funciones de debug para uso en consola
+if (typeof window !== 'undefined') {
+  window.adminDebug = {
+    endpoints: debugEndpoints,
+    auth: debugAuth,
+    data: debugDataState,
+    full: runFullDebug
+  };
+}
 
 // Utilidades
 const formatDate = (date) => {

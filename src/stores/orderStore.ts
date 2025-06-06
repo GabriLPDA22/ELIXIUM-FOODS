@@ -1,347 +1,281 @@
-// src/stores/orderStore.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import orderService, {
-  type OrderResponse,
-  type CreateOrderRequest,
-  OrderStatus,
-} from '@/services/orderService'
-import { useAuthStore } from './auth'
+import type { Order, CreateOrderRequest } from '@/types'
+import orderService, { OrderStatus, type OrderResponse } from '@/services/orderService'
 
-export const useOrderStore = defineStore('orders', () => {
-  // Estado
-  const orders = ref<OrderResponse[]>([])
-  const currentOrder = ref<OrderResponse | null>(null)
+export const useOrderStore = defineStore('order', () => {
+  const currentOrder = ref<Order | null>(null)
+  const orderHistory = ref<OrderResponse[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const lastErrorTime = ref<number>(0)
+  const lastOrderId = ref<number | null>(null)
 
-  // Getters
-  const orderHistory = computed(() =>
-    orders.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const hasOrders = computed(() => orderHistory.value.length > 0)
+
+  const recentOrders = computed(() =>
+    orderHistory.value
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
   )
 
   const activeOrders = computed(() =>
-    orders.value.filter((order) =>
-      [
-        OrderStatus.PENDING,
-        OrderStatus.ACCEPTED,
-        OrderStatus.PREPARING,
-        OrderStatus.READY_FOR_PICKUP,
-        OrderStatus.ON_THE_WAY,
-      ].includes(order.status)
+    orderHistory.value.filter(order =>
+      ![OrderStatus.DELIVERED, OrderStatus.CANCELLED].includes(order.status)
     )
   )
 
   const completedOrders = computed(() =>
-    orders.value.filter((order) =>
+    orderHistory.value.filter(order =>
       [OrderStatus.DELIVERED, OrderStatus.CANCELLED].includes(order.status)
     )
   )
 
-  const totalOrdersCount = computed(() => orders.value.length)
-
-  const totalSpent = computed(() =>
-    orders.value
-      .filter((order) => order.status === OrderStatus.DELIVERED)
-      .reduce((total, order) => total + order.total, 0)
-  )
-
-  // Helper para manejar errores
-  const handleError = (err: any, context: string): string => {
-    console.error(`❌ Error en ${context}:`, err)
-
-    let errorMessage = `Error en ${context}`
-
-    // Determinar el tipo de error
-    if (err.code === 'NETWORK_ERROR' || err.message?.includes('Network Error')) {
-      errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
-    } else if (err.response?.status === 401) {
-      errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-    } else if (err.response?.status === 404) {
-      errorMessage = 'Recurso no encontrado. El servidor puede estar inactivo.'
-    } else if (err.response?.status === 500) {
-      errorMessage = 'Error interno del servidor. Intenta nuevamente más tarde.'
-    } else if (err.message) {
-      errorMessage = err.message
-    }
-
-    error.value = errorMessage
-    lastErrorTime.value = Date.now()
-
-    return errorMessage
-  }
-
-  // Acciones
-  const createOrder = async (orderData: CreateOrderRequest): Promise<OrderResponse> => {
+  async function createOrder(orderData: CreateOrderRequest): Promise<Order> {
     try {
       loading.value = true
       error.value = null
-
-      console.log('🛒 Creando pedido con datos:', orderData)
-
-      // Validar datos antes de enviar
-      if (!orderData.restaurantId) {
-        throw new Error('ID del restaurante es requerido')
-      }
-
-      if (!orderData.deliveryAddressId) {
-        throw new Error('Dirección de entrega es requerida')
-      }
-
-      if (!orderData.items || orderData.items.length === 0) {
-        throw new Error('Se requiere al menos un producto en el pedido')
-      }
-
-      if (!orderData.paymentMethod) {
-        throw new Error('Método de pago es requerido')
-      }
-
-      const newOrder = await orderService.createOrder(orderData)
-
-      console.log('✅ Pedido creado exitosamente:', newOrder)
-
-      // Agregar el nuevo pedido al inicio de la lista
-      orders.value.unshift(newOrder)
-      currentOrder.value = newOrder
-
-      return newOrder
-    } catch (err: any) {
-      const errorMessage = handleError(err, 'crear pedido')
-      throw new Error(errorMessage)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const fetchOrders = async (): Promise<void> => {
-    try {
-      loading.value = true
-      error.value = null
-
-      console.log('🔄 Cargando pedidos del usuario...')
-
-      const userOrders = await orderService.getUserOrders()
-      orders.value = userOrders
-
-      console.log(`✅ Cargados ${userOrders.length} pedidos`)
-    } catch (err: any) {
-      handleError(err, 'cargar pedidos')
-
-      // Si no se pueden cargar pedidos, no fallar completamente
-      // Solo mostrar array vacío
-      orders.value = []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const fetchOrderById = async (orderId: number): Promise<OrderResponse | null> => {
-    try {
-      loading.value = true
-      error.value = null
-
-      console.log(`🔄 Cargando pedido ${orderId}...`)
-
-      const order = await orderService.getOrderById(orderId)
-
-      // Actualizar el pedido en la lista si ya existe
-      const existingOrderIndex = orders.value.findIndex((o) => o.id === orderId)
-      if (existingOrderIndex !== -1) {
-        orders.value[existingOrderIndex] = order
-      } else {
-        orders.value.push(order)
-      }
-
+      const order = await orderService.createOrder(orderData)
       currentOrder.value = order
-      console.log('✅ Pedido cargado:', order)
+      lastOrderId.value = order.id
+      const existingIndex = orderHistory.value.findIndex(o => o.id === order.id)
+      if (existingIndex === -1) {
+        orderHistory.value.unshift(order as OrderResponse)
+      } else {
+        orderHistory.value[existingIndex] = order as OrderResponse
+      }
       return order
     } catch (err: any) {
-      handleError(err, `cargar pedido ${orderId}`)
-      return null
+      error.value = err.message
+      console.error('❌ Error creando pedido:', err)
+      throw err
     } finally {
       loading.value = false
     }
   }
 
-  const cancelOrder = async (orderId: number): Promise<boolean> => {
+  async function fetchOrders(): Promise<void> {
     try {
       loading.value = true
       error.value = null
-
-      console.log(`🔄 Cancelando pedido ${orderId}...`)
-
-      const success = await orderService.cancelOrder(orderId)
-
-      if (success) {
-        // Actualizar el estado del pedido localmente
-        const orderIndex = orders.value.findIndex((o) => o.id === orderId)
-        if (orderIndex !== -1) {
-          orders.value[orderIndex].status = OrderStatus.CANCELLED
-          orders.value[orderIndex].updatedAt = new Date().toISOString()
-        }
-
-        // Si es el pedido actual, también actualizarlo
-        if (currentOrder.value?.id === orderId) {
-          currentOrder.value.status = OrderStatus.CANCELLED
-          currentOrder.value.updatedAt = new Date().toISOString()
-        }
-
-        console.log(`✅ Pedido ${orderId} cancelado exitosamente`)
-      }
-
-      return success
+      const orders = await orderService.getUserOrders()
+      orderHistory.value = orders.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
     } catch (err: any) {
-      const errorMessage = handleError(err, `cancelar pedido ${orderId}`)
-
-      // IMPORTANTE: No lanzar error aquí para que el componente pueda manejar la respuesta
-      // En su lugar, mostrar que la cancelación falló pero intentar actualizar localmente
-      console.warn(`⚠️ Cancelación del pedido ${orderId} falló en backend, actualizando localmente`)
-
-      // Actualizar localmente como fallback
-      const orderIndex = orders.value.findIndex((o) => o.id === orderId)
-      if (orderIndex !== -1) {
-        orders.value[orderIndex].status = OrderStatus.CANCELLED
-        orders.value[orderIndex].updatedAt = new Date().toISOString()
-      }
-
-      if (currentOrder.value?.id === orderId) {
-        currentOrder.value.status = OrderStatus.CANCELLED
-        currentOrder.value.updatedAt = new Date().toISOString()
-      }
-
-      // Retornar true para indicar que la cancelación se completó localmente
-      return true
+      error.value = err.message
+      console.error('❌ Error cargando pedidos:', err)
+      throw err
     } finally {
       loading.value = false
     }
   }
 
-  const updateOrderStatus = async (orderId: number, status: OrderStatus): Promise<boolean> => {
+  async function fetchOrderById(orderId: number): Promise<OrderResponse> {
     try {
-      console.log(`🔄 Actualizando pedido ${orderId} a estado ${status}...`)
-
-      const success = await orderService.updateOrderStatus(orderId, status)
-
-      if (success) {
-        // Actualizar el estado del pedido localmente
-        const orderIndex = orders.value.findIndex((o) => o.id === orderId)
-        if (orderIndex !== -1) {
-          orders.value[orderIndex].status = status
-          orders.value[orderIndex].updatedAt = new Date().toISOString()
-        }
-
-        // Si es el pedido actual, también actualizarlo
-        if (currentOrder.value?.id === orderId) {
-          currentOrder.value.status = status
-          currentOrder.value.updatedAt = new Date().toISOString()
-        }
-
-        console.log(`✅ Pedido ${orderId} actualizado a ${status}`)
-      }
-
-      return success
-    } catch (err: any) {
-      handleError(err, `actualizar pedido ${orderId}`)
-
-      // Como fallback, actualizar localmente
-      const orderIndex = orders.value.findIndex((o) => o.id === orderId)
-      if (orderIndex !== -1) {
-        orders.value[orderIndex].status = status
-        orders.value[orderIndex].updatedAt = new Date().toISOString()
-      }
-
-      if (currentOrder.value?.id === orderId) {
-        currentOrder.value.status = status
-        currentOrder.value.updatedAt = new Date().toISOString()
-      }
-
-      return true // Retornar true como fallback
-    }
-  }
-
-  const getOrdersByStatus = (status: OrderStatus): OrderResponse[] => {
-    return orders.value.filter((order) => order.status === status)
-  }
-
-  const getOrdersByRestaurant = (restaurantId: number): OrderResponse[] => {
-    return orders.value.filter((order) => order.restaurantId === restaurantId)
-  }
-
-  const clearError = (): void => {
-    error.value = null
-    lastErrorTime.value = 0
-  }
-
-  const clearCurrentOrder = (): void => {
-    currentOrder.value = null
-  }
-
-  const clearOrders = (): void => {
-    orders.value = []
-    currentOrder.value = null
-    error.value = null
-  }
-
-  const initializeStore = async (): Promise<void> => {
-    try {
-      const authStore = useAuthStore()
-
-      // Solo cargar pedidos si el usuario está autenticado
-      if (authStore.isAuthenticated) {
-        console.log('🔄 Inicializando store de pedidos...')
-        await fetchOrders()
+      loading.value = true
+      error.value = null
+      const order = await orderService.getOrderById(orderId)
+      const existingIndex = orderHistory.value.findIndex(o => o.id === orderId)
+      if (existingIndex !== -1) {
+        orderHistory.value[existingIndex] = order
       } else {
-        console.log('⚠️ Usuario no autenticado, saltando carga de pedidos')
-        clearOrders()
+        orderHistory.value.unshift(order)
       }
+      if (currentOrder.value?.id === orderId) {
+        currentOrder.value = order as Order
+      }
+      return order
     } catch (err: any) {
-      console.warn('⚠️ Error al inicializar store de pedidos:', err)
-      // No lanzar error aquí para no bloquear la app
+      error.value = err.message
+      console.error('❌ Error cargando pedido:', err)
+      throw err
+    } finally {
+      loading.value = false
     }
   }
 
-  // Método para reintentar operaciones fallidas
-  const retryLastOperation = async (): Promise<void> => {
-    if (error.value && Date.now() - lastErrorTime.value < 60000) { // Solo reintentar si el error es reciente
-      console.log('🔄 Reintentando última operación...')
-      clearError()
-      await fetchOrders()
+  async function updateOrderStatus(orderId: number, status: OrderStatus): Promise<OrderResponse> {
+    try {
+      loading.value = true
+      error.value = null
+      const updatedOrder = await orderService.updateOrderStatus(orderId, status)
+      const existingIndex = orderHistory.value.findIndex(o => o.id === orderId)
+      if (existingIndex !== -1) {
+        orderHistory.value[existingIndex] = updatedOrder
+      }
+      if (currentOrder.value?.id === orderId) {
+        currentOrder.value = updatedOrder as Order
+      }
+      return updatedOrder
+    } catch (err: any) {
+      error.value = err.message
+      console.error('❌ Error actualizando estado del pedido:', err)
+      throw err
+    } finally {
+      loading.value = false
     }
   }
 
-  // Método para verificar si hay errores de conectividad
-  const hasConnectivityIssues = computed(() => {
-    return error.value?.includes('conexión') || error.value?.includes('Network Error')
-  })
+  async function cancelOrder(orderId: number, reason?: string): Promise<OrderResponse> {
+    try {
+      loading.value = true
+      error.value = null
+      const cancelledOrder = await orderService.cancelOrder(orderId, reason)
+      const existingIndex = orderHistory.value.findIndex(o => o.id === orderId)
+      if (existingIndex !== -1) {
+        orderHistory.value[existingIndex] = cancelledOrder
+      }
+      if (currentOrder.value?.id === orderId) {
+        currentOrder.value = cancelledOrder as Order
+      }
+      return cancelledOrder
+    } catch (err: any) {
+      error.value = err.message
+      console.error('❌ Error cancelando pedido:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function trackOrder(orderId: number): Promise<{
+    currentStatus: OrderStatus
+    estimatedDelivery: string
+    steps: { status: OrderStatus; completed: boolean; timestamp?: string }[]
+  }> {
+    try {
+      const trackingInfo = await orderService.trackOrder(orderId)
+      return trackingInfo
+    } catch (err: any) {
+      console.error('❌ Error rastreando pedido:', err)
+      throw err
+    }
+  }
+
+  async function validatePromoCode(
+    code: string,
+    restaurantId: number,
+    subtotal: number
+  ): Promise<{ valid: boolean; discount: number; message?: string }> {
+    try {
+      const result = await orderService.validatePromoCode(code, restaurantId, subtotal)
+      return result
+    } catch (err: any) {
+      console.error('❌ Error validando código promocional:', err)
+      return {
+        valid: false,
+        discount: 0,
+        message: err.message || 'Error al validar código promocional'
+      }
+    }
+  }
+
+  async function getAvailableDeliveryTimes(
+    restaurantId: number,
+    addressId: number,
+    date: string
+  ): Promise<string[]> {
+    try {
+      const times = await orderService.getAvailableDeliveryTimes(restaurantId, addressId, date)
+      return times
+    } catch (err: any) {
+      console.error('❌ Error obteniendo tiempos de entrega:', err)
+      return []
+    }
+  }
+
+  async function estimateDeliveryTime(
+    restaurantId: number,
+    addressId: number
+  ): Promise<{ estimatedMinutes: number; estimatedTime: string }> {
+    try {
+      const estimate = await orderService.estimateDeliveryTime(restaurantId, addressId)
+      return estimate
+    } catch (err: any) {
+      console.error('❌ Error estimando tiempo de entrega:', err)
+      return {
+        estimatedMinutes: 35,
+        estimatedTime: new Date(Date.now() + 35 * 60000).toLocaleTimeString('es-ES', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+    }
+  }
+
+  function findOrderById(orderId: number): OrderResponse | undefined {
+    return orderHistory.value.find(order => order.id === orderId)
+  }
+
+  function canCancelOrder(order: OrderResponse): boolean {
+    return orderService.canCancelOrder(order)
+  }
+
+  function canReorderOrder(order: OrderResponse): boolean {
+    return orderService.canReorderOrder(order)
+  }
+
+  function getOrderStatusText(status: OrderStatus): string {
+    return orderService.getOrderStatusText(status)
+  }
+
+  function getOrderStatusClass(status: OrderStatus): string {
+    return orderService.getOrderStatusClass(status)
+  }
+
+  function formatOrderDate(dateString: string): string {
+    return orderService.formatOrderDate(dateString)
+  }
+
+  function summarizeOrderItems(items: { productName: string; quantity: number }[]): string {
+    return orderService.summarizeOrderItems(items)
+  }
+
+  function clearState(): void {
+    currentOrder.value = null
+    orderHistory.value = []
+    error.value = null
+    lastOrderId.value = null
+  }
+
+  function clearError(): void {
+    error.value = null
+  }
+
+  function setCurrentOrder(order: Order): void {
+    currentOrder.value = order
+    lastOrderId.value = order.id
+  }
 
   return {
-    // Estado
-    orders,
     currentOrder,
+    orderHistory,
     loading,
     error,
-
-    // Getters
-    orderHistory,
+    lastOrderId,
+    hasOrders,
+    recentOrders,
     activeOrders,
     completedOrders,
-    totalOrdersCount,
-    totalSpent,
-    hasConnectivityIssues,
-
-    // Acciones
     createOrder,
     fetchOrders,
     fetchOrderById,
-    cancelOrder,
     updateOrderStatus,
-    getOrdersByStatus,
-    getOrdersByRestaurant,
+    cancelOrder,
+    trackOrder,
+    validatePromoCode,
+    getAvailableDeliveryTimes,
+    estimateDeliveryTime,
+    findOrderById,
+    canCancelOrder,
+    canReorderOrder,
+    getOrderStatusText,
+    getOrderStatusClass,
+    formatOrderDate,
+    summarizeOrderItems,
+    clearState,
     clearError,
-    clearCurrentOrder,
-    clearOrders,
-    initializeStore,
-    retryLastOperation,
+    setCurrentOrder
   }
 })

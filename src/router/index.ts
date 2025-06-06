@@ -1,102 +1,102 @@
-// src/router/index.ts
-import { createRouter, createWebHistory } from 'vue-router'
-import routes from './routes'
-import { useAuthStore } from '@/stores/auth'
-import { useBusinessAuthStore } from '@/stores/businessAuth'
-import { requireAuth, requireBusinessAuth, redirectIfAuthenticated, redirectIfBusinessAuthenticated } from './auth-guards'
+import { createRouter, createWebHistory } from 'vue-router';
+import routes from './routes';
+import { useAuthStore } from '@/stores/auth';
+import { isTokenValid } from '@/services/api';
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    } else {
-      return { top: 0 }
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (savedPosition) {
+          resolve(savedPosition);
+        } else {
+          resolve({ top: 0, left: 0 });
+        }
+      }, 350);
+    });
+  }
+});
+
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
+
+  const getAuthToken = () => {
+    return localStorage.getItem('authToken') || localStorage.getItem('token');
+  };
+
+  const authToken = getAuthToken();
+
+  if (authToken && isTokenValid() && !authStore.user) {
+    try {
+      authStore.initializeAuth();
+      await new Promise(resolve => setTimeout(resolve, 50));
+    } catch (error) {
     }
   }
-})
 
-// Navegación guard
-router.beforeEach(async (to, from, next) => {
-  // Verificar si la ruta requiere autenticación de usuario regular
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  const isGuestOnly = to.matched.some(record => record.meta.guest)
+  if (authToken && !isTokenValid()) {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    authStore.logout?.(false);
+  }
 
-  // Verificar si la ruta requiere autenticación de negocio
-  const requiresBusinessAuth = to.matched.some(record => record.meta.requiresBusinessAuth)
-  const isBusinessGuestOnly = to.matched.some(record => record.meta.businessGuest)
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const isGuestOnly = to.matched.some(record => record.meta.guest);
+  const requiresRole = to.meta.requiresRole as string[];
 
-  // Inicializar los stores después del refresco de la página
-  const authStore = useAuthStore()
-  const businessAuthStore = useBusinessAuthStore()
-
-  // Rutas para usuarios regulares
   if (requiresAuth) {
-    // CORREGIDO: usar isAuthenticated como computed, no como función
-    if (!authStore.isAuthenticated) {
-      // Redirigir al login con un parámetro de retorno
-      next({
+    const validToken = authToken && isTokenValid();
+    const hasValidUser = authStore.user && authStore.isAuthenticated;
+
+    if (!validToken || !hasValidUser) {
+      return next({
         name: 'login',
         query: { returnUrl: to.fullPath }
-      })
-    } else {
-      // Si requiere un rol específico y el usuario no lo tiene
-      if (to.meta.requiresRole && !to.meta.requiresRole.includes(authStore.user?.role)) {
-        next({ path: '/unauthorized' })
-      } else {
-        // Si está autenticado y tiene el rol adecuado, permitir la navegación
-        next()
+      });
+    }
+
+    if (requiresRole && requiresRole.length > 0) {
+      const userRole = authStore.user?.role;
+      if (!userRole || !requiresRole.includes(userRole)) {
+        return next({
+          path: '/unauthorized',
+          query: {
+            error: 'insufficient_permissions',
+            required: requiresRole.join(', '),
+            current: userRole || 'none'
+          }
+        });
       }
     }
+    return next();
   }
-  // Rutas para empresas/restaurantes
-  else if (requiresBusinessAuth) {
-    // Si la ruta requiere autenticación de negocio, verificar si está autenticado
-    if (!businessAuthStore.isAuthenticated) {
-      // Intentar verificar la autenticación con el backend
-      const isAuthenticated = await businessAuthStore.checkAuth()
-      if (!isAuthenticated) {
-        // Redirigir al login de negocios con la ruta original como returnUrl
-        next({
-          name: 'business-login',
-          query: { returnUrl: to.fullPath },
-        })
-      } else {
-        // Si requiere un rol específico y el negocio no lo tiene
-        if (to.meta.requiresBusinessRole && !to.meta.requiresBusinessRole.includes(businessAuthStore.businessRole)) {
-          next({ path: '/business/unauthorized' })
-        } else {
-          // Si está autenticado y tiene el rol adecuado, permitir la navegación
-          next()
+
+  if (isGuestOnly) {
+    const validToken = authToken && isTokenValid();
+    const hasValidUser = authStore.user && authStore.isAuthenticated;
+
+    if (validToken && hasValidUser) {
+      const returnUrl = to.query.returnUrl as string;
+      if (returnUrl) {
+        try {
+          const decodedUrl = decodeURIComponent(returnUrl);
+          return next(decodedUrl);
+        } catch (error) {
+          // Manejo de error de decodificación
         }
       }
-    } else {
-      // Si está autenticado como negocio, verificar roles si es necesario
-      if (to.meta.requiresBusinessRole && !to.meta.requiresBusinessRole.includes(businessAuthStore.businessRole)) {
-        next({ path: '/business/unauthorized' })
-      } else {
-        next()
-      }
+      return next({ name: 'home' });
     }
+    return next();
   }
-  // Rutas para guest de usuarios regulares
-  else if (isGuestOnly && authStore.isAuthenticated) {
-    // CORREGIDO: usar isAuthenticated como computed, no como función
-    // Si la ruta es solo para visitantes (login, register) y el usuario ya está autenticado,
-    // redirigir al inicio
-    next({ name: 'home' })
-  }
-  // Rutas para guest de negocios
-  else if (isBusinessGuestOnly && businessAuthStore.isAuthenticated) {
-    // Si la ruta es solo para visitantes de negocios y ya está autenticado,
-    // redirigir al dashboard
-    next({ name: 'business-dashboard' })
-  }
-  else {
-    // Para rutas que no requieren autenticación
-    next()
-  }
-})
 
-export default router
+  next();
+});
+
+router.afterEach((to, from) => {
+});
+
+export default router;

@@ -7,18 +7,10 @@ export const authDebugger = {
    */
   async testLogin(email: string, password: string) {
     try {
-      console.log(`Probando login con: ${email}`)
-
       const response = await api.post('/api/Auth/login', { email, password })
-      console.log('Respuesta de login:', response)
-
       // Si hay token, verificar que sea un JWT válido
       if (response.data?.token) {
         const isValidJwt = response.data.token.split('.').length === 3
-
-        console.log(`Token obtenido: ${response.data.token.substring(0, 20)}...`)
-        console.log(`¿Es un JWT válido? ${isValidJwt}`)
-
         // Solo configurar si es un JWT válido
         if (isValidJwt) {
           localStorage.setItem('token', response.data.token)
@@ -30,7 +22,6 @@ export const authDebugger = {
         // Guardar refreshToken por separado
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken)
-          console.log(`RefreshToken guardado: ${response.data.refreshToken.substring(0, 20)}...`)
         }
       }
 
@@ -61,8 +52,6 @@ export const authDebugger = {
       console.log(
         `Probando endpoint protegido con token: ${token ? token.substring(0, 20) + '...' : 'No (ausente)'}`
       )
-      console.log(`¿El token tiene formato JWT? ${isValidJwt}`)
-
       const response = await api.get('/api/Users/me', {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',

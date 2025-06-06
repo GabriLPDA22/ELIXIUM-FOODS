@@ -1,437 +1,413 @@
-// src/stores/cart.ts - VERSIÓN CORREGIDA
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import productService from '@/services/productService';
-import type { Product } from '@/services/productService';
+// src/stores/cart.ts
 
-export interface CartItem {
-  id: number;
-  productId: number;
-  name: string;
-  price: number;
-  quantity: number;
-  imageUrl: string;
-  restaurantId: number;
-  restaurantName?: string;
-  maxQuantity?: number;
-  isAvailable: boolean;
-}
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { CartItem, Product, ProductOffer } from '@/types'
+import { offerService } from '@/services/offerService'
 
 export const useCartStore = defineStore('cart', () => {
-  // Estado
-  const items = ref<CartItem[]>([]);
-  const restaurantId = ref<number | null>(null);
-  const restaurantName = ref<string | null>(null);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
-
-  // Helper function para números seguros - MEJORADA
-  const safeNumber = (value: any, defaultValue: number = 0): number => {
-    if (value === null || value === undefined || value === '') {
-      return defaultValue;
-    }
-    const num = typeof value === 'number' ? value : parseFloat(value);
-    return isNaN(num) ? defaultValue : num;
-  };
-
-  // Helper function para validar precios - CORREGIDA
-  const isValidPrice = (price: any): boolean => {
-    const num = safeNumber(price);
-    return num > 0;
-  };
-
-  // Nueva función para encontrar precio válido
-  const findValidPrice = (product: any): number => {
-    console.log('🔍 Buscando precio válido para:', product.name);
-    console.log('🔍 Producto completo:', product);
-
-    const possiblePriceFields = ['price', 'precio', 'cost', 'amount', 'unitPrice', 'salePrice'];
-
-    for (let field of possiblePriceFields) {
-      if (product[field] !== null && product[field] !== undefined && product[field] !== '') {
-        const testPrice = typeof product[field] === 'number' ? product[field] : parseFloat(product[field]);
-        if (!isNaN(testPrice) && testPrice > 0) {
-          console.log(`✅ Precio encontrado en ${field}:`, testPrice);
-          return testPrice;
-        }
-      }
-    }
-
-    console.log('❌ No se encontró precio válido');
-    return 0;
-  };
+  // State
+  const items = ref<CartItem[]>([])
+  const restaurantId = ref<number | null>(null)
+  const restaurantName = ref<string>('')
+  const estimatedDeliveryTime = ref<number>(30)
+  const activeOffers = ref<ProductOffer[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
   // Getters
-  const itemCount = computed(() => {
-    return items.value.reduce((acc, item) => acc + safeNumber(item.quantity), 0);
-  });
+  const isEmpty = computed(() => items.value.length === 0)
 
-  const totalAmount = computed(() => {
-    return items.value.reduce((acc, item) => {
-      const price = safeNumber(item.price);
-      const quantity = safeNumber(item.quantity);
-      return acc + (price * quantity);
-    }, 0);
-  });
+  const itemCount = computed(() =>
+    items.value.reduce((total, item) => total + item.quantity, 0)
+  )
 
-  const isEmpty = computed(() => items.value.length === 0);
+  const originalSubtotal = computed(() =>
+    items.value.reduce((total, item) => total + (item.originalPrice * item.quantity), 0)
+  )
 
-  const isValid = computed(() => {
-    return items.value.every(item => item.isAvailable && isValidPrice(item.price));
-  });
+  const subtotalWithOffers = computed(() =>
+    items.value.reduce((total, item) => total + (item.price * item.quantity), 0)
+  )
 
-  const addToCart = async (product: Product, quantity: number = 1): Promise<boolean> => {
+  const totalSavings = computed(() => {
+    const rawSavings = originalSubtotal.value - subtotalWithOffers.value;
+    return rawSavings > 0 ? Math.ceil(rawSavings * 100) / 100 : 0;
+  })
+
+  const cartSummary = computed(() => ({
+    originalSubtotal: originalSubtotal.value,
+    subtotalWithOffers: subtotalWithOffers.value,
+    totalSavings: totalSavings.value,
+    itemCount: itemCount.value
+  }))
+
+  // Actions
+
+  /**
+   * Agrega un producto al carrito
+   */
+  async function addToCart(product: Product, quantity: number = 1): Promise<void> {
     try {
-        loading.value = true;
-        error.value = null;
+      loading.value = true
+      error.value = null
 
-        console.log('🛒 Cart recibe producto:', product);
-
-        // Validación básica
-        if (!product || !product.id) {
-            error.value = 'Producto no válido';
-            return false;
-        }
-
-        // GARANTIZAR PRECIO - NO VALIDAR, SOLO USAR
-        let finalPrice = product.price || 15.99; // PRECIO DEFAULT SI NO EXISTE
-
-        console.log('💰 Precio final a usar:', finalPrice);
-
-        // Verificar cambio de restaurante
-        const productRestaurantId = product.restaurantId || product.businessId || 0;
-        if (restaurantId.value !== null && restaurantId.value !== productRestaurantId) {
-            const confirmClear = confirm(
-                `Tu canasta contiene elementos de ${restaurantName.value}. ¿Deseas vaciar tu canasta para pedir de este nuevo restaurante?`
-            );
-            if (confirmClear) {
-                clearCart();
-            } else {
-                return false;
-            }
-        }
-
-        // Establecer restaurante
-        if (restaurantId.value === null) {
-            restaurantId.value = productRestaurantId;
-            restaurantName.value = product.restaurantName || product.businessName || 'Restaurante';
-        }
-
-        // Verificar si ya existe
-        const existingItem = items.value.find(item => item.productId === product.id);
-
-        if (existingItem) {
-            existingItem.quantity += quantity;
-            existingItem.price = finalPrice; // Actualizar precio
-        } else {
-            // Crear nuevo item SIN VALIDACIONES COMPLEJAS
-            const newItem: CartItem = {
-                id: Date.now(),
-                productId: product.id,
-                name: product.name || 'Producto',
-                price: finalPrice, // USAR PRECIO GARANTIZADO
-                quantity: quantity,
-                imageUrl: product.imageUrl || '',
-                restaurantId: productRestaurantId,
-                restaurantName: product.restaurantName || product.businessName,
-                maxQuantity: 10,
-                isAvailable: true // SIEMPRE TRUE PARA EVITAR PROBLEMAS
-            };
-
-            items.value.push(newItem);
-        }
-
-        await saveCart();
-        console.log('✅ Producto agregado exitosamente');
-        return true;
-
-    } catch (err: any) {
-        console.error('❌ Error en addToCart:', err);
-        error.value = 'Error al agregar producto';
-        return false;
-    } finally {
-        loading.value = false;
-    }
-};
-
-  const updateQuantity = async (itemId: number, quantity: number): Promise<boolean> => {
-    try {
-      const item = items.value.find(item => item.id === itemId);
-
-      if (!item) {
-        error.value = 'Producto no encontrado en el carrito';
-        return false;
+      // Verificar si es un restaurante diferente
+      if (restaurantId.value && restaurantId.value !== product.restaurantId) {
+        throw new Error('No puedes agregar productos de diferentes restaurantes')
       }
 
-      const newQuantity = safeNumber(quantity);
+      // Establecer información del restaurante si es el primer producto
+      if (!restaurantId.value) {
+        restaurantId.value = product.restaurantId || 0
+        restaurantName.value = product.restaurantName || 'Restaurante'
+
+        // Cargar ofertas activas del restaurante
+        if (restaurantId.value) {
+          await loadActiveOffers(restaurantId.value)
+        }
+      }
+
+      const originalPrice = getProductPrice(product)
+      const existingItemIndex = items.value.findIndex(item => item.productId === product.id)
+
+      if (existingItemIndex !== -1) {
+        // Actualizar cantidad del producto existente
+        items.value[existingItemIndex].quantity += quantity
+      } else {
+        // Agregar nuevo producto
+        const newItem: CartItem = {
+          id: product.id,
+          productId: product.id,
+          name: product.name,
+          price: originalPrice, // Se actualizará con ofertas
+          originalPrice,
+          imageUrl: product.imageUrl || '',
+          restaurantId: product.restaurantId || restaurantId.value || 0,
+          restaurantName: product.restaurantName || restaurantName.value,
+          categoryId: product.categoryId,
+          isAvailable: product.isAvailable,
+          description: product.description,
+          businessId: product.businessId,
+          businessName: product.restaurantName || restaurantName.value,
+          quantity
+        }
+
+        items.value.push(newItem)
+      }
+
+      // Recalcular precios con ofertas
+      await recalculateCartPrices()
+
+    } catch (err: any) {
+      error.value = err.message
+      console.error('❌ Error agregando al carrito:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualiza la cantidad de un producto en el carrito
+   */
+  async function updateQuantity(productId: number, newQuantity: number): Promise<void> {
+    try {
       if (newQuantity <= 0) {
-        return removeItem(itemId);
+        await removeItem(productId)
+        return
       }
 
-      const maxQuantity = safeNumber(item.maxQuantity, 10);
-      if (newQuantity > maxQuantity) {
-        error.value = `Cantidad máxima permitida: ${maxQuantity}`;
-        return false;
+      const itemIndex = items.value.findIndex(item => item.productId === productId)
+      if (itemIndex !== -1) {
+        items.value[itemIndex].quantity = newQuantity
+        await recalculateCartPrices()
       }
-
-      // Verificar disponibilidad del producto
-      try {
-        const currentProduct = await productService.getProductById(item.productId);
-
-        if (!currentProduct.isAvailable) {
-          error.value = 'Este producto ya no está disponible';
-          item.isAvailable = false;
-          await saveCart();
-          return false;
-        }
-
-        const newPrice = findValidPrice(currentProduct);
-        if (newPrice > 0) {
-          item.price = newPrice;
-        }
-
-        item.quantity = newQuantity;
-        item.isAvailable = currentProduct.isAvailable !== false;
-      } catch (err) {
-        // Si no se puede verificar, mantener el item pero actualizar cantidad
-        item.quantity = newQuantity;
-      }
-
-      await saveCart();
-      return true;
     } catch (err: any) {
-      console.error('Error updating quantity:', err);
-      error.value = err.message || 'Error al actualizar cantidad';
-      return false;
+      error.value = err.message
+      console.error('❌ Error actualizando cantidad:', err)
+      throw err
     }
-  };
+  }
 
-  const removeItem = (itemId: number): boolean => {
-    const index = items.value.findIndex(item => item.id === itemId);
-
-    if (index !== -1) {
-      items.value.splice(index, 1);
-
-      // Si no quedan items, resetear el restaurantId
-      if (items.value.length === 0) {
-        restaurantId.value = null;
-        restaurantName.value = null;
-      }
-
-      saveCart();
-      return true;
+  /**
+   * Incrementa la cantidad de un producto
+   */
+  async function incrementItem(productId: number): Promise<void> {
+    const item = items.value.find(item => item.productId === productId)
+    if (item) {
+      await updateQuantity(productId, item.quantity + 1)
     }
+  }
 
-    return false;
-  };
+  /**
+   * Decrementa la cantidad de un producto
+   */
+  async function decrementItem(productId: number): Promise<void> {
+    const item = items.value.find(item => item.productId === productId)
+    if (item) {
+      await updateQuantity(productId, Math.max(0, item.quantity - 1))
+    }
+  }
 
-  const clearCart = (): void => {
-    items.value = [];
-    restaurantId.value = null;
-    restaurantName.value = null;
-    error.value = null;
-    saveCart();
-  };
-
-  const validateCart = async (): Promise<boolean> => {
+  /**
+   * Elimina un producto del carrito
+   */
+  async function removeItem(productId: number): Promise<void> {
     try {
-      loading.value = true;
-      error.value = null;
+      const itemIndex = items.value.findIndex(item => item.productId === productId)
+      if (itemIndex !== -1) {
+        const removedItem = items.value[itemIndex]
+        items.value.splice(itemIndex, 1)
 
-      if (items.value.length === 0) {
-        return true;
+        // Si el carrito queda vacío, limpiar información del restaurante
+        if (items.value.length === 0) {
+          clearRestaurantInfo()
+        } else {
+          await recalculateCartPrices()
+        }
       }
+    } catch (err: any) {
+      error.value = err.message
+      console.error('❌ Error eliminando del carrito:', err)
+      throw err
+    }
+  }
 
-      // Validar cada producto individualmente
-      let hasUnavailableItems = false;
-      let hasInvalidPrices = false;
+  /**
+   * Vacía completamente el carrito
+   */
+  function clearCart(): void {
+    items.value = []
+    clearRestaurantInfo()
+  }
 
+  /**
+   * Carga las ofertas activas de un restaurante
+   */
+  async function loadActiveOffers(restaurantIdParam: number): Promise<void> {
+    try {
+      activeOffers.value = await offerService.getActiveOffersByRestaurant(restaurantIdParam)
+    } catch (err: any) {
+      console.error('❌ Error cargando ofertas:', err)
+      activeOffers.value = []
+    }
+  }
+
+  /**
+   * Recalcula los precios del carrito aplicando ofertas
+   */
+  async function recalculateCartPrices(): Promise<void> {
+    if (!restaurantId.value || items.value.length === 0) return
+
+    try {
+      const currentSubtotal = originalSubtotal.value
+
+      // Procesar cada item para aplicar ofertas
       for (const item of items.value) {
-        try {
-          const currentProduct = await productService.getProductById(item.productId);
+        const applicableOffers = activeOffers.value.filter(offer =>
+          offer.productId === item.productId &&
+          offer.status === 'active' &&
+          isOfferValid(offer) &&
+          item.quantity >= offer.minimumQuantity &&
+          currentSubtotal >= offer.minimumOrderAmount
+        )
 
-          if (!currentProduct.isAvailable) {
-            item.isAvailable = false;
-            hasUnavailableItems = true;
+        // Aplicar la mejor oferta
+        if (applicableOffers.length > 0) {
+          const bestOffer = findBestOffer(item.originalPrice, applicableOffers)
+          if (bestOffer) {
+            item.price = calculateDiscountedPrice(item.originalPrice, bestOffer)
+            item.appliedOffer = bestOffer
           } else {
-            item.isAvailable = true;
-
-            const newPrice = findValidPrice(currentProduct);
-            if (newPrice > 0) {
-              // Verificar si el precio cambió significativamente
-              if (Math.abs(safeNumber(item.price) - newPrice) > 0.01) {
-                item.price = newPrice;
-                hasInvalidPrices = true;
-              }
-            } else {
-              // Si el precio no es válido, marcar como no disponible
-              item.isAvailable = false;
-              hasUnavailableItems = true;
-            }
+            item.price = item.originalPrice
+            item.appliedOffer = undefined
           }
-        } catch (err) {
-          // Si no se puede obtener el producto, marcarlo como no disponible
-          item.isAvailable = false;
-          hasUnavailableItems = true;
+        } else {
+          item.price = item.originalPrice
+          item.appliedOffer = undefined
         }
       }
-
-      if (hasUnavailableItems) {
-        error.value = 'Algunos productos en tu carrito ya no están disponibles';
-        await saveCart();
-        return false;
-      }
-
-      if (hasInvalidPrices) {
-        error.value = 'Los precios de algunos productos han cambiado';
-        await saveCart();
-        return false;
-      }
-
-      await saveCart();
-      return true;
     } catch (err: any) {
-      console.error('Error validating cart:', err);
-      error.value = err.message || 'Error al validar el carrito';
-      return false;
-    } finally {
-      loading.value = false;
+      console.error('❌ Error recalculando precios:', err)
+      // En caso de error, usar precios originales
+      items.value.forEach(item => {
+        item.price = item.originalPrice
+        item.appliedOffer = undefined
+      })
     }
-  };
+  }
 
-  const getUnavailableItems = (): CartItem[] => {
-    return items.value.filter(item => !item.isAvailable);
-  };
+  /**
+   * Valida el carrito antes del checkout
+   */
+  async function validateCart(): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = []
 
-  const removeUnavailableItems = (): void => {
-    const availableItems = items.value.filter(item => item.isAvailable);
-    items.value = availableItems;
-
-    if (items.value.length === 0) {
-      restaurantId.value = null;
-      restaurantName.value = null;
+    if (isEmpty.value) {
+      errors.push('El carrito está vacío')
     }
 
-    saveCart();
-  };
+    if (!restaurantId.value) {
+      errors.push('No se ha seleccionado un restaurante')
+    }
 
-  const getCartSummary = () => {
+    // Verificar disponibilidad de productos
+    const unavailableItems = items.value.filter(item => !item.isAvailable)
+    if (unavailableItems.length > 0) {
+      errors.push(`Los siguientes productos no están disponibles: ${unavailableItems.map(i => i.name).join(', ')}`)
+    }
+
+    // Verificar precios mínimos
+    const invalidPriceItems = items.value.filter(item => item.price <= 0)
+    if (invalidPriceItems.length > 0) {
+      errors.push(`Los siguientes productos tienen precios inválidos: ${invalidPriceItems.map(i => i.name).join(', ')}`)
+    }
+
     return {
-      itemCount: itemCount.value,
-      totalAmount: totalAmount.value,
-      restaurantId: restaurantId.value,
-      restaurantName: restaurantName.value,
-      isEmpty: isEmpty.value,
-      isValid: isValid.value,
-      hasUnavailableItems: getUnavailableItems().length > 0
-    };
-  };
-
-  // Persistencia local - MEJORADA
-  const saveCart = async (): Promise<void> => {
-    try {
-      const cartData = {
-        items: items.value,
-        restaurantId: restaurantId.value,
-        restaurantName: restaurantName.value,
-        timestamp: Date.now()
-      };
-
-      localStorage.setItem('cart', JSON.stringify(cartData));
-    } catch (err) {
-      console.error('Error saving cart to localStorage:', err);
+      valid: errors.length === 0,
+      errors
     }
-  };
+  }
 
-  const loadCart = (): void => {
-    try {
-      const savedCart = localStorage.getItem('cart');
+  /**
+   * Obtiene un item del carrito por ID de producto
+   */
+  function getCartItem(productId: number): CartItem | undefined {
+    return items.value.find(item => item.productId === productId)
+  }
 
-      if (savedCart) {
-        const cartData = JSON.parse(savedCart);
+  /**
+   * Verifica si un producto está en el carrito
+   */
+  function isInCart(productId: number): boolean {
+    return items.value.some(item => item.productId === productId)
+  }
 
-        // Verificar que los datos no sean muy antiguos (más de 24 horas)
-        const maxAge = 24 * 60 * 60 * 1000;
-        const isExpired = cartData.timestamp && (Date.now() - cartData.timestamp) > maxAge;
+  /**
+   * Obtiene la cantidad de un producto en el carrito
+   */
+  function getItemQuantity(productId: number): number {
+    const item = items.value.find(item => item.productId === productId)
+    return item?.quantity || 0
+  }
 
-        if (isExpired) {
-          console.log('Cart data expired, clearing cart');
-          clearCart();
-          return;
-        }
+  // Helper functions
 
-        // Validar y limpiar los datos cargados - MEJORADA
-        const validItems = (cartData.items || []).map((item: any) => ({
-          ...item,
-          price: safeNumber(item.price, 0), // Mantener precio 0 si existe
-          quantity: safeNumber(item.quantity, 1),
-          isAvailable: item.isAvailable !== false
-        })).filter((item: CartItem) => {
-          // Solo filtrar si realmente no tiene ID o nombre
-          const hasBasicData = item.productId && item.name;
-          const hasValidPrice = item.price > 0; // Solo rechazar si el precio es realmente 0
+  /**
+   * Obtiene el precio real de un producto
+   */
+  function getProductPrice(product: Product): number {
+    if (product.restaurantPrice && product.restaurantPrice > 0) {
+      return product.restaurantPrice
+    }
+    return product.basePrice || 0
+  }
 
-          if (!hasBasicData) {
-            console.log('❌ Item rechazado por falta de datos básicos:', item);
-            return false;
-          }
+  /**
+   * Verifica si una oferta es válida
+   */
+  function isOfferValid(offer: ProductOffer): boolean {
+    const now = new Date()
+    const startDate = new Date(offer.startDate)
+    const endDate = new Date(offer.endDate)
 
-          if (!hasValidPrice) {
-            console.log('⚠️ Item con precio 0 cargado (se validará después):', item);
-          }
+    return (
+      offer.status === 'active' &&
+      startDate <= now &&
+      endDate >= now &&
+      (offer.usageLimit === 0 || offer.usageCount < offer.usageLimit)
+    )
+  }
 
-          return hasBasicData;
-        });
+  /**
+   * Encuentra la mejor oferta para un precio dado
+   */
+  function findBestOffer(originalPrice: number, offers: ProductOffer[]): ProductOffer | undefined {
+    let bestOffer: ProductOffer | undefined
+    let lowestPrice = originalPrice
 
-        items.value = validItems;
-        restaurantId.value = cartData.restaurantId || null;
-        restaurantName.value = cartData.restaurantName || null;
-
-        console.log('✅ Carrito cargado desde localStorage:', validItems);
-
-        // Validar carrito después de cargar (sin bloquear la UI)
-        setTimeout(() => {
-          if (items.value.length > 0) {
-            validateCart().catch(console.error);
-          }
-        }, 2000);
+    for (const offer of offers) {
+      const discountedPrice = calculateDiscountedPrice(originalPrice, offer)
+      if (discountedPrice < lowestPrice) {
+        lowestPrice = discountedPrice
+        bestOffer = offer
       }
-    } catch (err) {
-      console.error('Error loading cart from localStorage:', err);
-      clearCart();
     }
-  };
 
-  const clearError = (): void => {
-    error.value = null;
-  };
+    return bestOffer
+  }
 
-  // Inicializar cargando datos guardados
-  loadCart();
+  /**
+   * Calcula el precio con descuento
+   */
+  function calculateDiscountedPrice(originalPrice: number, offer: ProductOffer): number {
+    if (!isOfferValid(offer)) return originalPrice
+
+    let discountedPrice: number
+
+    if (offer.discountType === 'percentage' || offer.discountType === '%') {
+      discountedPrice = originalPrice * (1 - offer.discountValue / 100)
+    } else {
+      discountedPrice = Math.max(0.01, originalPrice - offer.discountValue)
+    }
+
+    return Math.max(0.01, discountedPrice)
+  }
+
+  /**
+   * Limpia la información del restaurante
+   */
+  function clearRestaurantInfo(): void {
+    restaurantId.value = null
+    restaurantName.value = ''
+    estimatedDeliveryTime.value = 30
+    activeOffers.value = []
+    error.value = null
+  }
+
+  /**
+   * Formatea el badge de una oferta
+   */
+  function formatOfferBadge(offer: ProductOffer): string {
+    if (offer.discountType === 'percentage' || offer.discountType === '%') {
+      return `${offer.discountValue}% OFF`
+    } else {
+      return `$${offer.discountValue.toFixed(2)} OFF`
+    }
+  }
 
   return {
-    // Estado
+    // State
     items,
     restaurantId,
     restaurantName,
+    estimatedDeliveryTime,
+    activeOffers,
     loading,
     error,
 
     // Getters
-    itemCount,
-    totalAmount,
     isEmpty,
-    isValid,
+    itemCount,
+    originalSubtotal,
+    subtotalWithOffers,
+    totalSavings,
+    cartSummary,
 
-    // Acciones
+    // Actions
     addToCart,
     updateQuantity,
+    incrementItem,
+    decrementItem,
     removeItem,
     clearCart,
+    loadActiveOffers,
+    recalculateCartPrices,
     validateCart,
-    getUnavailableItems,
-    removeUnavailableItems,
-    getCartSummary,
-    clearError
-  };
-});
+    getCartItem,
+    isInCart,
+    getItemQuantity,
+    formatOfferBadge
+  }
+})

@@ -149,8 +149,8 @@
           <div class="business-analytics__chart-header">
             <h3>Ingresos en el Tiempo</h3>
             <div class="business-analytics__chart-controls">
-              <button 
-                v-for="period in chartPeriods" 
+              <button
+                v-for="period in chartPeriods"
                 :key="period.value"
                 @click="changeChartPeriod(period.value)"
                 :class="['business-analytics__chart-btn', { 'business-analytics__chart-btn--active': chartPeriod === period.value }]"
@@ -198,7 +198,7 @@
                 <tr v-for="product in topProducts" :key="product.id" class="business-analytics__table-row">
                   <td>
                     <div class="business-analytics__product-info">
-                      <img :src="product.imageUrl || '/images/product-placeholder.png'" :alt="product.name" class="business-analytics__product-image">
+                      <img :src="product.imageUrl || '/Images/product-placeholder.png'" :alt="product.name" class="business-analytics__product-image">
                       <span class="business-analytics__product-name">{{ product.name }}</span>
                     </div>
                   </td>
@@ -236,7 +236,7 @@
                 <tr v-for="restaurant in restaurantStats" :key="restaurant.id" class="business-analytics__table-row">
                   <td>
                     <div class="business-analytics__restaurant-info">
-                      <img :src="restaurant.logoUrl || '/images/restaurant-placeholder.png'" :alt="restaurant.name" class="business-analytics__restaurant-image">
+                      <img :src="restaurant.logoUrl || '/Images/restaurant-placeholder.png'" :alt="restaurant.name" class="business-analytics__restaurant-image">
                       <span class="business-analytics__restaurant-name">{{ restaurant.name }}</span>
                     </div>
                   </td>
@@ -259,6 +259,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification Component -->
+    <ToastNotification ref="toastRef" />
   </div>
 </template>
 
@@ -267,9 +270,20 @@ import { ref, computed, onMounted, onBeforeUnmount, onActivated, nextTick, watch
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
+import ToastNotification from '@/components/ui/ToastNotification.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Toast ref
+const toastRef = ref(null)
+
+// Toast helper function
+const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  if (toastRef.value) {
+    toastRef.value.useToast()[type](message, title)
+  }
+}
 
 // Estado principal
 const loading = ref(true)
@@ -302,7 +316,7 @@ const chartPeriods = [
 const selectedPeriodLabel = computed(() => {
   const labels = {
     7: 'Últimos 7 días',
-    30: 'Últimos 30 días', 
+    30: 'Últimos 30 días',
     90: 'Últimos 90 días',
     365: 'Último año'
   }
@@ -338,7 +352,7 @@ const kpiData = computed(() => {
   const now = new Date()
   const currentStartDate = new Date(now.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
   const previousStartDate = new Date(currentStartDate.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
-  
+
   let previousOrders = [...allOrders.value]
   if (selectedRestaurantId.value !== 'all') {
     previousOrders = previousOrders.filter(order => order.restaurantId === selectedRestaurantId.value)
@@ -368,7 +382,7 @@ const kpiData = computed(() => {
     averageOrderValue: currentAOV,
     uniqueCustomers: uniqueCustomers,
     revenueChange,
-    ordersChange,  
+    ordersChange,
     aovChange,
     customersChange
   }
@@ -462,6 +476,7 @@ const loadBusiness = async () => {
     }
   } catch (error) {
     console.error('Error cargando business:', error)
+    showToast('error', 'No se pudo cargar la información del negocio', 'Error de conexión')
   }
 }
 
@@ -476,6 +491,7 @@ const loadRestaurants = async () => {
   } catch (error) {
     console.error('Error cargando restaurantes:', error)
     restaurants.value = []
+    showToast('error', 'No se pudieron cargar los restaurantes', 'Error de conexión')
   }
 }
 
@@ -498,12 +514,14 @@ const loadOrders = async () => {
         }
       } catch (error) {
         console.error(`Error pedidos restaurante ${restaurant.id}:`, error)
+        showToast('warning', `No se pudieron cargar los pedidos de ${restaurant.name}`, 'Advertencia')
       }
     }
 
     allOrders.value = allOrdersData
   } catch (error) {
     console.error('Error cargando pedidos:', error)
+    showToast('error', 'Error general al cargar los pedidos', 'Error de conexión')
   }
 }
 
@@ -526,12 +544,14 @@ const loadProducts = async () => {
         }
       } catch (error) {
         console.error(`Error productos restaurante ${restaurant.id}:`, error)
+        showToast('warning', `No se pudieron cargar los productos de ${restaurant.name}`, 'Advertencia')
       }
     }
 
     allProducts.value = allProductsData
   } catch (error) {
     console.error('Error cargando productos:', error)
+    showToast('error', 'Error general al cargar los productos', 'Error de conexión')
   }
 }
 
@@ -541,10 +561,10 @@ const createRevenueChart = async () => {
 
   const ctx = revenueChart.value.getContext('2d')
   if (!ctx) return
-  
+
   // Preparar datos de ingresos por día
   const chartData = prepareRevenueChartData()
-  
+
   // Destruir gráfico anterior si existe
   if (revenueChartInstance) {
     revenueChartInstance.destroy()
@@ -600,7 +620,7 @@ const createOrdersChart = async () => {
 
   const ctx = ordersChart.value.getContext('2d')
   if (!ctx) return
-  
+
   // Contar pedidos por estado
   const statusCounts = filteredOrders.value.reduce((acc, order) => {
     acc[order.status] = (acc[order.status] || 0) + 1
@@ -609,7 +629,7 @@ const createOrdersChart = async () => {
 
   const statusLabels = {
     'Pending': 'Pendientes',
-    'Accepted': 'Aceptados', 
+    'Accepted': 'Aceptados',
     'Preparing': 'En preparación',
     'ReadyForPickup': 'Listos',
     'OnTheWay': 'En camino',
@@ -682,19 +702,19 @@ const createOrdersChart = async () => {
 const prepareRevenueChartData = () => {
   const now = new Date()
   const startDate = new Date(now.getTime() - (selectedPeriod.value * 24 * 60 * 60 * 1000))
-  
+
   const labels = []
   const values = []
-  
+
   // Generar etiquetas según el período del gráfico
   const daysInPeriod = selectedPeriod.value
-  const dataPoints = chartPeriod.value === 'daily' ? Math.min(daysInPeriod, 30) : 
+  const dataPoints = chartPeriod.value === 'daily' ? Math.min(daysInPeriod, 30) :
                      chartPeriod.value === 'weekly' ? Math.min(Math.ceil(daysInPeriod / 7), 12) :
                      Math.min(Math.ceil(daysInPeriod / 30), 12)
-  
+
   for (let i = dataPoints - 1; i >= 0; i--) {
     let periodStart, periodEnd, label
-    
+
     if (chartPeriod.value === 'daily') {
       periodStart = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000))
       periodEnd = new Date(periodStart.getTime() + (24 * 60 * 60 * 1000))
@@ -708,18 +728,18 @@ const prepareRevenueChartData = () => {
       periodEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
       label = periodStart.toLocaleDateString('es-ES', { month: 'short' })
     }
-    
+
     const periodRevenue = filteredOrders.value
       .filter(order => {
         const orderDate = new Date(order.createdAt)
         return orderDate >= periodStart && orderDate < periodEnd
       })
       .reduce((sum, order) => sum + order.total, 0)
-    
+
     labels.push(label)
     values.push(periodRevenue)
   }
-  
+
   return { labels, values }
 }
 
@@ -745,16 +765,19 @@ const createCharts = async () => {
 
 const refreshData = async () => {
   loading.value = true
-  
+
   // Resetear el estado para que el watcher se dispare
   isDataLoaded.value = false
-  
+
   try {
     await loadBusiness()
-    await loadRestaurants() 
+    await loadRestaurants()
     await loadOrders()
     await loadProducts()
     isDataLoaded.value = true
+    showToast('success', 'Datos actualizados correctamente', '¡Éxito!')
+  } catch (error) {
+    showToast('error', 'Error al actualizar los datos', 'Error')
   } finally {
     loading.value = false
   }
@@ -777,14 +800,14 @@ watch([selectedPeriod, selectedRestaurantId], async () => {
 
 watch(chartPeriod, async () => {
   if (isDataLoaded.value) {
-    await updateAnalytics()  
+    await updateAnalytics()
   }
 })
 
 // Lifecycle
 onMounted(async () => {
   isComponentMounted.value = true
-  
+
   if (!authStore.isAuthenticated) {
     const isAuth = await authStore.checkAuth()
     if (!isAuth || (authStore.user?.role !== 'Business' && authStore.user?.role !== 'Admin')) {
@@ -799,6 +822,9 @@ onMounted(async () => {
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js'
     script.onload = async () => {
       await refreshData()
+    }
+    script.onerror = () => {
+      showToast('error', 'No se pudo cargar la librería de gráficos', 'Error de carga')
     }
     document.head.appendChild(script)
   } else {
@@ -816,7 +842,7 @@ onActivated(async () => {
 onBeforeUnmount(() => {
   isComponentMounted.value = false
   isDataLoaded.value = false
-  
+
   if (revenueChartInstance) {
     revenueChartInstance.destroy()
     revenueChartInstance = null

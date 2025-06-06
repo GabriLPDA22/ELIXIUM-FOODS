@@ -1,8 +1,7 @@
-// src/stores/auth.ts
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { api } from '@/services/api'
-import authService from '@/services/authService'
+import axios, { type AxiosError } from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.elixiumfoods.com/api'
 
 export interface User {
   id: number
@@ -10,308 +9,399 @@ export interface User {
   firstName: string
   lastName: string
   role: string
+  phoneNumber?: string
   businessId?: number
   photoURL?: string
   googleId?: string
 }
 
-export interface LoginCredentials {
+export interface RegisterData {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  phoneNumber: string
+  role: string
+}
+
+export interface LoginData {
   email: string
   password: string
 }
 
-export interface GoogleLoginResponse {
+export interface AuthResponse {
   success: boolean
   message: string
-  token: string
-  refreshToken: string
-  userId: number
-  email: string
-  firstName: string
-  lastName: string
-  role: string
+  token?: string
+  refreshToken?: string
+  userId?: number
+  email?: string
+  firstName?: string
+  lastName?: string
+  role?: string
   businessId?: number
   photoURL?: string
   googleId?: string
 }
 
-export const useAuthStore = defineStore('auth', () => {
-  // Estado
-  const user = ref<User | null>(null)
-  const token = ref<string | null>(null)
-  const refreshToken = ref<string | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+// Configurar axios
+axios.defaults.baseURL = API_BASE_URL
+axios.defaults.headers.common['Content-Type'] = 'application/json'
+axios.defaults.timeout = 15000
 
-  // Computed
-  // isAuthenticated es una propiedad computada, se accede a su valor directamente (ej: authStore.isAuthenticated)
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+export const useAuthStore = defineStore('auth', {
+  state: () => ({
+    user: null as User | null,
+    token: localStorage.getItem('authToken') || null,
+    refreshToken: localStorage.getItem('refreshToken') || null,
+    loading: false,
+    error: null as string | null,
+    isAuthenticated: false,
+  }),
 
-  // NUEVO: Computed para verificar si es admin
-  const isAdmin = computed(() => {
-    return user.value?.role === 'Admin'
-  })
+  getters: {
+    isLoggedIn: (state) => !!state.token && !!state.user,
+    userRole: (state) => state.user?.role || null,
+    userName: (state) => (state.user ? `${state.user.firstName} ${state.user.lastName}` : null),
+    isAdmin: (state) => state.user?.role === 'Admin',
+    isBusiness: (state) => state.user?.role === 'Business',
+    isCustomer: (state) => state.user?.role === 'Customer',
+    isDeliveryPerson: (state) => state.user?.role === 'DeliveryPerson',
 
-  // Computed para la foto de perfil
-  const userProfileImage = computed(() => {
-    if (user.value?.photoURL) {
-      return user.value.photoURL
-    }
-    return null
-  })
+    userInitials: (state) => {
+      if (!state.user) return 'U'
+      const firstName = state.user.firstName || 'U'
+      const lastName = state.user.lastName || ''
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+    },
 
-  // Computed para las iniciales del usuario
-  const userInitials = computed(() => {
-    if (!user.value) return 'U'
+    userProfileImage: (state) => {
+      return state.user?.photoURL || null
+    },
 
-    const firstName = user.value.firstName || 'U'
-    const lastName = user.value.lastName || ''
+    isGoogleUser: (state) => !!state.user?.googleId,
+  },
 
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  })
+  actions: {
+    // =================== FUNCIÓN PARA GUARDAR DATOS COMPLETOS ===================
+    saveAuthData(authData: AuthResponse) {
+      // Guardar tokens
+      this.token = authData.token!
+      this.refreshToken = authData.refreshToken || null
 
-  // Computed para verificar si es usuario de Google
-  const isGoogleUser = computed(() => !!user.value?.googleId)
+      // Obtener usuario existente para preservar foto si es necesario
+      const existingUser = this.user
 
-  // Inicializar estado desde localStorage
-  const initializeAuth = () => {
-    const savedToken = localStorage.getItem('token')
-    const savedRefreshToken = localStorage.getItem('refreshToken')
-    const savedUser = localStorage.getItem('user')
-
-    if (savedToken && savedUser) {
-      token.value = savedToken
-      refreshToken.value = savedRefreshToken
-      try {
-        user.value = JSON.parse(savedUser)
-      } catch (e) {
-        console.error("Error al parsear el usuario desde localStorage", e);
-        // Opcionalmente, limpiar los datos corruptos
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        user.value = null;
-        token.value = null;
-        refreshToken.value = null;
+      // Crear objeto usuario completo
+      const newUserData = {
+        id: authData.userId!,
+        email: authData.email!,
+        firstName: authData.firstName!,
+        lastName: authData.lastName!,
+        role: authData.role!,
+        businessId: authData.businessId,
+        photoURL: authData.photoURL,
+        googleId: authData.googleId,
       }
 
-
-      // Configurar header de autorización solo si el token es válido
-      if (token.value) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+      // NUEVA LÓGICA: Preservar foto existente si el login no incluye una nueva foto
+      // Esto aplica tanto para usuarios Google como usuarios normales
+      if (
+        existingUser &&
+        existingUser.email === newUserData.email &&
+        existingUser.photoURL &&
+        (!newUserData.photoURL || newUserData.photoURL === '')
+      ) {
+        newUserData.photoURL = existingUser.photoURL
       }
-    }
-  }
 
-  // Guardar datos de autenticación
-  const saveAuthData = (authData: {
-    token: string
-    refreshToken: string
-    user: User
-  }) => {
-    token.value = authData.token
-    refreshToken.value = authData.refreshToken
-    user.value = authData.user
+      // Crear objeto usuario completo
+      this.user = newUserData
 
-    // Guardar en localStorage
-    localStorage.setItem('token', authData.token)
-    localStorage.setItem('refreshToken', authData.refreshToken)
-    localStorage.setItem('user', JSON.stringify(authData.user))
+      // ✅ GUARDAR TODO EN LOCALSTORAGE
+      localStorage.setItem('authToken', this.token)
+      localStorage.setItem('user', JSON.stringify(this.user))
 
-    // Configurar header de autorización
-    api.defaults.headers.common['Authorization'] = `Bearer ${authData.token}`
-  }
+      if (this.refreshToken) {
+        localStorage.setItem('refreshToken', this.refreshToken)
+      }
 
-  // Login normal
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
-    try {
-      loading.value = true
-      error.value = null
+      // Marcar como autenticado
+      this.isAuthenticated = true
 
-      const response = await api.post('/api/Auth/login', credentials)
+      // Configurar axios
+      this.setupAxiosDefaults()
+    },
 
-      if (response.data?.success) {
-        const userData: User = {
-          id: response.data.userId,
-          email: response.data.email,
-          firstName: response.data.firstName,
-          lastName: response.data.lastName,
-          role: response.data.role,
-          businessId: response.data.businessId,
-          photoURL: response.data.photoURL,
-          googleId: response.data.googleId
+    // =================== FUNCIÓN PARA INICIALIZAR DESDE LOCALSTORAGE ===================
+    initializeFromStorage() {
+      const savedToken = localStorage.getItem('authToken')
+      const savedUser = localStorage.getItem('user')
+      const savedRefreshToken = localStorage.getItem('refreshToken')
+
+      if (savedToken && savedUser) {
+        try {
+          this.token = savedToken
+          this.refreshToken = savedRefreshToken
+          this.user = JSON.parse(savedUser)
+          this.isAuthenticated = true
+          this.setupAxiosDefaults()
+        } catch (error) {
+          console.error('❌ Error parseando usuario desde localStorage:', error)
+          this.clearAuthData()
         }
-
-        saveAuthData({
-          token: response.data.token,
-          refreshToken: response.data.refreshToken,
-          user: userData
-        })
-
-        console.log('Login exitoso:', userData)
-        return true
-      } else {
-        error.value = response.data?.message || 'Error de autenticación'
-        return false
       }
-    } catch (err: any) {
-      console.error('Error en login:', err)
-      error.value = err.response?.data?.message || 'Error de conexión'
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
+    },
 
-  // Login con Google
-  const loginWithGoogle = async (googleToken: string): Promise<boolean> => {
-    try {
-      loading.value = true
-      error.value = null
+    // =================== FUNCIÓN PARA LIMPIAR DATOS ===================
+    clearAuthData() {
+      this.user = null
+      this.token = null
+      this.refreshToken = null
+      this.isAuthenticated = false
+      this.error = null
 
-      console.log('Enviando token de Google al backend:', googleToken.substring(0, 50) + '...')
-
-      const response = await api.post('/api/Auth/google-login', {
-        idToken: googleToken
-      })
-
-      if (response.data?.success) {
-        const userData: User = {
-          id: response.data.userId,
-          email: response.data.email,
-          firstName: response.data.firstName,
-          lastName: response.data.lastName,
-          role: response.data.role,
-          businessId: response.data.businessId,
-          photoURL: response.data.photoURL,
-          googleId: response.data.googleId
-        }
-
-        saveAuthData({
-          token: response.data.token,
-          refreshToken: response.data.refreshToken,
-          user: userData
-        })
-
-        console.log('Login con Google exitoso:', userData)
-        return true
-      } else {
-        error.value = response.data?.message || 'Error de autenticación con Google'
-        return false
-      }
-    } catch (err: any) {
-      console.error('Error en login con Google:', err)
-      error.value = err.response?.data?.message || 'Error de conexión con Google'
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // Verificar autenticación
-  const checkAuth = async (): Promise<boolean> => {
-    try {
-      if (!token.value) return false
-
-      // Verificar token actual
-      // Asegúrate que authService.verifyToken() existe y funciona como esperas
-      const isValid = await authService.verifyToken()
-
-      if (isValid) {
-        return true
-      }
-
-      // Si el token no es válido, intentar refrescar
-      // Asegúrate que authService.refreshToken() existe y funciona como esperas
-      const refreshed = await authService.refreshToken()
-
-      if (refreshed) {
-        // Actualizar el token en el store si authService.refreshToken() lo actualiza en localStorage
-        const newToken = localStorage.getItem('token')
-        if (newToken) {
-          token.value = newToken
-          api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
-        }
-        return true
-      }
-
-      // Si no se puede refrescar, cerrar sesión
-      await logout()
-      return false
-    } catch (error) {
-      console.error('Error verificando autenticación:', error)
-      await logout()
-      return false
-    }
-  }
-
-  // Logout
-  const logout = async () => {
-    try {
-      // Intentar revocar el token en el servidor
-      if (refreshToken.value) {
-        await api.post('/api/Auth/revoke-token', {
-          refreshToken: refreshToken.value
-        })
-      }
-    } catch (error) {
-      console.error('Error revocando token:', error)
-      // No se relanza el error para asegurar que el logout local siempre ocurra
-    } finally {
-      // Limpiar estado local
-      user.value = null
-      token.value = null
-      refreshToken.value = null
-      error.value = null
-
-      // Limpiar localStorage
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('authToken')
       localStorage.removeItem('user')
+      localStorage.removeItem('refreshToken')
 
-      // Limpiar header de autorización
-      delete api.defaults.headers.common['Authorization']
-    }
-  }
+      delete axios.defaults.headers.common['Authorization']
+    },
 
-  // Refrescar token
-  const refreshAuthToken = async (): Promise<boolean> => {
-    // Asegúrate que authService.refreshToken() existe, actualice el localStorage y devuelva un booleano
-    const refreshed = await authService.refreshToken();
-    if (refreshed) {
-        const newToken = localStorage.getItem('token');
-        if (newToken) {
-            token.value = newToken;
-            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    async register(registerData: RegisterData): Promise<boolean> {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await axios.post<AuthResponse>('/auth/register', {
+          email: registerData.email,
+          password: registerData.password,
+          firstName: registerData.firstName,
+          lastName: registerData.lastName,
+          phoneNumber: registerData.phoneNumber,
+          role: registerData.role || 'Customer',
+        })
+
+        if (response.data.success && response.data.token) {
+          this.saveAuthData(response.data)
+          return true
+        } else {
+          this.error = response.data.message || 'Error en el registro'
+          return false
         }
-    }
-    return refreshed;
-  }
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          this.error = error.response.data.message
+        } else if (error.response?.status === 400) {
+          this.error = 'Datos de registro inválidos'
+        } else if (error.response?.status === 409) {
+          this.error = 'El email ya está registrado'
+        } else {
+          this.error = 'Error de conexión con el servidor'
+        }
+        return false
+      } finally {
+        this.loading = false
+      }
+    },
 
-  // Inicializar al crear el store
-  initializeAuth()
+    async login(loginData: LoginData): Promise<boolean> {
+      this.loading = true
+      this.error = null
 
-  return {
-    // Estado
-    user,
-    token,
-    refreshToken,
-    loading,
-    error,
+      try {
+        const response = await axios.post<AuthResponse>('/auth/login', {
+          email: loginData.email,
+          password: loginData.password,
+        })
 
-    // Computed
-    isAuthenticated,
-    isAdmin,
-    userProfileImage,
-    userInitials,
-    isGoogleUser,
+        if (response.data.success && response.data.token) {
+          this.saveAuthData(response.data)
 
-    // Acciones
-    login,
-    loginWithGoogle,
-    logout,
-    checkAuth,
-    refreshAuthToken,
-    initializeAuth // Aunque se llama al crear, puede ser útil exponerla
-  }
+          // NUEVA LÓGICA: Después del login exitoso, cargar la información completa del perfil
+          // para asegurar que tenemos la foto de perfil actualizada
+          try {
+            await this.loadCompleteUserProfile()
+          } catch (profileError) {
+            console.warn('⚠️ No se pudo cargar el perfil completo, pero el login fue exitoso:', profileError)
+          }
+
+          return true
+        } else {
+          this.error = response.data.message || 'Credenciales incorrectas'
+          return false
+        }
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          this.error = error.response.data.message
+        } else if (error.response?.status === 401) {
+          this.error = 'Email o contraseña incorrectos'
+        } else {
+          this.error = 'Error de conexión con el servidor'
+        }
+        return false
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async loginWithGoogle(googleToken: string): Promise<boolean> {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await axios.post<AuthResponse>('/auth/google-login', {
+          idToken: googleToken,
+        })
+        if (response.data.success && response.data.token) {
+          // ✅ USAR LA FUNCIÓN DE GUARDAR DATOS
+          this.saveAuthData(response.data)
+          return true
+        } else {
+          this.error = response.data.message || 'Error en login con Google'
+          console.error('❌ Error en respuesta:', this.error)
+          return false
+        }
+      } catch (error: any) {
+        console.error('💥 Error en login con Google:', error)
+
+        if (error.response?.data?.message) {
+          this.error = error.response.data.message
+        } else if (error.response?.status === 400) {
+          this.error = 'Token de Google inválido'
+        } else {
+          this.error = 'Error de conexión con el servidor'
+        }
+        return false
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // NUEVO MÉTODO: Cargar información completa del perfil después del login
+    async loadCompleteUserProfile(): Promise<void> {
+      if (!this.token || !this.user) return
+
+      try {
+        const response = await axios.get('/auth/me', {
+          headers: { Authorization: `Bearer ${this.token}` },
+        })
+
+        if (response.data.success && response.data.data) {
+          const completeUserData = response.data.data
+
+          // Actualizar solo los campos que pueden haber cambiado, preservando lo que ya tenemos
+          if (this.user) {
+            this.user = {
+              ...this.user,
+              ...completeUserData,
+              // Preservar foto de Google si ya la tenemos y no viene una nueva
+              photoURL: completeUserData.photoURL || this.user.photoURL || null
+            }
+
+            localStorage.setItem('user', JSON.stringify(this.user))
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error cargando perfil completo:', error)
+        // No lanzar el error, el login ya fue exitoso
+      }
+    },
+
+    async logout() {
+      try {
+        if (this.token) {
+          await axios.post(
+            '/auth/logout',
+            {},
+            {
+              headers: { Authorization: `Bearer ${this.token}` },
+            }
+          )
+        }
+      } catch (error) {
+        console.error('⚠️ Error en logout del servidor:', error)
+      } finally {
+        this.clearAuthData()
+      }
+    },
+
+    async checkAuth() {
+      const token = localStorage.getItem('authToken')
+
+      if (!token) {
+        console.log('❌ No hay token')
+        return false
+      }
+
+      try {
+        const response = await axios.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (response.data.success) {
+          this.user = response.data.data
+          this.token = token
+          this.isAuthenticated = true
+          this.setupAxiosDefaults()
+          return true
+        }
+      } catch (error) {
+        console.error('❌ Error verificando auth:', error)
+        this.logout()
+      }
+
+      return false
+    },
+
+    setupAxiosDefaults() {
+      if (this.token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
+      }
+    },
+
+    clearError() {
+      this.error = null
+    },
+
+    updateUserProfile(updates: Partial<User>) {
+      if (this.user) {
+        // PROTECCIÓN: No permitir sobrescribir foto de usuario de Google con datos vacíos
+        if (this.isGoogleUser && updates.photoURL === '' && this.user.photoURL) {
+          const { photoURL, ...safeUpdates } = updates // Remover photoURL para evitar sobrescritura
+          this.user = { ...this.user, ...safeUpdates }
+        } else {
+          this.user = { ...this.user, ...updates }
+        }
+
+        localStorage.setItem('user', JSON.stringify(this.user))
+      }
+    },
+
+    // Añadir este nuevo método para manejo específico de fotos
+    updateProfilePhoto(photoURL: string | null) {
+      if (!this.user) return
+
+      // PROTECCIÓN: No permitir cambio de foto para usuarios de Google
+      if (this.isGoogleUser) {
+        console.warn('⚠️ Intento de cambiar foto de usuario de Google bloqueado')
+        return
+      }
+
+      this.user.photoURL = photoURL || ''
+      localStorage.setItem('user', JSON.stringify(this.user))
+    },
+
+    // Añadir este método para sincronizar fotos de Google
+    syncGooglePhoto(googlePhotoURL: string) {
+      if (!this.user || !this.isGoogleUser) return
+      this.user.photoURL = googlePhotoURL
+      localStorage.setItem('user', JSON.stringify(this.user))
+    },
+
+    // =================== INICIALIZAR (llamar desde main.ts) ===================
+    initializeAuth() {
+      this.initializeFromStorage()
+    },
+  },
 })

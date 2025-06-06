@@ -266,11 +266,6 @@ const handleResetPassword = async () => {
       return;
     }
 
-    console.log('=== DEBUG RESET PASSWORD ===');
-    console.log('Token:', resetToken.value?.substring(0, 10) + '...');
-    console.log('Email:', resetEmail.value);
-    console.log('Nueva contraseña length:', newPassword.value.length);
-
     // ✅ LLAMAR AL SERVICIO CON LOS 3 PARÁMETROS REQUERIDOS
     const result = await authService.resetPassword(resetToken.value, resetEmail.value, newPassword.value, confirmPassword.value);
 
@@ -300,27 +295,17 @@ const handleResetPassword = async () => {
 
 // ✅ VERIFICAR TOKEN Y EMAIL AL MONTAR EL COMPONENTE
 onMounted(() => {
-  console.log('=== DEBUG MOUNT ===');
-  console.log('URL completa:', window.location.href);
-  console.log('Query params:', route.query);
-
   const token = route.query.token as string;
   const email = route.query.email as string;
-
-  console.log('Token extraído:', token?.substring(0, 10) + '...');
-  console.log('Email extraído:', email);
-
   // Validar que tengamos ambos parámetros
   if (!token) {
     tokenError.value = 'No se proporcionó un token de restablecimiento válido en la URL.';
     return;
   }
-
   if (!email) {
     tokenError.value = 'No se proporcionó un email válido en la URL de restablecimiento.';
     return;
   }
-
   // Validar formato básico del email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
@@ -336,14 +321,16 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// Variables (mismas que ForgotPassword.vue)
-$primary: #FF416C;
-$primary-light: #FF6B9D;
-$primary-gradient: linear-gradient(#eb3963 0%, rgb(175, 85, 85) 100%);
-$card-bg: rgba(30, 41, 59, 0.95);
+$reset-primary: #FF416C;
+$reset-primary-light: #FF4B2B;
+$reset-accent: #FFC837;
+$reset-accent-orange: #FF8008;
+$reset-primary-gradient: linear-gradient(135deg, #FF416C, #FF4B2B);
+$reset-accent-gradient: linear-gradient(to right, #FFC837, #FF8008);
+$reset-card-bg: rgba(30, 41, 59, 0.95);
 
 .reset-password-view {
-  background: $primary-gradient;
+  background: $reset-primary-gradient;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -455,7 +442,7 @@ $card-bg: rgba(30, 41, 59, 0.95);
 .reset-password-card {
   width: 100%;
   max-width: 480px;
-  background: $card-bg;
+  background: $reset-card-bg;
   backdrop-filter: blur(20px);
   border-radius: 16px;
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
@@ -473,17 +460,28 @@ $card-bg: rgba(30, 41, 59, 0.95);
     justify-content: center;
     width: 80px;
     height: 80px;
-    background: rgba($primary, 0.2);
+    background: linear-gradient(135deg, rgba(255, 200, 55, 0.2), rgba(255, 128, 8, 0.15));
     border-radius: 50%;
     margin-bottom: 16px;
-    color: $primary;
+    border: 2px solid rgba(255, 200, 55, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(255, 200, 55, 0.15);
+
+    svg {
+      color: $reset-accent;
+      filter: drop-shadow(0 2px 4px rgba(255, 128, 8, 0.3));
+    }
   }
 
   &__title {
     font-size: 28px;
     font-weight: 700;
     margin-bottom: 8px;
-    color: $primary;
+    background: $reset-accent-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
   }
 
   &__subtitle {
@@ -507,14 +505,28 @@ $card-bg: rgba(30, 41, 59, 0.95);
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: $primary;
-    font-weight: 500;
+    background: $reset-accent-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
 
     &:hover {
-      color: $primary-light;
+      filter: brightness(1.1);
       text-decoration: underline;
+      transform: translateX(-2px);
+    }
+
+    svg {
+      color: $reset-accent;
+      transition: all 0.3s ease;
+    }
+
+    &:hover svg {
+      color: $reset-accent-orange;
+      transform: translateX(-2px);
     }
   }
 }
@@ -549,12 +561,15 @@ $card-bg: rgba(30, 41, 59, 0.95);
   }
 
   &__link {
-    color: #ef4444;
+    background: $reset-accent-gradient;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
     text-decoration: underline;
     font-weight: 500;
 
     &:hover {
-      color: #dc2626;
+      filter: brightness(1.1);
     }
   }
 
@@ -596,8 +611,8 @@ $card-bg: rgba(30, 41, 59, 0.95);
 
     &:focus {
       outline: none;
-      border-color: $primary;
-      box-shadow: 0 0 0 2px rgba($primary, 0.2);
+      border-color: $reset-accent;
+      box-shadow: 0 0 0 2px rgba(255, 200, 55, 0.2);
       background: rgba(255, 255, 255, 0.08);
     }
 
@@ -622,7 +637,7 @@ $card-bg: rgba(30, 41, 59, 0.95);
     transition: color 0.3s ease;
 
     &:hover:not(:disabled) {
-      color: $primary;
+      color: $reset-accent;
     }
 
     &:disabled {
@@ -699,7 +714,7 @@ $card-bg: rgba(30, 41, 59, 0.95);
   &__button {
     width: 100%;
     padding: 14px 20px;
-    background: $primary-gradient;
+    background: $reset-primary-gradient;
     color: white;
     border: none;
     border-radius: 8px;
@@ -713,7 +728,8 @@ $card-bg: rgba(30, 41, 59, 0.95);
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba($primary, 0.3);
+      box-shadow: 0 10px 25px rgba(255, 65, 108, 0.4);
+      filter: brightness(1.05);
     }
 
     &:disabled {

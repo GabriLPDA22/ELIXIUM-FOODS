@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="docs/images/logo.png" alt="Elixium Foods Logo" width="200"/>
+<img src="docs/Images/logo.png" alt="Elixium Foods Logo" width="200"/>
 
 ### **Deliciosa comida. Entrega rápida.**
 
@@ -42,6 +42,9 @@
     <td align="center"><strong>Home</strong></td>
     <td align="center"><strong>Categorías</strong></td>
     <td align="center"><strong>Restaurantes</strong></td>
+    <td><img src="docs/Images/home-screen.webp" alt="Pantalla principal con búsqueda y entrega rápida" /></td>
+    <td><img src="docs/Images/categories-screen.webp" alt="Exploración por categorías gastronómicas" /></td>
+    <td><img src="docs/Images/restaurants-screen.webp" alt="Listado de restaurantes con filtros" /></td>
   </tr>
 </table>
 </div>
