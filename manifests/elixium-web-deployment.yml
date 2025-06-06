@@ -26,6 +26,7 @@ metadata:
   labels:
     app: elixium-foods
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: elixium-foods
@@ -40,7 +41,7 @@ spec:
     spec:
       containers:
         - name: elixium-foods
-          image: franvilla/front:latest
+          image: __IMAGE_TAG__
           ports:
             - containerPort: 80
           env:
