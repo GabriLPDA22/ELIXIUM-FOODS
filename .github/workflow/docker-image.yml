@@ -32,7 +32,7 @@ jobs:
       id: docker_meta
       uses: docker/metadata-action@v5
       with:
-        images: santospardos/elixium-foods
+        images: franvilla/front
         tags: |
           type=sha,format=short
 
@@ -59,7 +59,7 @@ jobs:
 
     - name: Replace image tag in deployment
       run: |
-        IMAGE_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | grep -o 'santospardos/elixium-foods:[^,]*')
+        IMAGE_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | grep -o 'franvilla/front:[^,]*')
         sed "s|__IMAGE_TAG__|$IMAGE_TAG|" manifests/elixium-web-deployment.yml > manifests/tmp-deployment.yml
 
     - name: Deploy to EKS
