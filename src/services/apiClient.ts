@@ -3,7 +3,7 @@ import axios from 'axios'
 
 // Configura la instancia de axios con opciones predeterminadas
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.elixiumfoods.com',
   headers: {
     'Content-Type': 'application/json',
   },
