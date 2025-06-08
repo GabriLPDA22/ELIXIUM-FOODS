@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="docs/Images/logo.png" alt="Elixium Foods Logo" width="200"/>
+<img src="public/images/LOGO CHIQUITO.png" alt="Elixium Foods Logo" width="200"/>
 
 ### **Deliciosa comida. Entrega rápida.**
 
